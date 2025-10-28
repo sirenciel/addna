@@ -13,9 +13,13 @@ export interface CampaignBlueprint {
   };
   targetPersona: TargetPersona;
   adDna: {
-    visualFocus: string;
-    emotionValue: string;
-    textHook: string;
+    salesMechanism: string;
+    copyPattern: string;
+    persuasionFormula: string;
+    specificLanguagePatterns: string[];
+    toneOfVoice: string;
+    socialProofElements: string;
+    objectionHandling: string;
     visualStyle: string;
     targetCountry: string;
     offerSummary: string;

@@ -468,13 +468,13 @@ function App() {
 
     try {
         let urls: string[] = [];
-        const generateWithReference = (prompt: string) => generateAdImage(prompt, referenceImage || undefined);
+        const generate = (prompt: string) => generateAdImage(prompt, referenceImage || undefined, allowVisualExploration);
 
         if (concept.placement === 'Carousel' && concept.carouselSlides && concept.carouselSlides.length > 0) {
-            const imagePromises = concept.carouselSlides.map(slide => generateWithReference(slide.visualPrompt));
+            const imagePromises = concept.carouselSlides.map(slide => generate(slide.visualPrompt));
             urls = await Promise.all(imagePromises);
         } else {
-            const singleUrl = await generateWithReference(concept.visualPrompt);
+            const singleUrl = await generate(concept.visualPrompt);
             urls = [singleUrl];
         }
         setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, imageUrls: urls, isGenerating: false} } } : n));
