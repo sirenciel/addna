@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AdConcept, CarouselSlide, ALL_AWARENESS_STAGES, ALL_CREATIVE_FORMATS, CampaignBlueprint } from '../types';
 import { refineVisualPrompt } from '../services/geminiService';
@@ -113,7 +114,7 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
               value={formData.visualVehicle}
               onChange={handleChange}
               className="w-full bg-gray-900 border border-gray-700 rounded-md p-2 focus:ring-2 focus:ring-brand-primary"
-              placeholder="e.g., Selfie-style vertical video, slightly shaky..."
+              placeholder="e.g., 'Foto 'problem' yang sangat relatable', 'Ekspresi 'aha!' saat menemukan solusi', 'Hasil 'after' yang dramatis dan memuaskan'"
             />
           </div>
 

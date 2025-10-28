@@ -500,6 +500,11 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
         **STEP 4: Write the Visual Prompt.** Expand your visual hook idea into a full, detailed prompt using this EXACT structure:
 
+        **[COMMERCIAL GOAL & PSYCHOLOGY]**
+        - **Primary Goal**: The image MUST visually communicate the main benefit ("${blueprint.productAnalysis.keyBenefit}") and evoke a specific, powerful emotion relevant to the solution (e.g., 'relief', 'desire', 'curiosity').
+        - **Psychological Impact**: The scene should make the persona feel that achieving their desired outcome ("${persona.desiredOutcomes[0] || 'their goal'}") is easy and attainable with this product.
+        - **Sales Focus**: The image must be a "scroll-stopper" that compels the user to stop, feel an emotion, and read the headline. It must look like a high-converting ad, not a generic stock photo.
+
         **[SCENE FOUNDATION]**
         - **Setting**: Where exactly is this happening? (Be ultra-specific: "Bright minimalist kitchen with white marble countertop and succulents in background" NOT just "kitchen")
         - **Time/Lighting**: What time of day? What's the lighting quality? (e.g., "Golden hour sunlight streaming through sheer curtains creating soft shadows", "Bright ring light setup for selfie video")
@@ -508,7 +513,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         **[SUBJECT]**
         - **Who**: ${persona.description}, age ${persona.age}, with ${persona.creatorType} aesthetic
         - **Doing What**: Use active verbs + object (e.g., "Enthusiastically demonstrating the product's feature while making direct eye contact with camera")
-        - **Expression**: Be hyper-specific (e.g., "Genuine surprise with wide eyes and slight open mouth" NOT "happy"; "Determined, focused expression with furrowed brow" NOT "serious")
+        - **Expression**: Must clearly convey the emotional 'AFTER' state of using the product (e.g., 'visibly relieved and happy', 'feeling confident and successful', 'surprised and delighted by the result').
         - **Clothing/Styling**: Must be authentic to ${blueprint.adDna.targetCountry} culture and ${persona.creatorType} style (e.g., "Wearing casual oversized hoodie and jeans, natural makeup, messy bun")
 
         **[TRIGGER VISUALIZATION - CRITICAL]**
@@ -519,7 +524,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         **[PRODUCT INTEGRATION]**
         - **Product Positioning**: Where is the product in frame? (Foreground hero shot / background lifestyle prop / being held at chest level)
         - **Brand Visibility**: Is logo/branding clearly visible? From what angle?
-        - **Product in Action**: How is it being used? Show the benefit happening (e.g., "Product visibly making the surface sparkle clean in real-time")
+        - **Product in Action**: Show the product as the clear 'hero' or 'solution'. The result of using the product (e.g., 'the sparkling clean surface', 'the flawless skin') should be as prominent, or more prominent, than the product itself.
 
         **[STYLE DNA FUSION]**
         ${visualStyleInstruction}
@@ -583,10 +588,12 @@ export const generateAdImage = async (prompt: string, referenceImageBase64?: str
     
     const useReference = referenceImageBase64 && !allowVisualExploration;
 
-    const textPart = { 
-        text: useReference 
-            ? `Inspired by the visual style, lighting, and mood of the provided reference image, generate a new, ultra-photorealistic commercial photo of the following scene: ${prompt}. The final image must look like a real, high-quality photograph, not an AI illustration.`
-            : `Ultra-photorealistic commercial advertisement photo, high detail, sharp focus. The scene is: ${prompt}. The final image should look like a real photograph, not an AI illustration.`
+    const salesIntent = "A highly persuasive, high-converting, and scroll-stopping advertisement image designed to sell a product. The image must be ultra-photorealistic, high-contrast, and emotionally resonant. The central focus must be on the user's benefit or transformation.";
+
+    const textPart = {
+        text: useReference
+            ? `${salesIntent} Using the provided reference image for style, lighting, and mood, create this new scene: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo.`
+            : `${salesIntent} The scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`
     };
     
     const parts: any[] = [textPart];
