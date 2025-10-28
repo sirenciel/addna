@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CampaignBlueprint, MindMapNode, AdConcept, AwarenessStage, CreativeFormat, PlacementFormat, TargetPersona, BuyingTriggerObject } from '../types';
 import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon } from './icons';
@@ -206,7 +207,7 @@ const NodeComponent: React.FC<{
     onTogglePlacement: (id: string) => void;
     onGenerateImage: (id: string) => void;
     onEditConcept: (id: string) => void;
-    onEvolveConcept: (id: string) => void;
+    onInitiateEvolution: (id: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (id: string) => void;
     onNodeHover: (id: string | null, event: React.MouseEvent | null) => void;
@@ -222,7 +223,7 @@ const NodeComponent: React.FC<{
             {node.type === 'trigger' && <TriggerNode node={node} onToggle={onToggleTrigger} />}
             {node.type === 'format' && <FormatNode node={node} onToggle={onToggleFormat} />}
             {node.type === 'placement' && <PlacementNode node={node} onToggle={onTogglePlacement} />}
-            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onEvolveConcept={props.onEvolveConcept} onOpenLightbox={props.onOpenLightbox} />}
+            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onOpenLightbox={props.onOpenLightbox} />}
             
             {node.type !== 'dna' && (
                 <button
@@ -356,7 +357,7 @@ interface MindMapViewProps {
     onTogglePlacement: (nodeId: string) => void;
     onGenerateImage: (conceptId: string) => void;
     onEditConcept: (conceptId: string) => void;
-    onEvolveConcept: (conceptId: string) => void;
+    onInitiateEvolution: (conceptId: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (nodeId: string) => void;
     onReset: () => void;

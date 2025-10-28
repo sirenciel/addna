@@ -6,6 +6,8 @@ interface BlueprintValidationStepProps {
   referenceImage: string;
   onContinue: (validatedBlueprint: CampaignBlueprint) => void;
   onBack: () => void;
+  allowVisualExploration: boolean;
+  onAllowVisualExplorationChange: (checked: boolean) => void;
 }
 
 const EditableField: React.FC<{label: string, value: string, name: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void}> = ({label, value, name, onChange}) => (
@@ -22,7 +24,7 @@ const EditableTextarea: React.FC<{label: string, value: string, name: string, on
     </div>
 );
 
-export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ initialBlueprint, referenceImage, onContinue, onBack }) => {
+export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ initialBlueprint, referenceImage, onContinue, onBack, allowVisualExploration, onAllowVisualExplorationChange }) => {
   const [blueprint, setBlueprint] = useState<CampaignBlueprint>(initialBlueprint);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, section: keyof CampaignBlueprint, field: string) => {
@@ -82,13 +84,11 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                     <EditableTextarea label="Desired Outcomes (pisahkan dengan koma)" name="desiredOutcomes" value={blueprint.targetPersona.desiredOutcomes.join(', ')} onChange={e => handlePersonaChange(e, 'desiredOutcomes')} />
                     
                     <div className="md:col-span-2 mt-2">
-                        <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Produk & Penawaran</h3>
+                        <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Produk</h3>
                     </div>
                     <EditableField label="Nama Produk/Layanan" name="name" value={blueprint.productAnalysis.name} onChange={e => handleInputChange(e, 'productAnalysis', 'name')} />
                     <EditableField label="Manfaat Utama" name="keyBenefit" value={blueprint.productAnalysis.keyBenefit} onChange={e => handleInputChange(e, 'productAnalysis', 'keyBenefit')} />
-                    <EditableField label="Ringkasan Penawaran" name="summary" value={blueprint.offerAnalysis.summary} onChange={e => handleInputChange(e, 'offerAnalysis', 'summary')} />
-                    <EditableField label="Call to Action (CTA)" name="cta" value={blueprint.offerAnalysis.cta} onChange={e => handleInputChange(e, 'offerAnalysis', 'cta')} />
-
+                    
                     <div className="md:col-span-2 mt-2">
                         <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Analisis Iklan (DNA)</h3>
                     </div>
@@ -96,7 +96,23 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                     <EditableField label="Emosi/Nilai" name="emotionValue" value={blueprint.adDna.emotionValue} onChange={e => handleInputChange(e, 'adDna', 'emotionValue')} />
                     <EditableField label="Text Hook" name="textHook" value={blueprint.adDna.textHook} onChange={e => handleInputChange(e, 'adDna', 'textHook')} />
                      <EditableField label="Gaya Visual" name="visualStyle" value={blueprint.adDna.visualStyle} onChange={e => handleInputChange(e, 'adDna', 'visualStyle')} />
+                     <EditableField label="Ringkasan Penawaran" name="offerSummary" value={blueprint.adDna.offerSummary} onChange={e => handleInputChange(e, 'adDna', 'offerSummary')} />
+                    <EditableField label="Call to Action (CTA)" name="cta" value={blueprint.adDna.cta} onChange={e => handleInputChange(e, 'adDna', 'cta')} />
                      <EditableField label="Target Negara" name="targetCountry" value={blueprint.adDna.targetCountry} onChange={e => handleInputChange(e, 'adDna', 'targetCountry')} />
+                    
+                    <div className="md:col-span-2 flex items-center space-x-2 mt-2 p-3 bg-gray-900/50 rounded-lg">
+                        <input
+                            type="checkbox"
+                            id="allowVisualExploration"
+                            checked={allowVisualExploration}
+                            onChange={(e) => onAllowVisualExplorationChange(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary"
+                        />
+                        <label htmlFor="allowVisualExploration" className="text-sm font-medium text-brand-text-secondary">
+                            Izinkan AI bereksplorasi dengan gaya visual baru (berbeda dari referensi).
+                        </label>
+                    </div>
+
                 </div>
                 
                 <div className="lg:col-span-3 flex justify-between items-center pt-4 border-t border-gray-700 mt-2">

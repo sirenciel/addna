@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { MindMapNode, AdConcept, CampaignBlueprint } from '../types';
 import { FilterControls } from './FilterControls';
@@ -13,7 +14,7 @@ interface ConceptGalleryProps {
     campaignBlueprint: CampaignBlueprint | null;
     onGenerateImage: (conceptId: string) => void;
     onEditConcept: (conceptId: string) => void;
-    onEvolveConcept: (conceptId: string) => void;
+    onInitiateEvolution: (conceptId: string) => void;
     onSaveConcept: (conceptId: string, updatedContent: AdConcept) => void;
     onCloseModal: () => void;
     onReset: () => void;
@@ -88,7 +89,7 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
                                 node={node}
                                 onGenerateImage={props.onGenerateImage}
                                 onEditConcept={props.onEditConcept}
-                                onEvolveConcept={props.onEvolveConcept}
+                                onInitiateEvolution={props.onInitiateEvolution}
                                 onOpenLightbox={props.onOpenLightbox}
                             />
                         ))}

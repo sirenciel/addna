@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { InputForm } from './components/InputForm';
 import { DnaValidationStep } from './components/DnaValidationStep';
@@ -6,9 +7,10 @@ import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
 import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject } from './types';
-import { analyzeCampaignBlueprint, generatePersonaVariations, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, generateConceptVariations } from './services/geminiService';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
+import { EvolveModal } from './components/EvolveModal';
 
 // Simple UUID generator
 function simpleUUID() {
@@ -26,9 +28,12 @@ function App() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingConceptId, setEditingConceptId] = useState<string | null>(null);
+  const [evolutionTarget, setEvolutionTarget] = useState<AdConcept | null>(null);
   const [currentStep, setCurrentStep] = useState<AppStep>('input');
   const [viewMode, setViewMode] = useState<ViewMode>('mindmap');
   const [lightboxData, setLightboxData] = useState<{ concept: AdConcept, startIndex: number } | null>(null);
+  const [allowVisualExploration, setAllowVisualExploration] = useState<boolean>(false);
+
 
   const handleGenerate = async (imageBase64: string, caption: string, productInfo: string, offerInfo: string) => {
     setIsLoading(true);
@@ -290,7 +295,7 @@ function App() {
 
       try {
           const ideas = await generateCreativeIdeas(
-              campaignBlueprint, angle, trigger, awareness, format, placement, persona, placementNode.id
+              campaignBlueprint, angle, trigger, awareness, format, placement, persona, placementNode.id, allowVisualExploration
           );
           
           const newCreativeNodes: MindMapNode[] = ideas.map(concept => ({
@@ -405,40 +410,53 @@ function App() {
         isExpanded: false,
         width: 250, height: 140,
     };
+    // FIX: Removed spread operator from `newPersonaNode`. It's a single object, not an array.
     setNodes(prev => [...prev, newPersonaNode]);
   };
 
+  const handleInitiateEvolution = (conceptId: string) => {
+    const conceptNode = nodes.find(n => n.id === conceptId);
+    if (!conceptNode || conceptNode.type !== 'creative') return;
+    const concept = (conceptNode.content as { concept: AdConcept }).concept;
+    setEvolutionTarget(concept);
+  };
 
-  const handleEvolveConcept = async (conceptId: string) => {
-    const baseNode = nodes.find(n => n.id === conceptId);
-    if (!campaignBlueprint || !baseNode || baseNode.type !== 'creative') return;
-    const baseConcept = (baseNode.content as { concept: AdConcept }).concept;
+  const handleExecuteEvolution = async (
+      baseConcept: AdConcept,
+      evolutionType: 'angle' | 'trigger' | 'format' | 'placement',
+      newValue: string
+  ) => {
+      if (!campaignBlueprint) return;
+      setEvolutionTarget(null);
+      setIsLoading(true);
+      setLoadingMessage(`Mengevolusikan konsep ke ${evolutionType} "${newValue}"...`);
+      setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: true } } } : n));
 
-    setIsLoading(true);
-    setLoadingMessage(`Mengevolusikan konsep "${baseConcept.headline}"...`);
-    setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: true } } } : n));
-    
-    try {
-      const variations = await generateConceptVariations(baseConcept, campaignBlueprint);
-      const newCreativeNodes: MindMapNode[] = variations.map(concept => ({
-          id: concept.id,
-          parentId: baseNode.parentId, // Attach to the same placement
-          type: 'creative',
-          label: concept.headline,
-          content: { concept },
-          position: { x: 0, y: 0 },
-          width: 320,
-          height: 480,
-      }));
-      setNodes(prev => [...prev, ...newCreativeNodes]);
-    } catch (e: any) {
-      console.error(e);
-      setError(`Gagal mengevolusikan konsep.`);
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage('');
-      setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: false } } } : n));
-    }
+      try {
+          const [newConcept] = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, newValue);
+          if (newConcept) {
+              const newCreativeNode: MindMapNode = {
+                  id: newConcept.id,
+                  parentId: baseConcept.strategicPathId, // Attach to the same placement for simplicity
+                  type: 'creative',
+                  label: newConcept.headline,
+                  content: { concept: newConcept },
+                  position: { x: 0, y: 0 }, // Let layout handle it
+                  width: 320,
+                  height: 480,
+              };
+              setNodes(prev => [...prev, newCreativeNode]);
+          } else {
+              throw new Error("Evolusi tidak menghasilkan konsep baru.");
+          }
+      } catch (e: any) {
+          console.error(e);
+          setError(`Gagal mengevolusikan konsep.`);
+      } finally {
+          setIsLoading(false);
+          setLoadingMessage('');
+          setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: false } } } : n));
+      }
   };
 
   const handleGenerateImage = async (conceptId: string) => {
@@ -522,6 +540,8 @@ function App() {
                     referenceImage={referenceImage}
                     onContinue={handleBlueprintValidated}
                     onBack={handleReset}
+                    allowVisualExploration={allowVisualExploration}
+                    onAllowVisualExplorationChange={setAllowVisualExploration}
                 />
             );
         case 'mindmap':
@@ -531,7 +551,7 @@ function App() {
                 editingConcept: editingConcept,
                 onGenerateImage: handleGenerateImage,
                 onEditConcept: handleEditConcept,
-                onEvolveConcept: handleEvolveConcept,
+                onInitiateEvolution: handleInitiateEvolution,
                 onSaveConcept: handleSaveConcept,
                 onCloseModal: () => setEditingConceptId(null),
                 onOpenLightbox: handleOpenLightbox,
@@ -550,7 +570,7 @@ function App() {
                     onTogglePlacement={handleTogglePlacement}
                     onGenerateImage={handleGenerateImage}
                     onEditConcept={handleEditConcept}
-                    onEvolveConcept={handleEvolveConcept}
+                    onInitiateEvolution={handleInitiateEvolution}
                     onOpenLightbox={handleOpenLightbox}
                     onDeleteNode={handleDeleteNode}
                     onReset={handleReset}
@@ -608,6 +628,14 @@ function App() {
               onClose={() => setEditingConceptId(null)}
               onGenerateImage={handleGenerateImage}
           />
+      )}
+      {evolutionTarget && (
+        <EvolveModal
+          concept={evolutionTarget}
+          nodes={nodes}
+          onClose={() => setEvolutionTarget(null)}
+          onEvolve={handleExecuteEvolution}
+        />
       )}
     </main>
   );

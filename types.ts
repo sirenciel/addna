@@ -11,10 +11,6 @@ export interface CampaignBlueprint {
     name: string;
     keyBenefit: string;
   };
-  offerAnalysis: {
-    summary: string;
-    cta: string;
-  };
   targetPersona: TargetPersona;
   adDna: {
     visualFocus: string;
@@ -22,6 +18,8 @@ export interface CampaignBlueprint {
     textHook: string;
     visualStyle: string;
     targetCountry: string;
+    offerSummary: string;
+    cta: string;
   };
 }
 

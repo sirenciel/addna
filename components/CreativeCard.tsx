@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AdConcept, CreativeFormat, PlacementFormat, MindMapNode } from '../types';
 import { EditIcon, ClipboardCopyIcon, SparklesIcon, RefreshCwIcon } from './icons';
@@ -6,12 +7,12 @@ interface CreativeCardProps {
   node: MindMapNode;
   onGenerateImage: (id: string) => void;
   onEditConcept: (id: string) => void;
-  onEvolveConcept: (id: string) => void;
+  onInitiateEvolution: (id: string) => void;
   onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
   className?: string;
 }
 
-export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImage, onEditConcept, onEvolveConcept, onOpenLightbox, className = '' }) => {
+export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImage, onEditConcept, onInitiateEvolution, onOpenLightbox, className = '' }) => {
     const [copyButtonText, setCopyButtonText] = useState('Salin Teks');
     const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -145,7 +146,7 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                     <button onClick={() => onEditConcept(node.id)} title="Edit Detail & Prompt" className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><EditIcon className="w-3 h-3"/> Detail</button>
                     <button onClick={handleCopy} title="Salin Teks" className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><ClipboardCopyIcon className="w-3 h-3"/> {copyButtonText}</button>
                     <button 
-                        onClick={() => onEvolveConcept(node.id)} 
+                        onClick={() => onInitiateEvolution(node.id)} 
                         disabled={concept.isEvolving}
                         title="Buat variasi dari konsep ini" 
                         className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 disabled:opacity-50"
