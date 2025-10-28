@@ -237,6 +237,137 @@ const HEADLINE_FORMULAS: Record<AwarenessStage, string[]> = {
     ]
 }
 
+const TRIGGER_IMPLEMENTATION_CHECKLIST: Record<string, { copyMust: string[], visualMust: string[] }> = {
+  'Social Proof': {
+    copyMust: [
+      'Include specific numbers (e.g., "10,000+ users", "4.8/5 stars", "Ribuan orang udah...")',
+      'Quote or reference real people, testimonials, or authority figures',
+      'Use words that imply collective action: "terbukti", "ratusan", "semua orang", "akhirnya"'
+    ],
+    visualMust: [
+      'Show multiple people using product OR',
+      'Show testimonial quotes/ratings visible in the image OR',
+      'Show "as seen on" badges, media mentions, or crowd shots OR',
+      'Show before-after comparison from real customers with visible transformation'
+    ]
+  },
+  'Scarcity': {
+    copyMust: [
+      'State limited quantity/availability explicitly ("Hanya X tersisa", "Stok terbatas")',
+      'Use time/stock language that creates fear of missing out',
+      'Mention exclusivity or rarity ("Limited edition", "Jarang ada")'
+    ],
+    visualMust: [
+      'Show limited quantity indicators (countdown timer, stock level bar) OR',
+      'Show "almost sold out" or "low stock" warning in image OR',
+      'Show exclusive/limited edition packaging or badge OR',
+      'Show nearly empty shelf or product display'
+    ]
+  },
+  'Urgency': {
+    copyMust: [
+      'Include explicit deadline ("Hari ini aja", "Berakhir dalam X jam", "Sampai besok")',
+      'State consequence of delay ("Setelah ini, harga naik lagi")',
+      'Use time-sensitive language: "Sekarang", "Buruan", "Jangan sampai telat"'
+    ],
+    visualMust: [
+      'Show countdown timer or clock prominently OR',
+      'Show calendar with date circled/highlighted OR',
+      'Show person acting quickly/urgently (running, grabbing product) OR',
+      'Show visual cue of time passing (hourglass, timer app)'
+    ]
+  },
+  'Reciprocity': {
+    copyMust: [
+      'Offer something valuable for free first ("Gratis panduan", "Bonus ini dulu")',
+      'Frame as giving before asking ("Coba dulu", "Lihat hasilnya gratis")',
+      'Use language of generosity: "Kami kasih", "Khusus untuk kamu", "Hadiah dari kami"'
+    ],
+    visualMust: [
+      'Show the free item/bonus being offered prominently OR',
+      'Show person receiving or unboxing the freebie with delight OR',
+      'Show "FREE" badge or gift wrap visual OR',
+      'Show before (empty hands) and after (holding gift) state'
+    ]
+  },
+  'Authority': {
+    copyMust: [
+      'Cite expert, doctor, scientist, or recognized authority ("Dokter X merekomendasikan")',
+      'Mention certifications, studies, or research ("Terbukti secara klinis")',
+      'Use authority language: "Ahli bilang", "Studi menunjukkan", "Sertifikasi dari"'
+    ],
+    visualMust: [
+      'Show expert/doctor/professional in their environment (lab coat, clinic) OR',
+      'Show certification badges, seals, or official logos OR',
+      'Show research data, graphs, or scientific imagery OR',
+      'Show person in position of authority holding/endorsing product'
+    ]
+  },
+  'Liking': {
+    copyMust: [
+      'Use relatable, friendly, conversational tone as if talking to a friend',
+      'Share personal story or vulnerability ("Aku dulu juga gitu")',
+      'Use inclusive language: "Kita", "Sama-sama", "Buat kamu yang..."'
+    ],
+    visualMust: [
+      'Show relatable influencer or person similar to persona using product naturally OR',
+      'Show genuine smile, warm eye contact, inviting body language OR',
+      'Show casual, authentic setting (home, coffee shop, not studio) OR',
+      'Show person who looks like the target persona (age, style, vibe)'
+    ]
+  },
+  'Fear of Missing Out (FOMO)': {
+    copyMust: [
+      'Highlight what others are experiencing ("10,000 orang udah ngerasain ini")',
+      'Emphasize trend or movement ("Viral di TikTok", "Yang lagi hits")',
+      'Use FOMO language: "Jangan sampai ketinggalan", "Semua orang udah coba", "Kamu belum?"'
+    ],
+    visualMust: [
+      'Show crowd of people enjoying the product or experience OR',
+      'Show trending/viral visual cues (phone screens with high engagement) OR',
+      'Show "everyone else has it" scenario (empty shelf, sold out signs) OR',
+      'Show person looking sad/left out vs. person happy with product'
+    ]
+  },
+  'Exclusivity': {
+    copyMust: [
+      'Emphasize limited access ("Khusus member", "Hanya untuk select few")',
+      'Mention VIP, premium, or elite status ("Akses VIP", "Edisi khusus")',
+      'Use exclusive language: "Invite-only", "Private community", "Tidak dijual bebas"'
+    ],
+    visualMust: [
+      'Show VIP pass, membership card, or exclusive badge OR',
+      'Show velvet rope, locked door, or "members only" sign OR',
+      'Show luxury packaging or premium presentation OR',
+      'Show small, intimate group of people (not a crowd)'
+    ]
+  },
+  'Instant Gratification': {
+    copyMust: [
+      'Promise quick results ("Hasil dalam 3 hari", "Langsung terasa")',
+      'Emphasize speed and ease ("Cepat", "Instan", "Tanpa ribet")',
+      'Use immediate language: "Sekarang juga", "Langsung", "Dalam hitungan menit"'
+    ],
+    visualMust: [
+      'Show rapid transformation or instant result (fast-forward visual) OR',
+      'Show clock/timer showing short duration OR',
+      'Show person expressing surprise at how fast it worked OR',
+      'Show side-by-side immediate before/after'
+    ]
+  }
+};
+
+const injectDynamicValues = (formula: string, blueprint: CampaignBlueprint, persona: TargetPersona): string => {
+    return formula
+        .replace(/\[Product Name\]/g, blueprint.productAnalysis.name)
+        .replace(/\[Product\]/g, blueprint.productAnalysis.name)
+        .replace(/\[Offer\]/g, blueprint.adDna.offerSummary)
+        .replace(/\[persona\]/g, persona.description)
+        .replace(/\[problem\]/g, persona.painPoints[0] || 'masalah utama')
+        .replace(/\[benefit\]/g, blueprint.productAnalysis.keyBenefit)
+        .replace(/\[desired outcome\]/g, persona.desiredOutcomes[0] || 'hasil yang diinginkan');
+};
+
 
 export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: string, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const formatInstructions: Record<CreativeFormat, string> = {
@@ -251,12 +382,39 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
     };
 
     const placementInstructions: Record<PlacementFormat, string> = {
-        'Carousel': `Create a multi-slide story. Generate a 'carouselSlides' array with 3-5 slides following this story arc:
-        - Slide 1 (HOOK): Stop the scroll. Eye-catching visual + pattern interrupt question/bold statement.
-        - Slide 2 (AGITATE/RELATE): "Me too!" moment. Show the persona's pain point vividly.
-        - Slide 3 (SOLUTION): Introduce the product/mechanism as the solution. Show it in action.
-        - Slide 4 (PROOF): Build believability. Show results, testimonials, or social proof numbers.
-        - Slide 5 (CTA): Drive action. Clear Call To Action + Offer + Urgency/Scarcity.`,
+        'Carousel': `**CAROUSEL CREATION MANDATE**: You MUST generate a 'carouselSlides' array with exactly 5 slides. Each slide needs: slideNumber, visualPrompt, headline, and description. Follow this EXACT story arc:
+
+**Slide 1 (HOOK) - Purpose: STOP THE SCROLL**
+- Visual: Your most eye-catching, scroll-stopping image (the "visual hook" from Step 1). Should trigger curiosity or pattern interrupt.
+- Headline: Use one of the hook formulas. Max 8 words. Should create open loop.
+- Description: 1-2 sentences expanding on the curiosity gap. DO NOT reveal solution yet.
+- Example: Visual = "Person looking shocked at their phone screen showing dramatic before/after", Headline = "Kenapa aku baru tahu ini sekarang?!", Description = "Selama ini salah cara. Pantesan ga efektif..."
+
+**Slide 2 (AGITATE) - Purpose: "ME TOO!" MOMENT**
+- Visual: Show the persona's pain point VIVIDLY. Make them feel seen and understood. Should show frustration, tiredness, or problem state clearly.
+- Headline: Describe the pain in relatable language. 6-10 words.
+- Description: Agitate the pain. Describe consequences or frustrations. 2-3 sentences.
+- Example: Visual = "Person exhausted, surrounded by messy cleaning supplies, looking defeated", Headline = "Udah capek bersih-bersih tapi tetep kotor", Description = "Rasanya kayak ga ada habisnya. Udah ngabisin waktu berjam-jam, tapi besoknya kotor lagi..."
+
+**Slide 3 (SOLUTION) - Purpose: INTRODUCE THE MECHANISM**
+- Visual: Product in action OR transformation moment. Show HOW it solves the problem simply.
+- Headline: Reveal the solution simply. Use "Ternyata cuma perlu..." or "Solusinya: ...". 5-8 words.
+- Description: Explain the simple mechanism or how it works. 2-3 sentences.
+- Example: Visual = "Product being used, with visible results happening (sparkles, shine appearing)", Headline = "Ternyata cuma butuh ${blueprint.productAnalysis.name}", Description = "Formulanya dirancang khusus buat... Cukup [simple action], langsung bersih maksimal."
+
+**Slide 4 (PROOF) - Purpose: BUILD BELIEVABILITY**
+- Visual: MUST implement the "${trigger}" trigger visually (use the checklist). Show social proof/results/testimonials/data.
+- Headline: Proof statement. Include numbers if possible. 6-10 words.
+- Description: Specific results, testimonial snippet, or data point. 2-3 sentences.
+- Example: Visual = "Collage of user testimonials or before/after results from multiple people", Headline = "10,000+ orang udah buktiin hasilnya", Description = "Rating 4.9/5 dari ribuan review. 'Beneran game changer!' - Sarah, 29..."
+
+**Slide 5 (CTA) - Purpose: DRIVE ACTION WITH ${trigger.toUpperCase()}**
+- Visual: Product + offer visualization. If applicable, show scarcity/urgency cues for the offer. Clear, clean, product-focused shot.
+- Headline: ${blueprint.adDna.offerSummary} + ${blueprint.adDna.cta} + urgency/scarcity element (from trigger). 8-12 words.
+- Description: Clear CTA. Restate offer + create urgency. 2-3 sentences.
+- Example: Visual = "Product shot with price tag, FREE badge, and countdown timer visible", Headline = "Beli sekarang GRATIS ongkir + bonus brush. Promo cuma sampai besok!", Description = "Klik link di bio. Jangan sampai nyesel ga kebagian harga spesial ini. Stok terbatas!"
+
+All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${blueprint.adDna.toneOfVoice} tone.`,
         'Instagram Feed': "Design for a 1:1 or 4:5 aspect ratio. The visual should be high-quality and scroll-stopping. The hook should be an engaging question or a bold statement to encourage interaction in the caption.",
         'Instagram Story': "Design for a 9:16 vertical aspect ratio. The visual should feel native and authentic to the platform. The hook should be quick and punchy. The visual prompt can suggest text overlays or interactive elements."
     };
@@ -290,6 +448,16 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         - Creative Format: "${format}" (Guidelines: ${formatInstructions[format]})
         - Ad Placement: "${placement}" (Guidelines: ${placementInstructions[placement]})
 
+        **🔥 TRIGGER IMPLEMENTATION CHECKLIST for "${trigger}":**
+        
+        Your HOOK must include at least ONE of these:
+        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger]?.copyMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
+
+        Your VISUAL PROMPT must include at least ONE of these:
+        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger]?.visualMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
+
+        ⚠️ If your concept doesn't pass this checklist, it FAILS the trigger requirement.
+
         **VARIATION STRATEGY:**
         Generate 3 concepts, each testing a DIFFERENT hypothesis, while still adhering to the core mandate.
         - **Concept 1 - "Emotional Entry"**: Lead with emotion/identity. Hook focuses on feeling/aspiration. Visual shows an emotional state.
@@ -305,22 +473,75 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         - **HOOK CREATION MANDATE**: You MUST use one of these proven formulas for the "${awarenessStage}" stage:
         ${HOOK_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f}`).join('\n')}
         - The formula you choose MUST align with the trigger "${trigger}" and be localized for ${blueprint.adDna.targetCountry}.
+        
+        **HOOK FORMULA IMPLEMENTATION EXAMPLE**:
+        Formula: "${HOOK_FORMULAS[awarenessStage][0]}"
+        Context: Persona = "Busy moms", Pain = "Constantly cleaning floors", Product = "Super floor cleaner"
+        
+        ❌ BAD HOOK (too generic): "Tired of cleaning?"
+        ✅ GOOD HOOK (follows formula perfectly): "Kenapa lantai rumah kamu kotor lagi setelah 2 jam ngepel? (Hint: Bukan karena anakmu)"
+        
+        ^ Notice: Uses provocative question, addresses specific negative state ("kotor lagi setelah 2 jam"), hints at unexpected cause, uses conversational Indonesian.
+        
+        NOW write YOUR hook following one formula above using:
+        - Persona pains: ${persona.painPoints.join(', ')}
+        - Product benefit: ${blueprint.productAnalysis.keyBenefit}
+        - Trigger feeling: ${trigger}
+        - ${blueprint.adDna.targetCountry} language with ${blueprint.adDna.toneOfVoice} tone
 
         **STEP 3: Write the Headline.**
         - **HEADLINE FORMULAS MANDATE**: You MUST use one of these formulas for the "${awarenessStage}" stage:
-        ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f.replace('[Product Name]', blueprint.productAnalysis.name).replace('[Offer]', blueprint.adDna.offerSummary)}`).join('\n')}
+        ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${injectDynamicValues(f, blueprint, persona)}`).join('\n')}
         - It must include the key benefit ("${blueprint.productAnalysis.keyBenefit}"), embed the "${trigger}" feeling, and be localized for ${blueprint.adDna.targetCountry}.
 
-        **STEP 4: Write the Visual Prompt.** Expand your visual hook idea into a full prompt.
-        - **VISUAL PROMPT STRUCTURE** (Write in this exact order):
-        - **Scene Foundation**: Setting (specific place), Time/Lighting (e.g., "Golden hour sunlight"), Camera Angle (e.g., "Eye-level POV").
-        - **Subject**: Who (${persona.description}, age ${persona.age}), Doing what (active verb), Expression (specific emotion), Clothing/styling (authentic to ${blueprint.adDna.targetCountry} & persona).
-        - **Trigger Visualization**: How does the scene SHOW the "${trigger}" trigger? (e.g., For "Scarcity", show a nearly empty shelf). Be specific.
-        - **Product Integration**: How is the product shown? Is the brand visible?
+        **STEP 4: Write the Visual Prompt.** Expand your visual hook idea into a full, detailed prompt using this EXACT structure:
+
+        **[SCENE FOUNDATION]**
+        - **Setting**: Where exactly is this happening? (Be ultra-specific: "Bright minimalist kitchen with white marble countertop and succulents in background" NOT just "kitchen")
+        - **Time/Lighting**: What time of day? What's the lighting quality? (e.g., "Golden hour sunlight streaming through sheer curtains creating soft shadows", "Bright ring light setup for selfie video")
+        - **Camera Angle**: Exact camera position (e.g., "Eye-level straight-on POV", "Overhead flat lay 90 degrees", "Low angle looking up at 45 degrees", "Over-the-shoulder shot")
+
+        **[SUBJECT]**
+        - **Who**: ${persona.description}, age ${persona.age}, with ${persona.creatorType} aesthetic
+        - **Doing What**: Use active verbs + object (e.g., "Enthusiastically demonstrating the product's feature while making direct eye contact with camera")
+        - **Expression**: Be hyper-specific (e.g., "Genuine surprise with wide eyes and slight open mouth" NOT "happy"; "Determined, focused expression with furrowed brow" NOT "serious")
+        - **Clothing/Styling**: Must be authentic to ${blueprint.adDna.targetCountry} culture and ${persona.creatorType} style (e.g., "Wearing casual oversized hoodie and jeans, natural makeup, messy bun")
+
+        **[TRIGGER VISUALIZATION - CRITICAL]**
+        How does the scene physically SHOW the "${trigger}" trigger? This is NOT optional.
+        ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger]?.visualMust[0] || 'Visualize the trigger somehow.'}
+        Be extremely specific about HOW the trigger appears in the frame.
+
+        **[PRODUCT INTEGRATION]**
+        - **Product Positioning**: Where is the product in frame? (Foreground hero shot / background lifestyle prop / being held at chest level)
+        - **Brand Visibility**: Is logo/branding clearly visible? From what angle?
+        - **Product in Action**: How is it being used? Show the benefit happening (e.g., "Product visibly making the surface sparkle clean in real-time")
+
+        **[STYLE DNA FUSION]**
         ${visualStyleInstruction}
-        - **Final Instruction**: Photorealistic, commercial quality, authentic, not AI-illustration-looking.
+        Describe the COLOR PALETTE, COMPOSITION STYLE, and MOOD that results from this fusion.
+
+        **[TECHNICAL SPECS]**
+        Photorealistic, commercial quality, shot with high-end camera, sharp focus on subject's face and product, authentic NOT AI-illustration-looking, ${placement === 'Instagram Story' ? '9:16 vertical aspect ratio' : placement === 'Instagram Feed' ? '1:1 or 4:5 aspect ratio' : 'optimized for digital advertising'}.
         ---
         
+        ---
+        **BEFORE YOU RESPOND - INTERNAL QUALITY CHECK:**
+        
+        For EACH of the 3 concepts you generated, silently score these (don't include scores in JSON):
+        
+        1. **Hook Clarity (1-10)**: Does it follow a proven formula from the list? Is it immediately understandable?
+        2. **Trigger Visibility (1-10)**: Is the "${trigger}" trigger OBVIOUS in both copy AND visual? Can you see/feel it?
+        3. **Persona Authenticity (1-10)**: Does it feel 100% genuine to "${persona.description}" living in ${blueprint.adDna.targetCountry}? No cringe?
+        4. **Visual-Text Synergy (1-10)**: Do hook and visual amplify each other, or are they disconnected?
+        5. **Sales DNA Consistency (1-10)**: Does it feel like part of the original campaign family? Same persuasion style?
+        6. **Variation Distinctness (1-10)**: Are your 3 concepts truly DIFFERENT from each other (Emotional vs Logical vs Social)?
+        
+        **If ANY concept scores below 7 on ANY criteria, REGENERATE that specific element before responding.**
+        **If Concepts 1, 2, 3 are too similar to each other, REGENERATE to ensure distinctness.**
+        
+        ---
+
         Now, generate an array of 3 JSON objects using the process above. Each object must have the following structure:
         - id: A unique string identifier.
         - angle: Must be "${angle}".

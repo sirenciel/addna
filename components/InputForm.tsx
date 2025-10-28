@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { UploadIcon } from './icons';
 
@@ -27,6 +26,23 @@ export const InputForm: React.FC<InputFormProps> = ({ onGenerate }) => {
     }
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const result = reader.result as string;
+            // Ensure result is not null and is a data URL before splitting
+            if (result && result.includes(',')) {
+                resolve(result.split(',')[1]);
+            } else {
+                reject(new Error("Invalid file data URL."));
+            }
+        };
+        reader.onerror = error => reject(error);
+    });
+  }
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!imageFile) {
@@ -34,7 +50,14 @@ export const InputForm: React.FC<InputFormProps> = ({ onGenerate }) => {
       return;
     }
     setIsLoading(true);
-    onGenerate(imagePreview!.split(',')[1], caption, productInfo, offerInfo);
+    try {
+        const base64Data = await fileToBase64(imageFile);
+        onGenerate(base64Data, caption, productInfo, offerInfo);
+    } catch (error) {
+        console.error("Error reading file:", error);
+        alert('Gagal membaca file gambar.');
+        setIsLoading(false); // Reset loading state on error
+    }
   };
 
   const triggerFileSelect = () => {
