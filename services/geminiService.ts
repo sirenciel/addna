@@ -114,10 +114,14 @@ export const generatePersonaVariations = async (blueprint: CampaignBlueprint, ex
 };
 
 
-export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, persona: TargetPersona, awarenessStage: AwarenessStage, existingAngles: string[] = []): Promise<string[]> => {
+export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, persona: TargetPersona, awarenessStage: AwarenessStage | 'all', existingAngles: string[] = []): Promise<string[]> => {
+    const awarenessPromptPart = awarenessStage === 'all'
+    ? 'Generate angles that are broadly applicable and can be adapted later for specific awareness stages. Focus on core emotional hooks and value propositions.'
+    : `The angles must be tailored to someone in the "${awarenessStage}" stage. For example, for "Unaware" audiences, angles should focus on the problem or emotion, not the solution. For "Product Aware" audiences, angles can be more feature-focused.`
+
     const prompt = `
         You are a creative strategist. Based on the provided 'Campaign Blueprint', a specific 'Target Persona', and their 'Awareness Stage', generate 4 distinct, high-level strategic angles for a new advertising campaign.
-        The angles must be tailored to someone in the "${awarenessStage}" stage. For example, for "Unaware" audiences, angles should focus on the problem or emotion, not the solution. For "Product Aware" audiences, angles can be more feature-focused.
+        ${awarenessPromptPart}
         
         Campaign Blueprint:
         - Product Benefit: ${blueprint.productAnalysis.keyBenefit}

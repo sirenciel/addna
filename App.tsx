@@ -20,6 +20,17 @@ function simpleUUID() {
     });
 }
 
+const FORMAT_PLACEMENT_MAP: Record<CreativeFormat, PlacementFormat[]> = {
+    'UGC': ['Instagram Story', 'Instagram Feed', 'Carousel'],
+    'Before & After': ['Instagram Feed', 'Carousel'],
+    'Comparison': ['Carousel', 'Instagram Feed'],
+    'Demo': ['Instagram Story', 'Carousel', 'Instagram Feed'],
+    'Testimonial': ['Instagram Feed', 'Carousel'],
+    'Problem/Solution': ['Carousel', 'Instagram Feed'],
+    'Educational/Tip': ['Carousel', 'Instagram Story'],
+    'Storytelling': ['Carousel', 'Instagram Feed'],
+};
+
 function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
@@ -83,7 +94,51 @@ function App() {
   
   const handleTogglePersona = (nodeId: string) => {
     const personaNode = nodes.find(n => n.id === nodeId);
-    if (!personaNode) return;
+    if (!personaNode || !campaignBlueprint) return;
+
+    const childrenExist = nodes.some(n => n.parentId === nodeId);
+
+    if (childrenExist) {
+        setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
+    } else {
+        setIsLoading(true);
+        setLoadingMessage('Membuat angle strategis untuk persona ini...');
+        
+        const generateAndSetAngles = async () => {
+            try {
+                const personaContent = personaNode.content as { persona: TargetPersona };
+                const angles = await generateHighLevelAngles(campaignBlueprint, personaContent.persona, 'all'); 
+                
+                const newAngleNodes: MindMapNode[] = angles.map(angle => ({
+                    id: simpleUUID(),
+                    parentId: nodeId,
+                    type: 'angle',
+                    label: angle,
+                    content: { angle },
+                    position: { x: 0, y: 0 },
+                    isExpanded: false,
+                    width: 220,
+                    height: 80,
+                }));
+                setNodes(prev => [
+                    ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
+                    ...newAngleNodes
+                ]);
+            } catch (e: any) {
+                console.error(e);
+                setError(e.message || 'Gagal membuat angle strategis.');
+            } finally {
+                setIsLoading(false);
+                setLoadingMessage('');
+            }
+        };
+        generateAndSetAngles();
+    }
+  };
+
+  const handleToggleAngle = async (nodeId: string) => {
+    const angleNode = nodes.find(n => n.id === nodeId);
+    if (!angleNode) return;
 
     const childrenExist = nodes.some(n => n.parentId === nodeId);
 
@@ -118,53 +173,9 @@ function App() {
     if (childrenExist) {
         setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
     } else {
-        const personaNode = nodes.find(n => n.id === awarenessNode.parentId);
-        if (!personaNode) {
-            setError('Konteks persona tidak ditemukan untuk membuat angle.');
-            return;
-        }
-
-        setIsLoading(true);
-        setLoadingMessage(`Membuat angle untuk tahap "${awarenessNode.label}"...`);
-        try {
-            const personaContent = personaNode.content as { persona: TargetPersona };
-            const angles = await generateHighLevelAngles(
-                campaignBlueprint, 
-                personaContent.persona,
-                awarenessNode.label as AwarenessStage
-            );
-
-            const angleNodes: MindMapNode[] = angles.map((angle) => ({
-                id: simpleUUID(), parentId: nodeId, type: 'angle', label: angle,
-                content: { angle }, position: { x: 0, y: 0 }, isExpanded: false,
-                width: 220, height: 80,
-            }));
-            setNodes(prev => [
-                ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
-                ...angleNodes
-            ]);
-        } catch (e: any) {
-            console.error(e);
-            setError(e.message || 'Gagal membuat angle strategis.');
-        } finally {
-            setIsLoading(false);
-            setLoadingMessage('');
-        }
-    }
-  };
-
-  const handleToggleAngle = async (nodeId: string) => {
-    const angleNode = nodes.find(n => n.id === nodeId);
-    if (!angleNode || !campaignBlueprint) return;
-
-    const childrenExist = nodes.some(n => n.parentId === nodeId);
-
-    if (childrenExist) {
-        setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
-    } else {
-        const awarenessNode = nodes.find(n => n.id === angleNode.parentId);
-        const personaNode = awarenessNode ? nodes.find(n => n.id === awarenessNode.parentId) : undefined;
-        if (!personaNode || !awarenessNode) {
+        const angleNode = nodes.find(n => n.id === awarenessNode.parentId);
+        const personaNode = angleNode ? nodes.find(n => n.id === angleNode.parentId) : undefined;
+        if (!personaNode || !angleNode) {
             setError('Konteks tidak ditemukan untuk membuat trigger.');
             return;
         }
@@ -244,7 +255,10 @@ function App() {
     if (childrenExist) {
         setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
     } else {
-        const newPlacementNodes: MindMapNode[] = ALL_PLACEMENT_FORMATS.map(placement => ({
+        const format = formatNode.label as CreativeFormat;
+        const relevantPlacements = FORMAT_PLACEMENT_MAP[format] || ALL_PLACEMENT_FORMATS;
+
+        const newPlacementNodes: MindMapNode[] = relevantPlacements.map(placement => ({
             id: simpleUUID(),
             parentId: nodeId,
             type: 'placement',
@@ -274,9 +288,9 @@ function App() {
       
       const formatNode = nodes.find(n => n.id === placementNode.parentId);
       const triggerNode = formatNode ? nodes.find(n => n.id === formatNode.parentId) : undefined;
-      const angleNode = triggerNode ? nodes.find(n => n.id === triggerNode.parentId) : undefined;
-      const awarenessNode = angleNode ? nodes.find(n => n.id === angleNode.parentId) : undefined;
-      const personaNode = awarenessNode ? nodes.find(n => n.id === awarenessNode.parentId) : undefined;
+      const awarenessNode = triggerNode ? nodes.find(n => n.id === triggerNode.parentId) : undefined;
+      const angleNode = awarenessNode ? nodes.find(n => n.id === awarenessNode.parentId) : undefined;
+      const personaNode = angleNode ? nodes.find(n => n.id === angleNode.parentId) : undefined;
 
       if (!formatNode || !awarenessNode || !triggerNode || !angleNode || !personaNode) {
           setError("Konteks untuk brief ini tidak dapat ditemukan.");
@@ -410,7 +424,6 @@ function App() {
         isExpanded: false,
         width: 250, height: 140,
     };
-    // FIX: Removed spread operator from `newPersonaNode`. It's a single object, not an array.
     setNodes(prev => [...prev, newPersonaNode]);
   };
 

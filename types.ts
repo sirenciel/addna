@@ -85,7 +85,7 @@ export interface MindMapNode {
   parentId?: string;
   type: NodeType;
   label: string;
-  content: CampaignBlueprint | { persona: TargetPersona } | { angle: string } | { trigger: BuyingTriggerObject } | { awareness: AwarenessStage } | { format: CreativeFormat } | { placement: PlacementFormat } | { concept: AdConcept };
+  content: CampaignBlueprint | { persona: TargetPersona } | { angle: string } | { awareness: AwarenessStage } | { trigger: BuyingTriggerObject } | { format: CreativeFormat } | { placement: PlacementFormat } | { concept: AdConcept };
   position: { x: number; y: number };
   
   // State properties
