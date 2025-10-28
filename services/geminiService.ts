@@ -373,7 +373,7 @@ const injectDynamicValues = (formula: string, blueprint: CampaignBlueprint, pers
 };
 
 
-export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: string, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const formatInstructions: Record<CreativeFormat, string> = {
         'UGC': "Simulate a genuine user-generated video or photo. The tone should be authentic, not overly polished. Visual prompt should describe a realistic setting.",
         'Before & After': "Clearly show a 'before' state demonstrating a problem and an 'after' state showing the solution provided by the product. The transformation should be obvious.",
@@ -407,12 +407,12 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
 - Example: Visual = "Product being used, with visible results happening (sparkles, shine appearing)", Headline = "Ternyata cuma butuh ${blueprint.productAnalysis.name}", Description = "Formulanya dirancang khusus buat... Cukup [simple action], langsung bersih maksimal."
 
 **Slide 4 (PROOF) - Purpose: BUILD BELIEVABILITY**
-- Visual: MUST implement the "${trigger}" trigger visually (use the checklist). Show social proof/results/testimonials/data.
+- Visual: WAJIB mengimplementasikan trigger "${trigger.name}" secara visual. Pilih dan deskripsikan secara spesifik SATU ide dari checklist visual untuk trigger ini. Contohnya: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust[0] || 'Tunjukkan hasil yang nyata.'}
 - Headline: Proof statement. Include numbers if possible. 6-10 words.
 - Description: Specific results, testimonial snippet, or data point. 2-3 sentences.
 - Example: Visual = "Collage of user testimonials or before/after results from multiple people", Headline = "10,000+ orang udah buktiin hasilnya", Description = "Rating 4.9/5 dari ribuan review. 'Beneran game changer!' - Sarah, 29..."
 
-**Slide 5 (CTA) - Purpose: DRIVE ACTION WITH ${trigger.toUpperCase()}**
+**Slide 5 (CTA) - Purpose: DRIVE ACTION WITH ${trigger.name.toUpperCase()}**
 - Visual: Product + offer visualization. If applicable, show scarcity/urgency cues for the offer. Clear, clean, product-focused shot.
 - Headline: ${blueprint.adDna.offerSummary} + ${blueprint.adDna.cta} + urgency/scarcity element (from trigger). 8-12 words.
 - Description: Clear CTA. Restate offer + create urgency. 2-3 sentences.
@@ -424,7 +424,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
     };
     
      const visualStyleInstruction = allowVisualExploration
-    ? `- **Style**: Anda BEBAS mengusulkan visualStyle dan visualPrompt yang sama sekali baru yang Anda yakini akan lebih 'scroll-stopping' untuk Persona dan Format ini (misal: 'grafis kontras tinggi', 'gaya meme', 'cinematic'). Buatlah sesuatu yang tak terduga dan menarik perhatian.`
+    ? `- **Style**: Anda BEBAS mengusulkan visualStyle dan visualPrompt yang sama sekali baru, TAPI **gunakan gaya visual asli ("${blueprint.adDna.visualStyle}") sebagai titik awal atau inspirasi**. Tujuannya adalah variasi kreatif, bukan sesuatu yang sama sekali tidak berhubungan. Buatlah sesuatu yang tak terduga namun tetap terasa 'on-brand'.`
     : `- **Style**: The visual style MUST be a direct evolution of the original 'Visual Style DNA'. Blend the DNA ("${blueprint.adDna.visualStyle}") with the persona's aesthetic ("${persona.creatorType}"). The result should look like a new ad from the same brand, for a different audience segment. **DO NOT create a visual style that is completely unrelated to the original DNA.**`;
 
 
@@ -447,18 +447,18 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
         **Creative Mandate (The Specific Task):**
         - Strategic Angle: "${angle}"
-        - 🔥 Psychological Buying Trigger: "${trigger}"
+        - 🔥 Psychological Buying Trigger: "${trigger.name}"
         - Awareness Stage: "${awarenessStage}"
         - Creative Format: "${format}" (Guidelines: ${formatInstructions[format]})
         - Ad Placement: "${placement}" (Guidelines: ${placementInstructions[placement]})
 
-        **🔥 TRIGGER IMPLEMENTATION CHECKLIST for "${trigger}":**
+        **🔥 TRIGGER IMPLEMENTATION CHECKLIST for "${trigger.name}":**
         
         Your HOOK must include at least ONE of these:
-        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger]?.copyMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
+        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.copyMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
 
         Your VISUAL PROMPT must include at least ONE of these:
-        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger]?.visualMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
+        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
 
         ⚠️ If your concept doesn't pass this checklist, it FAILS the trigger requirement.
 
@@ -476,7 +476,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         **STEP 2: Write the Hook.** Based on the visual hook idea, write the text hook.
         - **HOOK CREATION MANDATE**: You MUST use one of these proven formulas for the "${awarenessStage}" stage:
         ${HOOK_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f}`).join('\n')}
-        - The formula you choose MUST align with the trigger "${trigger}" and be localized for ${blueprint.adDna.targetCountry}.
+        - The formula you choose MUST align with the trigger "${trigger.name}" and be localized for ${blueprint.adDna.targetCountry}.
         
         **HOOK FORMULA IMPLEMENTATION EXAMPLE**:
         Formula: "${HOOK_FORMULAS[awarenessStage][0]}"
@@ -490,13 +490,13 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         NOW write YOUR hook following one formula above using:
         - Persona pains: ${persona.painPoints.join(', ')}
         - Product benefit: ${blueprint.productAnalysis.keyBenefit}
-        - Trigger feeling: ${trigger}
+        - Trigger feeling: ${trigger.name}
         - ${blueprint.adDna.targetCountry} language with ${blueprint.adDna.toneOfVoice} tone
 
         **STEP 3: Write the Headline.**
         - **HEADLINE FORMULAS MANDATE**: You MUST use one of these formulas for the "${awarenessStage}" stage:
         ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${injectDynamicValues(f, blueprint, persona)}`).join('\n')}
-        - It must include the key benefit ("${blueprint.productAnalysis.keyBenefit}"), embed the "${trigger}" feeling, and be localized for ${blueprint.adDna.targetCountry}.
+        - It must include the key benefit ("${blueprint.productAnalysis.keyBenefit}"), embed the "${trigger.name}" feeling, and be localized for ${blueprint.adDna.targetCountry}.
 
         **STEP 4: Write the Visual Prompt.** Expand your visual hook idea into a full, detailed prompt using this EXACT structure:
 
@@ -506,7 +506,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         - **Sales Focus**: The image must be a "scroll-stopper" that compels the user to stop, feel an emotion, and read the headline. It must look like a high-converting ad, not a generic stock photo.
 
         **[SCENE FOUNDATION]**
-        - **Setting**: Where exactly is this happening? (Be ultra-specific: "Bright minimalist kitchen with white marble countertop and succulents in background" NOT just "kitchen")
+        - **Setting**: Where exactly is this happening? (Be ultra-specific: "Bright minimalist kitchen with white marble countertop and succulents in background" NOT just "kitchen"). The setting must feel authentic and relatable for an audience in **${blueprint.adDna.targetCountry}**.
         - **Time/Lighting**: What time of day? What's the lighting quality? (e.g., "Golden hour sunlight streaming through sheer curtains creating soft shadows", "Bright ring light setup for selfie video")
         - **Camera Angle**: Exact camera position (e.g., "Eye-level straight-on POV", "Overhead flat lay 90 degrees", "Low angle looking up at 45 degrees", "Over-the-shoulder shot")
 
@@ -517,8 +517,8 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         - **Clothing/Styling**: Must be authentic to ${blueprint.adDna.targetCountry} culture and ${persona.creatorType} style (e.g., "Wearing casual oversized hoodie and jeans, natural makeup, messy bun")
 
         **[TRIGGER VISUALIZATION - CRITICAL]**
-        How does the scene physically SHOW the "${trigger}" trigger? This is NOT optional.
-        ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger]?.visualMust[0] || 'Visualize the trigger somehow.'}
+        How does the scene physically SHOW the "${trigger.name}" trigger? This is NOT optional.
+        ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust[0] || 'Visualize the trigger somehow.'}
         Be extremely specific about HOW the trigger appears in the frame.
 
         **[PRODUCT INTEGRATION]**
@@ -540,7 +540,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         For EACH of the 3 concepts you generated, silently score these (don't include scores in JSON):
         
         1. **Hook Clarity (1-10)**: Does it follow a proven formula from the list? Is it immediately understandable?
-        2. **Trigger Visibility (1-10)**: Is the "${trigger}" trigger OBVIOUS in both copy AND visual? Can you see/feel it?
+        2. **Trigger Visibility (1-10)**: Is the "${trigger.name}" trigger OBVIOUS in both copy AND visual? Can you see/feel it?
         3. **Persona Authenticity (1-10)**: Does it feel 100% genuine to "${persona.description}" living in ${blueprint.adDna.targetCountry}? No cringe?
         4. **Visual-Text Synergy (1-10)**: Do hook and visual amplify each other, or are they disconnected?
         5. **Sales DNA Consistency (1-10)**: Does it feel like part of the original campaign family? Same persuasion style?
@@ -554,7 +554,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         Now, generate an array of 3 JSON objects using the process above. Each object must have the following structure:
         - id: A unique string identifier.
         - angle: Must be "${angle}".
-        - trigger: Must be "${trigger}".
+        - trigger: Must be "${trigger.name}".
         - format: Must be "${format}".
         - placement: Must be "${placement}".
         - awarenessStage: Must be "${awarenessStage}".
@@ -566,7 +566,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         - hook: Your generated hook.
         - headline: Your generated headline.
         - visualPrompt: Your generated visual prompt.
-        - adSetName: A suggested ad set name in the format: Persona_Angle_Trigger_Awareness_Format_Placement_v[1,2, or 3].
+        - adSetName: A suggested ad set name. **MUST follow this EXACT format, replacing bracketed items and using underscores**: [PersonaShortDescription]_[AngleKeyword]_[TriggerName]_[AwarenessStage]_[Format]_[Placement]_v[1, 2, or 3]. Example: BusyMoms_HematWaktu_SocialProof_ProblemAware_UGC_Story_v1.
         - carouselSlides: (Only if placement is "Carousel") An array of 3-5 slide objects, following the specified story arc. All text must be localized.
 
         Respond ONLY with the JSON array.
@@ -580,7 +580,10 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    return JSON.parse(cleanedJson) as Omit<AdConcept, 'imageUrls'>[];
+    const ideas = JSON.parse(cleanedJson) as Omit<AdConcept, 'imageUrls' | 'trigger'> & { trigger: string }[];
+    
+    // Augment the AI's response with the full trigger object
+    return ideas.map(idea => ({ ...idea, trigger }));
 };
 
 
@@ -636,7 +639,7 @@ export const refineVisualPrompt = async (concept: AdConcept, blueprint: Campaign
         - **Persona:** ${concept.personaDescription} (Age: ${concept.personaAge}, Style: ${concept.personaCreatorType})
         - **Headline:** ${concept.headline}
         - **🔥 Text Hook (The primary text the user sees):** "${concept.hook}"
-        - **Psychological Trigger:** "${concept.trigger}"
+        - **Psychological Trigger:** "${concept.trigger.name}"
         - **Creative Format:** ${concept.format}
         - **Target Country:** ${blueprint.adDna.targetCountry}
         - **Visual Vehicle (The high-level visual direction):** "${concept.visualVehicle}"
@@ -645,7 +648,7 @@ export const refineVisualPrompt = async (concept: AdConcept, blueprint: Campaign
         Generate a new \`visualPrompt\` string that:
         1.  **Creates a strong 'Visual Hook'**: The scene described must be the visual counterpart to the 'Text Hook'. What visual would make that text hook 10x more powerful and scroll-stopping?
         2.  Faithfully executes the direction given in the \`visualVehicle\`.
-        3.  Visually embodies the psychological trigger: "${concept.trigger}".
+        3.  Visually embodies the psychological trigger: "${concept.trigger.name}".
         4.  Is authentic to the persona's age and style, and culturally appropriate for **${blueprint.adDna.targetCountry}**. The scene must feel genuine to them.
         5.  Creates a unique visual style by thoughtfully blending the original ad's DNA ("${blueprint.adDna.visualStyle}") with the persona's authentic aesthetic.
         6.  Includes rich details about composition, lighting, subject's expression, action, and environment.
@@ -671,9 +674,9 @@ export const evolveConcept = async (
 ): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     
     const evolutionInstructions = {
-        angle: `Adapt the concept to a new strategic angle: "${newValue}". The trigger ("${baseConcept.trigger}") and format ("${baseConcept.format}") should remain consistent, but the core message (headline, hook) and visual must be re-imagined to reflect this new angle.`,
+        angle: `Adapt the concept to a new strategic angle: "${newValue}". The trigger ("${baseConcept.trigger.name}") and format ("${baseConcept.format}") should remain consistent, but the core message (headline, hook) and visual must be re-imagined to reflect this new angle.`,
         trigger: `Adapt the concept to use a new psychological trigger: "${newValue}". The angle ("${baseConcept.angle}") and format ("${baseConcept.format}") should remain consistent, but the headline, hook, and visual must be rewritten to powerfully evoke the feeling of "${newValue}".`,
-        format: `Adapt the concept to a new creative format: "${newValue}". The angle ("${baseConcept.angle}") and trigger ("${baseConcept.trigger}") are the same, but the entire execution (headline, hook, visual) must be re-imagined for the new format. If the new format is "Carousel", you MUST generate a "carouselSlides" array.`,
+        format: `Adapt the concept to a new creative format: "${newValue}". The angle ("${baseConcept.angle}") and trigger ("${baseConcept.trigger.name}") are the same, but the entire execution (headline, hook, visual) must be re-imagined for the new format. If the new format is "Carousel", you MUST generate a "carouselSlides" array.`,
         placement: `Adapt the concept for a new placement: "${newValue}". The core creative (angle, trigger, format) is the same, but the execution must be optimized. For "Instagram Story", this means a 9:16 aspect ratio and a punchier hook. For "Carousel", it means telling a story across multiple slides.`
     };
 
@@ -692,7 +695,7 @@ export const evolveConcept = async (
 
         **Base Creative Concept:**
         - Angle: "${baseConcept.angle}"
-        - Trigger: "${baseConcept.trigger}"
+        - Trigger: "${baseConcept.trigger.name}"
         - Format: "${baseConcept.format}"
         - Placement: "${baseConcept.placement}"
         - Headline: "${baseConcept.headline}"
@@ -705,7 +708,7 @@ export const evolveConcept = async (
         The object must have the following structure:
         - id: A new unique string identifier.
         - angle: The angle for the new concept.
-        - trigger: The trigger for the new concept.
+        - trigger: The name of the trigger for the new concept (string).
         - format: The format for the new concept.
         - placement: The placement for the new concept.
         - awarenessStage: Must be "${baseConcept.awarenessStage}".
@@ -720,7 +723,7 @@ export const evolveConcept = async (
             - It MUST be a creative re-interpretation based on the evolution mandate.
             - It MUST incorporate the Visual Style DNA: "${blueprint.adDna.visualStyle}".
             - It MUST be appropriate for the persona and the cultural context of ${blueprint.adDna.targetCountry}.
-        - adSetName: A suggested ad set name reflecting the new evolved parameters.
+        - adSetName: A suggested ad set name. **MUST follow a strict format reflecting the new evolved parameters**, like: [Persona]_[NewAngle/Trigger/etc]_[...]_v1.
         - carouselSlides: (Only if the new format is "Carousel") An array of 3-5 slide objects.
 
         Respond ONLY with a JSON array containing the single new concept object.
@@ -734,8 +737,21 @@ export const evolveConcept = async (
     
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    const result = JSON.parse(cleanedJson);
-    return Array.isArray(result) ? result : [result]; // Ensure it's always an array
+    const result = JSON.parse(cleanedJson) as (Omit<AdConcept, 'trigger' | 'imageUrls'> & { trigger: string })[];
+    
+    // Augment the AI response to ensure the trigger is a BuyingTriggerObject
+    return result.map((concept): Omit<AdConcept, 'imageUrls'> => {
+        let triggerObject: BuyingTriggerObject;
+        if (evolutionType === 'trigger') {
+            triggerObject = { name: newValue, description: 'Evolved trigger', example: 'Evolved trigger' };
+        } else {
+            triggerObject = baseConcept.trigger;
+        }
+        return {
+            ...concept,
+            trigger: triggerObject,
+        };
+    });
 };
 
 

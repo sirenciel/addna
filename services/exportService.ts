@@ -97,7 +97,7 @@ export const exportConceptsToZip = async (concepts: AdConcept[]) => {
             `"${concept.personaAge}"`,
             `"${concept.personaCreatorType}"`,
             `"${concept.angle.replace(/"/g, '""')}"`,
-            `"${concept.trigger}"`,
+            `"${concept.trigger.name}"`,
             `"${concept.format}"`,
             `"${concept.placement}"`,
             `"${concept.awarenessStage}"`,

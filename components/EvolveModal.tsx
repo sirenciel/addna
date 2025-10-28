@@ -46,7 +46,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
         
         const formats = ALL_CREATIVE_FORMATS.filter(f => f !== concept.format);
         const placements = ALL_PLACEMENT_FORMATS.filter(p => p !== concept.placement);
-        const triggers = ALL_BUYING_TRIGGERS.filter(t => t !== concept.trigger);
+        const triggers = ALL_BUYING_TRIGGERS.filter(t => t !== concept.trigger.name);
 
         return {
             angleOptions: angles,

@@ -55,7 +55,7 @@ export interface CarouselSlide {
 export interface AdConcept {
   id: string;
   angle: string;
-  trigger: BuyingTrigger;
+  trigger: BuyingTriggerObject;
   format: CreativeFormat;
   placement: PlacementFormat;
   awarenessStage: AwarenessStage;
@@ -85,7 +85,7 @@ export interface MindMapNode {
   parentId?: string;
   type: NodeType;
   label: string;
-  content: CampaignBlueprint | { persona: TargetPersona } | { angle: string } | { awareness: AwarenessStage } | { trigger: BuyingTriggerObject } | { format: CreativeFormat } | { placement: PlacementFormat } | { concept: AdConcept };
+  content: CampaignBlueprint | { persona: TargetPersona } | { awareness: AwarenessStage } | { angle: string } | { trigger: BuyingTriggerObject } | { format: CreativeFormat } | { placement: PlacementFormat } | { concept: AdConcept };
   position: { x: number; y: number };
   
   // State properties

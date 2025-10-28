@@ -24,6 +24,14 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleTriggerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = e.target;
+      setFormData(prev => ({
+          ...prev,
+          trigger: { ...prev.trigger, name: value }
+      }));
+  };
   
   const handleSlideChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, index: number, field: keyof Omit<CarouselSlide, 'slideNumber'>) => {
       const { value } = e.target;
@@ -89,7 +97,7 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
             </div>
              <div>
                 <label htmlFor="trigger" className="block text-sm font-medium text-brand-text-secondary mb-1">🔥 Buying Trigger</label>
-                <input type="text" name="trigger" id="trigger" value={formData.trigger} onChange={handleChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-2 focus:ring-2 focus:ring-brand-primary" />
+                <input type="text" name="trigger" id="trigger" value={formData.trigger.name} onChange={handleTriggerChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-2 focus:ring-2 focus:ring-brand-primary" />
             </div>
              <div>
               <label htmlFor="awarenessStage" className="block text-sm font-medium text-brand-text-secondary mb-1">Awareness Stage</label>

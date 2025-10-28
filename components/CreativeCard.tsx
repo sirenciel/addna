@@ -122,7 +122,7 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                         <div className="flex-shrink-0 flex flex-col items-end gap-1">
                             {concept.trigger && (
                                 <span className="text-xs px-1.5 py-0.5 rounded-full text-white font-semibold whitespace-nowrap bg-orange-600">
-                                    🔥 {concept.trigger}
+                                    🔥 {concept.trigger.name}
                                 </span>
                             )}
                             <span className={`text-xs px-1.5 py-0.5 rounded-full text-black font-semibold whitespace-nowrap ${awarenessColorMap[concept.awarenessStage] || 'bg-gray-400'}`}>
