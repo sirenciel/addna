@@ -425,9 +425,17 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
 
     const prompt = `
-        You are a world-class direct response creative director. Your task is to generate 3 unique ad concepts that are strategic variations of a base campaign.
-        Each concept must be a concrete, ready-to-launch execution of the given angle, trigger, format, and placement.
+        You are a world-class direct response creative director. Your task is to generate an array of 3 **strategically distinct** ad concepts based on a single brief.
 
+        **🔥 YOUR CORE MISSION: A/B TEST VARIATIONS**
+        It is CRITICAL that the three concepts are NOT just reworded versions of each other. You MUST generate three genuinely different creative hypotheses by following this exact variation strategy:
+        - **Concept 1 - "Emotional Entry"**: The entire concept (hook, headline, visual) must lead with emotion, feeling, or identity.
+        - **Concept 2 - "Logical Entry"**: The entire concept must lead with logic, mechanism, proof, or data.
+        - **Concept 3 - "Social Entry"**: The entire concept must lead with community, tribe, or social proof.
+
+        All three concepts will still use the same foundational elements, but will approach the audience from these three different psychological angles.
+
+        ---
         **Campaign Blueprint (The Foundation):**
         - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
         - Offer: ${blueprint.adDna.offerSummary} (CTA: ${blueprint.adDna.cta})
@@ -457,17 +465,13 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
 
         ⚠️ If your concept doesn't pass this checklist, it FAILS the trigger requirement.
-
-        **VARIATION STRATEGY:**
-        Generate 3 concepts, each testing a DIFFERENT hypothesis, while still adhering to the core mandate.
-        - **Concept 1 - "Emotional Entry"**: Lead with emotion/identity. Hook focuses on feeling/aspiration. Visual shows an emotional state.
-        - **Concept 2 - "Logical Entry"**: Lead with mechanism/proof. Hook focuses on how it works/data. Visual shows the product/process clearly.
-        - **Concept 3 - "Social Entry"**: Lead with community/tribe. Hook focuses on "others like you". Visual shows multiple people or testimonials.
-
-        ---
-        **CREATION PROCESS FOR EACH CONCEPT:**
         
-        **STEP 1: Visual-Text Synergy.** First, design the "3-Second Scroll-Stop Moment". What SPECIFIC VISUAL combined with a text hook would make someone STOP scrolling? Describe this visual hook idea in one vivid sentence.
+        ---
+        **CREATION PROCESS FOR EACH CONCEPT (APPLYING THE VARIATION STRATEGY):**
+        
+        For each of the 3 concepts (Emotional, Logical, Social), follow these steps to ensure strategic distinctness:
+
+        **STEP 1: Visual-Text Synergy.** First, design the "3-Second Scroll-Stop Moment" specifically for that concept's entry point (e.g., for "Emotional Entry", what is the most emotionally resonant visual?). Describe this visual hook idea in one vivid sentence.
         
         **STEP 2: Write the Hook.** Based on the visual hook idea, write the text hook.
         - **HOOK CREATION MANDATE**: You MUST use one of these proven formulas for the "${awarenessStage}" stage:
@@ -540,10 +544,9 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         3. **Persona Authenticity (1-10)**: Does it feel 100% genuine to "${persona.description}" living in ${blueprint.adDna.targetCountry}? No cringe?
         4. **Visual-Text Synergy (1-10)**: Do hook and visual amplify each other, or are they disconnected?
         5. **Sales DNA Consistency (1-10)**: Does it feel like part of the original campaign family? Same persuasion style?
-        6. **Variation Distinctness (1-10)**: Are your 3 concepts truly DIFFERENT from each other (Emotional vs Logical vs Social)?
+        6. **Variation Distinctness (1-10)**: Are your 3 concepts truly DIFFERENT from each other (Emotional vs Logical vs Social)? **THIS IS THE MOST IMPORTANT CHECK. IF THEY ARE TOO SIMILAR, REWRITE THEM FROM SCRATCH.**
         
-        **If ANY concept scores below 7 on ANY criteria, REGENERATE that specific element before responding.**
-        **If Concepts 1, 2, 3 are too similar to each other, REGENERATE to ensure distinctness.**
+        **If ANY concept scores below 8 on ANY criteria, REGENERATE that specific element before responding.**
         
         ---
 
