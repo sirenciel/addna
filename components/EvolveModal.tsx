@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { AdConcept, MindMapNode, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS } from '../types';
 import { LightbulbIcon, FireIcon, EditIcon, LayoutGridIcon, SparklesIcon } from './icons';

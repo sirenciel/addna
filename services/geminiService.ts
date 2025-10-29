@@ -114,14 +114,10 @@ export const generatePersonaVariations = async (blueprint: CampaignBlueprint, ex
 };
 
 
-export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, persona: TargetPersona, awarenessStage: AwarenessStage | 'all', existingAngles: string[] = []): Promise<string[]> => {
-    const awarenessPromptPart = awarenessStage === 'all'
-    ? 'Generate angles that are broadly applicable and can be adapted later for specific awareness stages. Focus on core emotional hooks and value propositions.'
-    : `The angles must be tailored to someone in the "${awarenessStage}" stage. For example, for "Unaware" audiences, angles should focus on the problem or emotion, not the solution. For "Product Aware" audiences, angles can be more feature-focused.`
-
+export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, persona: TargetPersona, awarenessStage: AwarenessStage, existingAngles: string[] = []): Promise<string[]> => {
     const prompt = `
         You are a creative strategist. Based on the provided 'Campaign Blueprint', a specific 'Target Persona', and their 'Awareness Stage', generate 4 distinct, high-level strategic angles for a new advertising campaign.
-        ${awarenessPromptPart}
+        The angles must be tailored to someone in the "${awarenessStage}" stage. For example, for "Unaware" audiences, angles should focus on the problem or emotion, not the solution. For "Product Aware" audiences, angles can be more feature-focused.
         
         Campaign Blueprint:
         - Product Benefit: ${blueprint.productAnalysis.keyBenefit}
@@ -447,7 +443,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
         **Creative Mandate (The Specific Task):**
         - Strategic Angle: "${angle}"
-        - 🔥 Psychological Buying Trigger: "${trigger.name}"
+        - 🔥 Psychological Buying Trigger: "${trigger.name}" (Description: ${trigger.description})
         - Awareness Stage: "${awarenessStage}"
         - Creative Format: "${format}" (Guidelines: ${formatInstructions[format]})
         - Ad Placement: "${placement}" (Guidelines: ${placementInstructions[placement]})
@@ -514,7 +510,7 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         - **Who**: ${persona.description}, age ${persona.age}, with ${persona.creatorType} aesthetic
         - **Doing What**: Use active verbs + object (e.g., "Enthusiastically demonstrating the product's feature while making direct eye contact with camera")
         - **Expression**: Must clearly convey the emotional 'AFTER' state of using the product (e.g., 'visibly relieved and happy', 'feeling confident and successful', 'surprised and delighted by the result').
-        - **Clothing/Styling**: Must be authentic to ${blueprint.adDna.targetCountry} culture and ${persona.creatorType} style (e.g., "Wearing casual oversized hoodie and jeans, natural makeup, messy bun")
+        - **Clothing/Styling**: Must be authentic to **${blueprint.adDna.targetCountry}** culture and ${persona.creatorType} style (e.g., "Wearing casual oversized hoodie and jeans, natural makeup, messy bun")
 
         **[TRIGGER VISUALIZATION - CRITICAL]**
         How does the scene physically SHOW the "${trigger.name}" trigger? This is NOT optional.
@@ -580,30 +576,42 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    const ideas = JSON.parse(cleanedJson) as Omit<AdConcept, 'imageUrls' | 'trigger'> & { trigger: string }[];
+    // FIX: Add parentheses around the intersection type to ensure it's parsed as an array of objects, not an intersection with an array.
+    const ideas = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'trigger'> & { trigger: string })[];
     
     // Augment the AI's response with the full trigger object
-    return ideas.map(idea => ({ ...idea, trigger }));
+    // FIX: The direct spread `{ ...idea, trigger }` can cause a TypeScript type inference issue.
+    // Destructuring the string `trigger` out and spreading the rest helps TypeScript correctly construct the new object type.
+    return ideas.map(idea => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { trigger: _, ...restOfIdea } = idea;
+        return { ...restOfIdea, trigger };
+    });
 };
 
 
 export const generateAdImage = async (prompt: string, referenceImageBase64?: string, allowVisualExploration: boolean = false): Promise<string> => {
     
-    const useReference = referenceImageBase64 && !allowVisualExploration;
-
     const salesIntent = "A highly persuasive, high-converting, and scroll-stopping advertisement image designed to sell a product. The image must be ultra-photorealistic, high-contrast, and emotionally resonant. The central focus must be on the user's benefit or transformation.";
-
-    const textPart = {
-        text: useReference
-            ? `${salesIntent} Using the provided reference image for style, lighting, and mood, create this new scene: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo.`
-            : `${salesIntent} The scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`
-    };
     
-    const parts: any[] = [textPart];
+    let textPrompt: string;
+    const parts: any[] = [];
 
-    if (useReference) {
-        parts.unshift(imageB64ToGenerativePart(referenceImageBase64!));
+    if (referenceImageBase64) {
+        parts.push(imageB64ToGenerativePart(referenceImageBase64));
+        if (allowVisualExploration) {
+            // When exploration is allowed, the reference image is "inspiration".
+            textPrompt = `${salesIntent} The provided image is a reference for the original campaign's style. Use it as **inspiration** for the mood, color palette, and general feel, but you have creative freedom to generate a completely new and different scene based on the following prompt. The goal is creative variation that feels fresh but still plausibly from the same brand family. The new scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`;
+        } else {
+            // When exploration is NOT allowed, the reference image is a strict guide.
+            textPrompt = `${salesIntent} Using the provided reference image for style, lighting, and mood, create this new scene: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo.`;
+        }
+    } else {
+        // No reference image at all.
+        textPrompt = `${salesIntent} The scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`;
     }
+    
+    parts.push({ text: textPrompt });
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -747,8 +755,14 @@ export const evolveConcept = async (
         } else {
             triggerObject = baseConcept.trigger;
         }
+        // FIX: The direct spread `{ ...concept, trigger: triggerObject }` was causing a TypeScript
+        // type inference issue. Destructuring `trigger` out and spreading the rest
+        // helps TypeScript correctly construct the new object type.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { trigger: _, ...restOfConcept } = concept;
+
         return {
-            ...concept,
+            ...restOfConcept,
             trigger: triggerObject,
         };
     });
