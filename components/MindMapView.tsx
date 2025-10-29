@@ -1,19 +1,25 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { CampaignBlueprint, MindMapNode, AdConcept, AwarenessStage, CreativeFormat, PlacementFormat, TargetPersona, BuyingTriggerObject } from '../types';
-import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon } from './icons';
+import { CampaignBlueprint, MindMapNode, AdConcept, AwarenessStage, CreativeFormat, PlacementFormat, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject } from '../types';
+import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon, ShieldAlertIcon, HeartIcon, HeartCrackIcon, TagIcon } from './icons';
 import { CreativeCard } from './CreativeCard';
 
 // Layout Constants
 const X_SPACING_PERSONA = 350;
+const X_SPACING_PAIN_DESIRE = 300;
+const X_SPACING_OBJECTION = 300;
+const X_SPACING_OFFER = 300;
 const X_SPACING_AWARENESS = 300;
 const X_SPACING_ANGLE = 300;
 const X_SPACING_TRIGGER = 300;
 const X_SPACING_FORMAT = 300;
 const X_SPACING_PLACEMENT = 300;
-const X_SPACING_CREATIVE = 380;
+const X_SPACING_CREATIVE = 260;
 
 const Y_SPACING_PERSONA = 40;
+const Y_SPACING_PAIN_DESIRE = 30;
+const Y_SPACING_OBJECTION = 30;
+const Y_SPACING_OFFER = 30;
 const Y_SPACING_AWARENESS = 30;
 const Y_SPACING_ANGLE = 40;
 const Y_SPACING_TRIGGER = 30;
@@ -100,7 +106,83 @@ const PersonaNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void 
                 </div>
             </div>
             {!node.isExpanded && (
-                 <p className="text-xs text-purple-200 mt-2">Klik untuk memilih tahap</p>
+                 <p className="text-xs text-purple-200 mt-2">Klik untuk analisis Pain/Desire</p>
+            )}
+        </div>
+    );
+};
+
+const PainDesireNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => {
+    const { painDesire } = node.content as { painDesire: PainDesireObject };
+    const isPain = painDesire.type === 'Pain';
+    const bgColor = isPain ? 'bg-rose-600 hover:bg-rose-500 border-rose-600' : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-600';
+    const iconColor = isPain ? 'text-rose-200' : 'text-emerald-200';
+    const textColor = isPain ? 'text-rose-100' : 'text-emerald-100';
+    const promptText = 'Klik untuk analisis keberatan';
+
+    return (
+        <div
+            onClick={() => onToggle(node.id)}
+            className={`relative p-3 w-full h-full rounded-lg shadow-lg flex flex-col justify-between text-center transition-all duration-300 cursor-pointer
+            ${node.isExpanded
+                ? 'bg-brand-surface border-2 border-gray-700'
+                : `${bgColor} transform hover:scale-105`}`
+            }
+        >
+            {isPain ? <HeartCrackIcon className={`w-5 h-5 absolute top-2 right-2 ${iconColor}`} /> : <HeartIcon className={`w-5 h-5 absolute top-2 right-2 ${iconColor}`} />}
+            <div>
+                <h4 className="font-bold text-base line-clamp-2">{painDesire.name}</h4>
+                <p className={`text-xs mt-1 line-clamp-2 ${node.isExpanded ? 'text-gray-400' : textColor}`}>{painDesire.description}</p>
+            </div>
+            {!node.isExpanded && (
+                 <p className={`text-xs mt-2 ${textColor}`}>{promptText}</p>
+            )}
+        </div>
+    );
+};
+
+
+const ObjectionNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => {
+    const { objection } = node.content as { objection: ObjectionObject };
+    return (
+        <div
+            onClick={() => onToggle(node.id)}
+            className={`relative p-3 w-full h-full rounded-lg shadow-lg flex flex-col justify-between text-center transition-all duration-300 cursor-pointer
+            ${node.isExpanded
+                ? 'bg-brand-surface border-2 border-gray-700'
+                : 'bg-red-600 hover:bg-red-500 border-2 border-red-600 transform hover:scale-105'}`
+            }
+        >
+            <ShieldAlertIcon className="w-5 h-5 absolute top-2 right-2 text-red-200" />
+            <div>
+                <h4 className="font-bold text-base line-clamp-2">{objection.name}</h4>
+                 <p className="text-xs text-red-200 mt-1 line-clamp-2">{objection.description}</p>
+            </div>
+            {!node.isExpanded && (
+                 <p className="text-xs text-red-100 mt-2">Klik untuk ide penawaran</p>
+            )}
+        </div>
+    );
+};
+
+const OfferNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => {
+    const { offer } = node.content as { offer: OfferTypeObject };
+    return (
+        <div
+            onClick={() => onToggle(node.id)}
+            className={`relative p-3 w-full h-full rounded-lg shadow-lg flex flex-col justify-between text-center transition-all duration-300 cursor-pointer
+            ${node.isExpanded
+                ? 'bg-brand-surface border-2 border-gray-700'
+                : 'bg-cyan-600 hover:bg-cyan-500 border-2 border-cyan-600 transform hover:scale-105'}`
+            }
+        >
+            <TagIcon className="w-5 h-5 absolute top-2 right-2 text-cyan-200" />
+            <div>
+                <h4 className="font-bold text-base line-clamp-2">{offer.name}</h4>
+                <p className={`text-xs mt-1 line-clamp-2 ${node.isExpanded ? 'text-gray-400' : 'text-cyan-100'}`}>{offer.description}</p>
+            </div>
+            {!node.isExpanded && (
+                 <p className="text-xs text-cyan-100 mt-2">Klik untuk memilih tahap</p>
             )}
         </div>
     );
@@ -124,35 +206,40 @@ const AwarenessStageNode: React.FC<{ node: MindMapNode, onToggle: (id: string) =
     </div>
 );
 
-const AngleNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => (
+const AngleNode: React.FC<{ node: MindMapNode; onToggle: (id: string) => void; onEducationHover: (type: 'angle' | 'trigger' | null, event: React.MouseEvent | null) => void; }> = ({ node, onToggle, onEducationHover }) => (
     <div
         onClick={() => onToggle(node.id)}
-        className={`relative p-4 w-full h-full rounded-lg shadow-lg flex items-center justify-center text-center transition-all duration-300 cursor-pointer
+        className={`relative p-4 w-full h-full rounded-lg shadow-lg flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer
             ${node.isExpanded
                 ? 'bg-brand-surface border-2 border-gray-700'
                 : 'bg-brand-primary hover:bg-indigo-500 border-2 border-brand-primary transform hover:scale-105'}`
         }
     >
+        <div className="w-full text-center" onMouseEnter={(e) => onEducationHover('angle', e)} onMouseLeave={() => onEducationHover(null, null)}>
+            <p className="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Level 4: Strategic Angle</p>
+        </div>
         <div>
-            <h4 className="font-bold text-lg">{node.label}</h4>
-            {!node.isExpanded && <p className="text-xs text-indigo-200 mt-1">Klik untuk buat trigger</p>}
+            <h4 className="font-bold text-base mt-1">Angle: {node.label}</h4>
+            {!node.isExpanded && <p className="text-xs text-indigo-200 mt-2">Klik untuk buat trigger</p>}
         </div>
     </div>
 );
 
-const TriggerNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => (
+const TriggerNode: React.FC<{ node: MindMapNode; onToggle: (id: string) => void; onEducationHover: (type: 'angle' | 'trigger' | null, event: React.MouseEvent | null) => void; }> = ({ node, onToggle, onEducationHover }) => (
     <div
         onClick={() => onToggle(node.id)}
-        className={`relative p-3 w-full h-full rounded-lg shadow-lg flex items-center justify-center text-center transition-all duration-300 cursor-pointer
+        className={`relative p-3 w-full h-full rounded-lg shadow-lg flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer
             ${node.isExpanded
                 ? 'bg-brand-surface border-2 border-gray-600'
                 : 'bg-orange-600 hover:bg-orange-500 border-2 border-orange-600 transform hover:scale-105'}`
         }
     >
         <FireIcon className="w-4 h-4 absolute top-2 right-2 text-orange-200" />
+        <div className="w-full text-center" onMouseEnter={(e) => onEducationHover('trigger', e)} onMouseLeave={() => onEducationHover(null, null)}>
+            <p className="text-xs font-semibold text-orange-200 uppercase tracking-wider">Level 5: Psychological Trigger</p>
+        </div>
         <div>
-            <h4 className="font-semibold text-md">{node.label}</h4>
-            <p className="text-xs text-orange-200">Buying Trigger</p>
+            <h4 className="font-semibold text-md mt-1">Trigger: {node.label}</h4>
             {!node.isExpanded && (
                  <p className="text-xs text-orange-100 mt-1">Klik untuk buat format</p>
             )}
@@ -163,14 +250,17 @@ const TriggerNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void 
 const FormatNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => (
     <div
         onClick={() => onToggle(node.id)}
-        className={`p-3 w-full h-full rounded-lg shadow-lg flex items-center justify-center text-center transition-all duration-300 cursor-pointer
+        className={`p-3 w-full h-full rounded-lg shadow-lg flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer
             ${node.isExpanded
                 ? 'bg-brand-surface border-2 border-gray-600'
                 : 'bg-brand-secondary hover:bg-green-500 border-2 border-brand-secondary transform hover:scale-105'}`
         }
     >
         <div>
-            <h4 className="font-semibold text-md">{node.label}</h4>
+            <p className="text-xs font-semibold text-green-200 uppercase tracking-wider">Level 6: Communication Format</p>
+        </div>
+        <div>
+            <h4 className="font-semibold text-md mt-1">Format: {node.label}</h4>
             {!node.isExpanded && (
                  <p className="text-xs text-green-100 mt-1">Klik untuk buat penempatan</p>
             )}
@@ -184,13 +274,13 @@ const PlacementNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => voi
         className={`p-3 w-full h-full rounded-lg shadow-lg flex items-center justify-center text-center transition-all duration-300 cursor-pointer
             ${node.isExpanded
                 ? 'bg-brand-surface border-2 border-gray-600'
-                : 'bg-cyan-600 hover:bg-cyan-500 border-2 border-cyan-600 transform hover:scale-105'}`
+                : 'bg-teal-600 hover:bg-teal-500 border-2 border-teal-600 transform hover:scale-105'}`
         }
     >
         <div>
             <h4 className="font-semibold text-md">{node.label}</h4>
             {!node.isExpanded && (
-                 <p className="text-xs text-cyan-100 mt-1">Klik untuk buat ide</p>
+                 <p className="text-xs text-teal-100 mt-1">Klik untuk buat ide</p>
             )}
         </div>
     </div>
@@ -200,6 +290,9 @@ const PlacementNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => voi
 const NodeComponent: React.FC<{
     node: MindMapNode;
     onTogglePersona: (id: string) => void;
+    onTogglePainDesire: (id: string) => void;
+    onToggleObjection: (id: string) => void;
+    onToggleOffer: (id: string) => void;
     onToggleAngle: (id: string) => void;
     onToggleTrigger: (id: string) => void;
     onToggleAwareness: (id: string) => void;
@@ -211,19 +304,23 @@ const NodeComponent: React.FC<{
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (id: string) => void;
     onNodeHover: (id: string | null, event: React.MouseEvent | null) => void;
+    onEducationHover: (type: 'angle' | 'trigger' | null, event: React.MouseEvent | null) => void;
 }> = (props) => {
-    const { node, onTogglePersona, onToggleAngle, onToggleTrigger, onToggleAwareness, onToggleFormat, onTogglePlacement, onDeleteNode, onNodeHover } = props;
+    const { node, onTogglePersona, onTogglePainDesire, onToggleObjection, onToggleOffer, onToggleAngle, onToggleTrigger, onToggleAwareness, onToggleFormat, onTogglePlacement, onDeleteNode, onNodeHover, onEducationHover } = props;
     
     return (
         <div className="node-container group relative" onMouseEnter={(e) => onNodeHover(node.id, e)} onMouseLeave={() => onNodeHover(null, null)}>
             {node.type === 'dna' && <DnaNode node={node} />}
             {node.type === 'persona' && <PersonaNode node={node} onToggle={onTogglePersona} />}
+            {node.type === 'pain_desire' && <PainDesireNode node={node} onToggle={onTogglePainDesire} />}
+            {node.type === 'objection' && <ObjectionNode node={node} onToggle={onToggleObjection} />}
+            {node.type === 'offer' && <OfferNode node={node} onToggle={onToggleOffer} />}
             {node.type === 'awareness' && <AwarenessStageNode node={node} onToggle={onToggleAwareness} />}
-            {node.type === 'angle' && <AngleNode node={node} onToggle={onToggleAngle} />}
-            {node.type === 'trigger' && <TriggerNode node={node} onToggle={onToggleTrigger} />}
+            {node.type === 'angle' && <AngleNode node={node} onToggle={onToggleAngle} onEducationHover={onEducationHover} />}
+            {node.type === 'trigger' && <TriggerNode node={node} onToggle={onToggleTrigger} onEducationHover={onEducationHover} />}
             {node.type === 'format' && <FormatNode node={node} onToggle={onToggleFormat} />}
             {node.type === 'placement' && <PlacementNode node={node} onToggle={onTogglePlacement} />}
-            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onOpenLightbox={props.onOpenLightbox} />}
+            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" />}
             
             {node.type !== 'dna' && (
                 <button
@@ -264,7 +361,10 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
 
         const Y_SPACING_MAP: Record<string, number> = {
             'dna': Y_SPACING_PERSONA,
-            'persona': Y_SPACING_AWARENESS,
+            'persona': Y_SPACING_PAIN_DESIRE,
+            'pain_desire': Y_SPACING_OBJECTION,
+            'objection': Y_SPACING_OFFER,
+            'offer': Y_SPACING_AWARENESS,
             'awareness': Y_SPACING_ANGLE,
             'angle': Y_SPACING_TRIGGER,
             'trigger': Y_SPACING_FORMAT,
@@ -272,6 +372,16 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
             'placement': Y_SPACING_CREATIVE,
         };
         const spacing = Y_SPACING_MAP[node.type] || 20;
+
+        if (node.type === 'placement') {
+            const groupSize = 3;
+            const numInTallestGroup = Math.min(children.length, groupSize);
+            if (numInTallestGroup === 0) return node.height || 0;
+            
+            const creativeHeight = children[0].height || 240;
+            const groupHeight = (numInTallestGroup * creativeHeight) + ((numInTallestGroup - 1) * spacing);
+            return Math.max(node.height || 0, groupHeight);
+        }
 
         const totalChildrenHeight = children.reduce((acc, child) => {
             return acc + getSubtreeHeight(child.id) + spacing;
@@ -292,7 +402,10 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
         
         const X_SPACING_MAP: Record<string, number> = {
             'dna': X_SPACING_PERSONA,
-            'persona': X_SPACING_AWARENESS,
+            'persona': X_SPACING_PAIN_DESIRE,
+            'pain_desire': X_SPACING_OBJECTION,
+            'objection': X_SPACING_OFFER,
+            'offer': X_SPACING_AWARENESS,
             'awareness': X_SPACING_ANGLE,
             'angle': X_SPACING_TRIGGER,
             'trigger': X_SPACING_FORMAT,
@@ -303,7 +416,10 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
         
         const Y_SPACING_MAP: Record<string, number> = {
             'dna': Y_SPACING_PERSONA,
-            'persona': Y_SPACING_AWARENESS,
+            'persona': Y_SPACING_PAIN_DESIRE,
+            'pain_desire': Y_SPACING_OBJECTION,
+            'objection': Y_SPACING_OFFER,
+            'offer': Y_SPACING_AWARENESS,
             'awareness': Y_SPACING_ANGLE,
             'angle': Y_SPACING_TRIGGER,
             'trigger': Y_SPACING_FORMAT,
@@ -311,6 +427,29 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
             'placement': Y_SPACING_CREATIVE,
         };
         const ySpacing = Y_SPACING_MAP[parentNode.type] || 20;
+
+        if (parentNode.type === 'placement') {
+            const creatives = children;
+            const groupSize = 3;
+            const groupHorizontalSpacing = 40;
+            const groupWidth = (creatives[0]?.width || 160) + groupHorizontalSpacing;
+            const creativeHeight = creatives[0]?.height || 240;
+
+            const subtreeHeight = getSubtreeHeight(parentId);
+            const startY = parentY + parentHeight / 2 - subtreeHeight / 2;
+
+            creatives.forEach((child, index) => {
+                const groupIndex = Math.floor(index / groupSize);
+                const indexInGroup = index % groupSize;
+                
+                const childX = parentX + xSpacing + (groupIndex * groupWidth);
+                const childY = startY + (indexInGroup * (creativeHeight + ySpacing));
+
+                child.position = { x: childX, y: childY };
+                laidOutNodes.set(child.id, { ...child });
+            });
+            return;
+        }
 
 
         const totalSubtreeHeight = children.reduce((acc, child) => acc + getSubtreeHeight(child.id) + ySpacing, -ySpacing);
@@ -350,6 +489,9 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
 interface MindMapViewProps {
     nodes: MindMapNode[];
     onTogglePersona: (nodeId: string) => void;
+    onTogglePainDesire: (nodeId: string) => void;
+    onToggleObjection: (nodeId: string) => void;
+    onToggleOffer: (nodeId: string) => void;
     onToggleAngle: (nodeId: string) => void;
     onToggleTrigger: (nodeId: string) => void;
     onToggleAwareness: (nodeId: string) => void;
@@ -373,6 +515,7 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
     const lastPos = useRef({ x: 0, y: 0 });
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [tooltip, setTooltip] = useState<{ content: React.ReactNode; x: number; y: number } | null>(null);
+    const [educationTooltip, setEducationTooltip] = useState<{ content: React.ReactNode; x: number; y: number } | null>(null);
 
     const laidOutNodes = useMemo(() => calculateLayout(nodes), [nodes]);
     const nodesMap = useMemo(() => new Map(laidOutNodes.map(node => [node.id, node])), [laidOutNodes]);
@@ -415,6 +558,22 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
         return path;
     }, [hoveredNodeId, nodesMap, laidOutNodes]);
 
+    const handleEducationHover = (type: 'angle' | 'trigger' | null, event: React.MouseEvent | null) => {
+        if (!type || !event) {
+            setEducationTooltip(null);
+            return;
+        }
+        let content = '';
+        if (type === 'angle') content = "Level ini menentukan 'APA' pesan utama Anda (Strategi Pesan).";
+        if (type === 'trigger') content = "Level ini menentukan 'BAGAIMANA' Anda menyampaikan pesan agar persuasif (Taktik Psikologis).";
+
+        if (content) {
+            setEducationTooltip({ content, x: event.clientX, y: event.clientY });
+        } else {
+            setEducationTooltip(null);
+        }
+    }
+
     const handleNodeHover = (nodeId: string | null, event: React.MouseEvent | null) => {
         setHoveredNodeId(nodeId);
 
@@ -442,6 +601,39 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                     </div>
                 );
                 break;
+            case 'pain_desire':
+                const { painDesire } = node.content as { painDesire: PainDesireObject };
+                const isPain = painDesire.type === 'Pain';
+                content = (
+                     <div>
+                        <strong className={`text-brand-text-primary block ${isPain ? 'text-rose-400' : 'text-emerald-400'}`}>
+                            {isPain ? 'PAIN' : 'DESIRE'}: {painDesire.name}
+                        </strong>
+                        <p className="mt-1">{painDesire.description}</p>
+                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Emotional Impact:</strong> {painDesire.emotionalImpact}</p>
+                    </div>
+                );
+                break;
+            case 'objection':
+                const { objection } = node.content as { objection: ObjectionObject };
+                content = (
+                     <div>
+                        <strong className="text-brand-text-primary block">Keberatan: {objection.name}</strong>
+                        <p className="mt-1">{objection.description}</p>
+                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Strategi Balasan:</strong> {objection.counterAngle}</p>
+                    </div>
+                );
+                break;
+            case 'offer':
+                const { offer } = node.content as { offer: OfferTypeObject };
+                content = (
+                     <div>
+                        <strong className="text-brand-text-primary block">Penawaran: {offer.name}</strong>
+                        <p className="mt-1">{offer.description}</p>
+                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Prinsip Psikologis:</strong> {offer.psychologicalPrinciple}</p>
+                    </div>
+                );
+                break;
             case 'angle':
                 content = <strong className="text-brand-text-primary">{node.label}</strong>;
                 break;
@@ -452,6 +644,9 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                         <strong className="text-brand-text-primary block">🔥 {trigger.name}</strong>
                         <p className="mt-1 border-t border-gray-600 pt-1">{trigger.description}</p>
                         <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Contoh:</strong> {trigger.example}</p>
+                        {trigger.analysis && (
+                            <p className="mt-2 text-xs bg-yellow-900/50 text-yellow-200 p-2 rounded-md"><strong className="font-bold">Kenapa Efektif:</strong> {trigger.analysis}</p>
+                        )}
                     </div>
                 );
                 break;
@@ -602,6 +797,7 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                                 {...props} 
                                 node={node} 
                                 onNodeHover={handleNodeHover}
+                                onEducationHover={handleEducationHover}
                             />
                         </foreignObject>
                     ))}
@@ -609,6 +805,7 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
              </svg>
              
              {tooltip && <Tooltip content={tooltip.content} x={tooltip.x} y={tooltip.y} />}
+             {educationTooltip && <Tooltip content={educationTooltip.content} x={educationTooltip.x} y={educationTooltip.y} />}
         </div>
     );
 }

@@ -1,3 +1,4 @@
+
 export interface TargetPersona {
   description: string;
   painPoints: string[];
@@ -27,10 +28,30 @@ export interface CampaignBlueprint {
   };
 }
 
+export interface PainDesireObject {
+  type: 'Pain' | 'Desire';
+  name: string;
+  description: string;
+  emotionalImpact: string;
+}
+
+export interface ObjectionObject {
+  name: string;
+  description: string;
+  counterAngle: string;
+}
+
+export interface OfferTypeObject {
+  name: string; // e.g., "Buy 1 Get 1 Free", "30-Day Money-Back Guarantee"
+  description: string; // Explanation of the offer
+  psychologicalPrinciple: string; // e.g., "Reciprocity", "Risk Reversal"
+}
+
 export interface BuyingTriggerObject {
   name: string;
   description: string;
   example: string;
+  analysis: string; // Why this example is effective.
 }
 
 export type BuyingTrigger = string;
@@ -64,6 +85,7 @@ export interface AdConcept {
   hook: string;
   headline:string;
   adSetName: string;
+  offerName: string;
   carouselSlides?: CarouselSlide[];
   // Persona metadata denormalized for easier access and export
   personaDescription: string;
@@ -78,14 +100,14 @@ export interface AdConcept {
   strategicPathId: string;
 }
 
-export type NodeType = 'dna' | 'persona' | 'angle' | 'trigger' | 'awareness' | 'format' | 'placement' | 'creative';
+export type NodeType = 'dna' | 'persona' | 'pain_desire' | 'objection' | 'offer' | 'angle' | 'trigger' | 'awareness' | 'format' | 'placement' | 'creative';
 
 export interface MindMapNode {
   id: string;
   parentId?: string;
   type: NodeType;
   label: string;
-  content: CampaignBlueprint | { persona: TargetPersona } | { awareness: AwarenessStage } | { angle: string } | { trigger: BuyingTriggerObject } | { format: CreativeFormat } | { placement: PlacementFormat } | { concept: AdConcept };
+  content: CampaignBlueprint | { persona: TargetPersona } | { painDesire: PainDesireObject } | { objection: ObjectionObject } | { offer: OfferTypeObject } | { awareness: AwarenessStage } | { angle: string } | { trigger: BuyingTriggerObject } | { format: CreativeFormat } | { placement: PlacementFormat } | { concept: AdConcept };
   position: { x: number; y: number };
   
   // State properties

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide } from '../types';
+import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject } from '../types';
 
 // Utility to convert file to base64
 const fileToGenerativePart = async (file: File) => {
@@ -102,14 +102,46 @@ const targetPersonaSchema = {
     required: ['description', 'age', 'creatorType', 'painPoints', 'desiredOutcomes']
 };
 
+const painDesireObjectSchema = {
+    type: Type.OBJECT,
+    properties: {
+        type: { type: Type.STRING, enum: ['Pain', 'Desire'] },
+        name: { type: Type.STRING },
+        description: { type: Type.STRING },
+        emotionalImpact: { type: Type.STRING }
+    },
+    required: ['type', 'name', 'description', 'emotionalImpact']
+};
+
+const objectionObjectSchema = {
+    type: Type.OBJECT,
+    properties: {
+        name: { type: Type.STRING },
+        description: { type: Type.STRING },
+        counterAngle: { type: Type.STRING }
+    },
+    required: ['name', 'description', 'counterAngle']
+};
+
+const offerTypeObjectSchema = {
+    type: Type.OBJECT,
+    properties: {
+        name: { type: Type.STRING },
+        description: { type: Type.STRING },
+        psychologicalPrinciple: { type: Type.STRING }
+    },
+    required: ['name', 'description', 'psychologicalPrinciple']
+};
+
 const buyingTriggerObjectSchema = {
     type: Type.OBJECT,
     properties: {
         name: { type: Type.STRING },
         description: { type: Type.STRING },
-        example: { type: Type.STRING }
+        example: { type: Type.STRING },
+        analysis: { type: Type.STRING }
     },
-    required: ['name', 'description', 'example']
+    required: ['name', 'description', 'example', 'analysis']
 };
 
 const carouselSlideSchema = {
@@ -141,12 +173,13 @@ const adConceptSchema = {
         headline: { type: Type.STRING },
         visualPrompt: { type: Type.STRING },
         adSetName: { type: Type.STRING },
+        offerName: { type: Type.STRING },
         carouselSlides: { type: Type.ARRAY, items: carouselSlideSchema }
     },
      required: [
         'id', 'angle', 'trigger', 'format', 'placement', 'awarenessStage', 'strategicPathId', 
         'personaDescription', 'personaAge', 'personaCreatorType', 'visualVehicle', 'hook', 
-        'headline', 'visualPrompt', 'adSetName'
+        'headline', 'visualPrompt', 'adSetName', 'offerName'
     ]
 };
 
@@ -213,27 +246,160 @@ export const generatePersonaVariations = async (blueprint: CampaignBlueprint, ex
     return JSON.parse(cleanedJson);
 };
 
-
-export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, persona: TargetPersona, awarenessStage: AwarenessStage, existingAngles: string[] = []): Promise<string[]> => {
+export const generatePainDesires = async (blueprint: CampaignBlueprint, persona: TargetPersona): Promise<PainDesireObject[]> => {
     const prompt = `
-        You are a creative strategist. Based on the provided 'Campaign Blueprint', a specific 'Target Persona', and their 'Awareness Stage', generate 4 distinct, high-level strategic angles for a new advertising campaign.
-        The angles must be tailored to someone in the "${awarenessStage}" stage. For example, for "Unaware" audiences, angles should focus on the problem or emotion, not the solution. For "Product Aware" audiences, angles can be more feature-focused.
-        
-        Campaign Blueprint:
+        You are a master consumer psychologist. Your task is to identify the deepest emotional drivers for a specific target persona.
+        Based on the provided campaign context, generate a mix of 4 distinct, core emotional drivers: 2 Pains (fears, frustrations) and 2 Desires (aspirations, goals).
+
+        **Context:**
+        - **Product:** ${blueprint.productAnalysis.name} - It solves problems by delivering "${blueprint.productAnalysis.keyBenefit}".
+        - **Target Persona:** ${persona.description}
+        - **Known Pains:** ${persona.painPoints.join(', ')}
+        - **Known Desires:** ${persona.desiredOutcomes.join(', ')}
+        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+
+        **Instructions:**
+        1.  Go beyond the surface-level pains and desires provided. Dig deeper into the *underlying emotional state*.
+        2.  For each driver, define its "type" as either "Pain" or "Desire".
+        3.  Provide a short, impactful "name" (e.g., "Fear of Being Left Behind", "Desire for Effortless Confidence").
+        4.  Provide a "description" explaining the driver from the persona's point of view.
+        5.  Provide the "emotionalImpact" which describes the raw feeling this driver causes (e.g., "Anxiety and social pressure", "Freedom and self-assurance").
+
+        **Output:**
+        Respond ONLY with a valid JSON array of 4 objects (2 Pains, 2 Desires) that conform to the schema.
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ text: prompt }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: { type: Type.ARRAY, items: painDesireObjectSchema }
+        }
+    });
+    const rawJson = response.text;
+    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
+    return JSON.parse(cleanedJson);
+};
+
+export const generateObjections = async (blueprint: CampaignBlueprint, persona: TargetPersona, painDesire: PainDesireObject): Promise<ObjectionObject[]> => {
+    const prompt = `
+        You are a seasoned market researcher and sales psychologist. Your task is to predict the 3 MOST LIKELY objections a specific persona will have, stemming directly from a core emotional driver (a pain or desire).
+
+        **Context:**
+        - **Product:** ${blueprint.productAnalysis.name} (Key Benefit: ${blueprint.productAnalysis.keyBenefit})
+        - **Offer:** ${blueprint.adDna.offerSummary}
+        - **Target Persona:** ${persona.description}
+        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+
+        **🔥 Core Emotional Driver:**
+        - **Type:** ${painDesire.type}
+        - **Name:** "${painDesire.name}"
+        - **Description:** "${painDesire.description}"
+        - **Emotional Impact:** "${painDesire.emotionalImpact}"
+
+        **Instructions:**
+        1.  Connect the dots: How does the product's promise interact with this specific emotional driver to create skepticism or doubt?
+        2.  For each objection, provide a short, clear "name" (e.g., "This won't work for MY specific situation", "The results look too good to be true", "It's probably too expensive for the value").
+        3.  Provide a "description" explaining the psychology behind the objection, linking it back to the core emotional driver.
+        4.  Provide a strategic "counterAngle" that suggests the best way to address this objection in an ad.
+
+        **Output:**
+        Respond ONLY with a valid JSON array of 3 objection objects that conform to the schema.
+    `;
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: objectionObjectSchema
+            }
+        }
+    });
+    const rawJson = response.text;
+    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
+    return JSON.parse(cleanedJson);
+};
+
+export const generateOfferTypes = async (blueprint: CampaignBlueprint, persona: TargetPersona, objection: ObjectionObject): Promise<OfferTypeObject[]> => {
+    const prompt = `
+        You are a master marketer and behavioral economist. Your task is to craft 3 distinct, compelling "Offer Types" designed specifically to neutralize a customer's objection.
+
+        **Context:**
+        - **Product:** ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
+        - **Original Offer:** ${blueprint.adDna.offerSummary}
+        - **Target Persona:** ${persona.description}
+        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+
+        **🔥 Customer Objection to Overcome:**
+        - **Objection Name:** "${objection.name}"
+        - **Psychology:** "${objection.description}"
+
+        **Instructions:**
+        1.  Analyze the objection. What is the root fear or concern? (e.g., Fear of loss, skepticism, price sensitivity).
+        2.  Generate 3 distinct offer structures that directly address this root concern.
+        3.  For each offer, provide:
+            - A clear "name" (e.g., "Risk-Free 30-Day Trial", "Value Bundle Discount", "Pay-in-3 Installments").
+            - A "description" explaining how the offer works for the customer.
+            - The core "psychologicalPrinciple" at play (e.g., "Risk Reversal", "Value Anchoring", "Pain of Payment Reduction").
+
+        **Output:**
+        Respond ONLY with a valid JSON array of 3 offer objects that conform to the schema.
+    `;
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ text: prompt }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: { type: Type.ARRAY, items: offerTypeObjectSchema }
+        }
+    });
+    const rawJson = response.text;
+    return JSON.parse(rawJson.replace(/^```json\s*|```$/g, ''));
+};
+
+
+export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, persona: TargetPersona, awarenessStage: AwarenessStage, objection: ObjectionObject, painDesire: PainDesireObject, offer: OfferTypeObject, existingAngles: string[] = []): Promise<string[]> => {
+    const prompt = `
+        You are a creative strategist. Your task is to generate 4 distinct, high-level strategic angles for an ad campaign.
+        **CRITICAL CONSTRAINTS:**
+        1. Each angle MUST directly counter a specific customer objection.
+        2. Each angle MUST resonate with a core emotional driver (Pain/Desire).
+        3. Each angle MUST be framed within the context of the provided Offer Type.
+
+        **Campaign Blueprint:**
         - Product Benefit: ${blueprint.productAnalysis.keyBenefit}
         - Core Persuasion Strategy: Use a "${blueprint.adDna.toneOfVoice}" tone to apply the "${blueprint.adDna.persuasionFormula}" formula.
         - Target Country: ${blueprint.adDna.targetCountry}
 
-        Target Persona:
+        **Target Persona:**
         - Description: ${persona.description}
-        - Pains: ${persona.painPoints.join(', ')}
-        - Desires: ${persona.desiredOutcomes.join(', ')}
 
-        🔥 Target Awareness Stage: ${awarenessStage}
+        **🔥 Core Emotional Driver:**
+        - **Type:** ${painDesire.type}
+        - **Name:** "${painDesire.name}"
+
+        **🔥 Customer Objection to Overcome:**
+        - **Objection Name:** "${objection.name}"
+        - **Suggested Counter-Strategy:** "${objection.counterAngle}"
+
+        **🔥 Strategic Offer Type:**
+        - **Offer Name:** "${offer.name}"
+        - **Psychology:** "${offer.psychologicalPrinciple}"
+
+        **🔥 Target Awareness Stage:** ${awarenessStage}
+
+        **Your Task:**
+        Based on all the context above, generate 4 strategic angles.
+        1. The angles must be tailored to someone in the "${awarenessStage}" stage.
+        2. **Crucially, each angle must be a creative execution of the counter-strategy, while also connecting to the core emotional driver and leveraging the provided offer.**
+        3. Use the "Suggested Counter-Strategy" and "Strategic Offer Type" as your primary inspiration.
 
         ${existingAngles.length > 0 ? `IMPORTANT: Do not generate any of the following angles, as they already exist: ${existingAngles.join(', ')}.` : ''}
 
-        Respond ONLY with a JSON array of 4 unique angle strings. For example: ["Focus on Relieving Pain X for [Persona]", "Highlight How [Persona] Achieves Outcome Y", "Build Emotional Connection with [Persona]", "Showcase a 'Day in the Life' of [Persona]"]
+        Respond ONLY with a JSON array of 4 unique angle strings. For example: ["Highlight the risk-free trial to build trust and counter skepticism", "Showcase the long-term value and ROI from the bundle to justify the price", "Demonstrate the product's simplicity and then present the easy installment plan"]
     `;
 
     const response = await ai.models.generateContent({
@@ -254,9 +420,9 @@ export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, pers
 
 export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, persona: TargetPersona, angle: string, awarenessStage: AwarenessStage): Promise<BuyingTriggerObject[]> => {
     const prompt = `
-        You are a Direct Response Copywriting Coach. Your goal is to educate an advertiser on the best psychological triggers to use for their campaign.
+        You are a Direct Response Copywriting Coach. Your goal is to educate an advertiser on the best psychological triggers to use for their campaign by creating a mini "Swipe File".
         Based on the campaign context, select the 4 MOST RELEVANT and POWERFUL psychological triggers from the predefined list below. The triggers must be appropriate for the audience's awareness stage.
-        Then, for each selected trigger, explain it clearly and provide a concrete example of how it applies directly to this product, persona, angle, and awareness stage.
+        Then, for each selected trigger, explain it clearly, provide a concrete example, and analyze why that example works for this specific audience.
 
         **Predefined List of Psychological Triggers:**
         - **Social Proof:** People trust what others are doing. (e.g., "Join 10,000+ happy customers").
@@ -279,8 +445,9 @@ export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, perso
 
         **Instructions:**
         1.  Analyze the context and choose the 4 best triggers from the list. For "Unaware" or "Problem Aware" stages, triggers like Reciprocity or Liking are better. For "Solution Aware" or "Product Aware", triggers like Scarcity or Social Proof are more effective.
-        2.  For each chosen trigger, create a JSON object with three fields as defined in the schema: "name", "description", and "example".
-        3.  The example should be a specific, actionable ad copy snippet or visual idea that resonates in "${blueprint.adDna.targetCountry}".
+        2.  For each chosen trigger, create a JSON object with four fields as defined in the schema: "name", "description", "example", and "analysis".
+        3.  The "example" should be a specific, actionable ad copy snippet or visual idea that resonates in "${blueprint.adDna.targetCountry}".
+        4.  **Crucially, the "analysis" field must explain in 1-2 sentences WHY this example is effective for this specific persona and context, as if you were annotating a successful ad in a swipe file.**
 
         **Output:**
         Respond ONLY with a valid JSON array of these 4 objects. Do not include any other text or markdown.
@@ -304,7 +471,7 @@ export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, perso
 export const getBuyingTriggerDetails = async (triggerName: string, blueprint: CampaignBlueprint, persona: TargetPersona, angle: string): Promise<BuyingTriggerObject> => {
     const prompt = `
         You are a Direct Response Copywriting Coach.
-        Your task is to provide the details for a specific psychological trigger within a given campaign context.
+        Your task is to provide the details for a specific psychological trigger within a given campaign context, including a "swipe file" analysis.
 
         **Psychological Trigger to Detail:** "${triggerName}"
 
@@ -316,9 +483,10 @@ export const getBuyingTriggerDetails = async (triggerName: string, blueprint: Ca
         - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
 
         **Instructions:**
-        1.  Based on the predefined list of psychological triggers, provide a clear, concise "description" for "${triggerName}".
-        2.  Create a concrete "example" of how this trigger applies directly to the provided campaign context. The example should be an actionable ad copy snippet or visual idea that would resonate in "${blueprint.adDna.targetCountry}".
-        3.  Return a single JSON object with three fields: "name" (which should be "${triggerName}"), "description", and "example".
+        1.  Provide a clear, concise "description" for "${triggerName}".
+        2.  Create a concrete "example" of how this trigger applies directly to the provided campaign context.
+        3.  Provide an "analysis" explaining in 1-2 sentences WHY this example would be effective for this specific persona and context.
+        4.  Return a single JSON object with four fields: "name" (which should be "${triggerName}"), "description", "example", and "analysis".
 
         **Output:**
         Respond ONLY with the single, valid JSON object that conforms to the schema. Do not include any other text or markdown.
@@ -433,7 +601,7 @@ const injectDynamicValues = (formula: string, blueprint: CampaignBlueprint, pers
 };
 
 
-export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const formatInstructions: Record<CreativeFormat, string> = {
         'UGC': "Simulate a genuine user-generated video or photo. The tone should be authentic, not overly polished. Visual prompt should describe a realistic setting.",
         'Before & After': "Clearly show a 'before' state demonstrating a problem and an 'after' state showing the solution provided by the product. The transformation should be obvious.",
@@ -454,7 +622,7 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
     - **Testimonial Story**: ${CAROUSEL_ARCS['Testimonial Story']}
 2.  After choosing an arc, generate a 'carouselSlides' array with exactly 5 slides that follow its narrative structure.
 3.  **CRITICAL**: You must follow a COPY-FIRST workflow. First, write the copy (headline, description) for all 5 slides. THEN, for each slide's copy, create a 'visualPrompt' that is a direct visual interpretation of that specific slide's message and follows the composition rule for Carousels.
-4.  The final slide MUST always be the Call to Action (CTA).
+4.  The final slide MUST always be the Call to Action (CTA) which incorporates the offer: "${offer.name}".
 5.  All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${blueprint.adDna.toneOfVoice} tone.`,
         'Instagram Feed': "Design for a 1:1 or 4:5 aspect ratio. The visual should be high-quality and scroll-stopping. The hook should be an engaging question or a bold statement to encourage interaction in the caption.",
         'Instagram Story': "Design for a 9:16 vertical aspect ratio. The visual should feel native and authentic to the platform. The hook should be quick and punchy. The visual prompt can suggest text overlays or interactive elements."
@@ -477,7 +645,7 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         ---
         **Campaign Blueprint (The Foundation):**
         - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - Offer: ${blueprint.adDna.offerSummary} (CTA: ${blueprint.adDna.cta})
+        - **Strategic Offer**: ${offer.name} - ${offer.description} (CTA: ${blueprint.adDna.cta})
         - **Sales DNA**:
             - Persuasion Formula: "${blueprint.adDna.persuasionFormula}"
             - Tone of Voice: "${blueprint.adDna.toneOfVoice}"
@@ -510,12 +678,21 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         - **HOOK CREATION MANDATE**: You MUST use one of these proven formulas for the "${awarenessStage}" stage:
         ${HOOK_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f}`).join('\n')}
         - **HEADLINE FORMULAS MANDATE**: You MUST use one of these formulas for the "${awarenessStage}" stage:
-        ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${injectDynamicValues(f, blueprint, persona)}`).join('\n')}
-        - The copy must align with the trigger "${trigger.name}" and be localized for ${blueprint.adDna.targetCountry}.
+        ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${injectDynamicValues(f, blueprint, persona).replace(/\[offer\]/g, offer.name)}`).join('\n')}
+        - The copy must align with the trigger "${trigger.name}", the offer "${offer.name}", and be localized for ${blueprint.adDna.targetCountry}.
 
         **STEP 2: Generate the Visual Interpretation.**
         - Now, as an Art Director, your job is to create a visual that RESPONDS to the copy you just wrote.
         - Create a detailed **visualPrompt** using this EXACT structure:
+
+        **[PATTERN INTERRUPT - THE SCROLL STOPPER]**
+        - **Core Idea**: Introduce ONE surprising, unexpected, or slightly surreal element that is thematically related but breaks the visual pattern of typical ads in this niche. This is the "WTF?" moment that makes someone stop scrolling.
+        - **Examples**: A skincare ad set in a surreal, beautiful library instead of a bathroom. A person using a cleaning product, but they are dressed in a formal evening gown. An image of a cat intensely studying a complex mathematical formula on a chalkboard.
+        - **Your Pattern Interrupt**: Describe the specific, unexpected element for THIS ad concept. It must be creative and attention-grabbing.
+
+        **[EMOTIONAL ANCHOR - THE HUMAN ELEMENT]**
+        - **Core Feeling**: The image MUST evoke a specific, powerful emotion relevant to the copy (e.g., relief, excitement, confidence, validation).
+        - **Facial Expression**: As the PRIMARY focus, the subject's expression MUST clearly convey this feeling. Describe it in detail (e.g., "A genuine, unforced smile of relief, eyes slightly closed, tension released from the shoulders"). This is more important than the background.
 
         **[COMMERCIAL GOAL & PSYCHOLOGY]**
         - **Primary Goal**: The image MUST visually communicate the core message of the copy and the main benefit ("${blueprint.productAnalysis.keyBenefit}").
@@ -530,7 +707,6 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         **[SUBJECT]**
         - **Who**: ${persona.description}, age ${persona.age}, with ${persona.creatorType} aesthetic.
         - **Doing What**: Active verbs that reflect the copy's message.
-        - **Expression**: Must clearly convey the emotional 'AFTER' state promised in the copy.
         - **Styling**: Authentic to **${blueprint.adDna.targetCountry}** culture.
 
         **[TRIGGER VISUALIZATION - CRITICAL]**
@@ -555,7 +731,7 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         
         ---
 
-        Now, generate an array of 3 JSON objects using the process above. Adhere strictly to the provided JSON schema. For 'adSetName', follow this format: [PersonaShort]_[AngleKeyword]_[Trigger]_[Awareness]_[Format]_[Placement]_v[1, 2, or 3].
+        Now, generate an array of 3 JSON objects using the process above. Adhere strictly to the provided JSON schema. For 'adSetName', follow this format: [PersonaShort]_[AngleKeyword]_[Trigger]_[Awareness]_[Format]_[Placement]_v[1, 2, or 3]. For the 'offerName' field, use this exact value: "${offer.name}".
         Respond ONLY with the JSON array.
     `;
     
@@ -694,6 +870,7 @@ export const evolveConcept = async (
             - Tone of Voice: "${blueprint.adDna.toneOfVoice}"
         - Visual Style DNA: "${blueprint.adDna.visualStyle}"
         - Target Country for Localization: "${blueprint.adDna.targetCountry}"
+        - **Strategic Offer to use**: "${baseConcept.offerName}"
 
         **Base Creative Concept:**
         - Angle: "${baseConcept.angle}"
@@ -708,6 +885,7 @@ export const evolveConcept = async (
         Now, generate an array containing ONE new JSON object for the evolved concept.
         Adhere strictly to the provided JSON schema.
         For 'adSetName', create a new name reflecting the new evolved parameters, like: [Persona]_[NewAngle/Trigger/etc]_[...]_v1.
+        For the 'offerName' field, you MUST use the value from the 'Strategic Offer to use' section above.
 
         Respond ONLY with a JSON array containing the single new concept object.
     `;

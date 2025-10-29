@@ -24,7 +24,6 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
     const [selectedPlacement, setSelectedPlacement] = useState('');
 
     const { angleOptions, triggerOptions, formatOptions, placementOptions } = useMemo(() => {
-        // FIX: Explicitly type nodesMap to help TypeScript correctly infer the type of `nodesMap.get()`, resolving errors where properties on nodes were not found.
         const nodesMap: Map<string, MindMapNode> = new Map(nodes.map(node => [node.id, node]));
 
         const findParent = (startNodeId: string | undefined, targetType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness'): MindMapNode | undefined => {

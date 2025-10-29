@@ -6,8 +6,8 @@ import { MindMapView } from './components/MindMapView';
 import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
-import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject } from './types';
-import { analyzeCampaignBlueprint, generatePersonaVariations, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails } from './services/geminiService';
+import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject } from './types';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
 import { EvolveModal } from './components/EvolveModal';
@@ -92,9 +92,148 @@ function App() {
     setNodes([dnaNode, initialPersonaNode]);
   };
   
-  const handleTogglePersona = (nodeId: string) => {
+  const handleTogglePersona = async (nodeId: string) => {
       const personaNode = nodes.find(n => n.id === nodeId);
-      if (!personaNode) return;
+      if (!personaNode || !campaignBlueprint) return;
+  
+      const childrenExist = nodes.some(n => n.parentId === nodeId);
+  
+      if (childrenExist) {
+          setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
+      } else {
+          setIsLoading(true);
+          setLoadingMessage(`Menganalisis Pain & Desire untuk persona "${personaNode.label}"...`);
+          try {
+              const persona = (personaNode.content as { persona: TargetPersona }).persona;
+              const painDesires = await generatePainDesires(campaignBlueprint, persona);
+              
+              const newPainDesireNodes: MindMapNode[] = painDesires.map(pd => ({
+                  id: simpleUUID(),
+                  parentId: nodeId,
+                  type: 'pain_desire',
+                  label: pd.name,
+                  content: { painDesire: pd },
+                  position: { x: 0, y: 0 },
+                  isExpanded: false,
+                  width: 250,
+                  height: 120,
+              }));
+  
+              setNodes(prev => [
+                  ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
+                  ...newPainDesireNodes
+              ]);
+          } catch (e: any) {
+              console.error(e);
+              setError(e.message || 'Gagal menganalisis Pain & Desire.');
+          } finally {
+              setIsLoading(false);
+              setLoadingMessage('');
+          }
+      }
+  };
+
+  const handleTogglePainDesire = async (nodeId: string) => {
+      const painDesireNode = nodes.find(n => n.id === nodeId);
+      if (!painDesireNode || !campaignBlueprint) return;
+
+      const childrenExist = nodes.some(n => n.parentId === nodeId);
+      if (childrenExist) {
+          setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
+          return;
+      }
+
+      const personaNode = nodes.find(n => n.id === painDesireNode.parentId);
+      if (!personaNode) {
+          setError('Konteks persona tidak ditemukan.');
+          return;
+      }
+      
+      setIsLoading(true);
+      setLoadingMessage(`Menganalisis potensi keberatan terkait "${painDesireNode.label}"...`);
+      try {
+          const persona = (personaNode.content as { persona: TargetPersona }).persona;
+          const painDesire = (painDesireNode.content as { painDesire: PainDesireObject }).painDesire;
+          const objections = await generateObjections(campaignBlueprint, persona, painDesire);
+
+          const newObjectionNodes: MindMapNode[] = objections.map(objection => ({
+              id: simpleUUID(),
+              parentId: nodeId,
+              type: 'objection',
+              label: objection.name,
+              content: { objection },
+              position: { x: 0, y: 0 },
+              isExpanded: false,
+              width: 250,
+              height: 100,
+          }));
+
+          setNodes(prev => [
+              ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
+              ...newObjectionNodes
+          ]);
+      } catch (e: any) {
+          console.error(e);
+          setError(e.message || 'Gagal menganalisis keberatan.');
+      } finally {
+          setIsLoading(false);
+          setLoadingMessage('');
+      }
+  };
+  
+  const handleToggleObjection = async (nodeId: string) => {
+      const objectionNode = nodes.find(n => n.id === nodeId);
+      if (!objectionNode || !campaignBlueprint) return;
+  
+      const childrenExist = nodes.some(n => n.parentId === nodeId);
+      if (childrenExist) {
+          setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
+          return;
+      }
+  
+      const painDesireNode = nodes.find(n => n.id === objectionNode.parentId);
+      const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
+  
+      if (!personaNode) {
+          setError('Konteks persona tidak ditemukan.');
+          return;
+      }
+  
+      setIsLoading(true);
+      setLoadingMessage(`Mencari tipe penawaran untuk mengatasi "${objectionNode.label}"...`);
+      try {
+          const persona = (personaNode.content as { persona: TargetPersona }).persona;
+          const objection = (objectionNode.content as { objection: ObjectionObject }).objection;
+          const offers = await generateOfferTypes(campaignBlueprint, persona, objection);
+  
+          const newOfferNodes: MindMapNode[] = offers.map(offer => ({
+              id: simpleUUID(),
+              parentId: nodeId,
+              type: 'offer',
+              label: offer.name,
+              content: { offer },
+              position: { x: 0, y: 0 },
+              isExpanded: false,
+              width: 250,
+              height: 100,
+          }));
+  
+          setNodes(prev => [
+              ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
+              ...newOfferNodes
+          ]);
+      } catch (e: any) {
+          console.error(e);
+          setError(e.message || 'Gagal membuat tipe penawaran.');
+      } finally {
+          setIsLoading(false);
+          setLoadingMessage('');
+      }
+  };
+
+  const handleToggleOffer = (nodeId: string) => {
+      const offerNode = nodes.find(n => n.id === nodeId);
+      if (!offerNode) return;
   
       const childrenExist = nodes.some(n => n.parentId === nodeId);
   
@@ -119,7 +258,7 @@ function App() {
           ]);
       }
   };
-  
+
   const handleToggleAwareness = async (nodeId: string) => {
       const awarenessNode = nodes.find(n => n.id === nodeId);
       if (!awarenessNode || !campaignBlueprint) return;
@@ -129,9 +268,13 @@ function App() {
       if (childrenExist) {
           setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
       } else {
-          const personaNode = nodes.find(n => n.id === awarenessNode.parentId);
-          if (!personaNode) {
-              setError('Konteks persona tidak ditemukan untuk membuat angle.');
+          const offerNode = nodes.find(n => n.id === awarenessNode.parentId);
+          const objectionNode = offerNode ? nodes.find(n => n.id === offerNode.parentId) : undefined;
+          const painDesireNode = objectionNode ? nodes.find(n => n.id === objectionNode.parentId) : undefined;
+          const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
+  
+          if (!personaNode || !objectionNode || !painDesireNode || !offerNode) {
+              setError('Konteks persona, pain/desire, keberatan, atau penawaran tidak ditemukan untuk membuat angle.');
               return;
           }
   
@@ -140,7 +283,18 @@ function App() {
           
           try {
               const personaContent = personaNode.content as { persona: TargetPersona };
-              const angles = await generateHighLevelAngles(campaignBlueprint, personaContent.persona, awarenessNode.label as AwarenessStage); 
+              const painDesireContent = painDesireNode.content as { painDesire: PainDesireObject };
+              const objectionContent = objectionNode.content as { objection: ObjectionObject };
+              const offerContent = offerNode.content as { offer: OfferTypeObject };
+
+              const angles = await generateHighLevelAngles(
+                campaignBlueprint, 
+                personaContent.persona, 
+                awarenessNode.label as AwarenessStage, 
+                objectionContent.objection, 
+                painDesireContent.painDesire,
+                offerContent.offer
+              ); 
               
               const newAngleNodes: MindMapNode[] = angles.map(angle => ({
                   id: simpleUUID(),
@@ -177,7 +331,11 @@ function App() {
           setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
       } else {
           const awarenessNode = nodes.find(n => n.id === angleNode.parentId);
-          const personaNode = awarenessNode ? nodes.find(n => n.id === awarenessNode.parentId) : undefined;
+          const offerNode = awarenessNode ? nodes.find(n => n.id === awarenessNode.parentId) : undefined;
+          const objectionNode = offerNode ? nodes.find(n => n.id === offerNode.parentId) : undefined;
+          const painDesireNode = objectionNode ? nodes.find(n => n.id === objectionNode.parentId) : undefined;
+          const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
+          
           if (!personaNode || !awarenessNode) {
               setError('Konteks tidak ditemukan untuk membuat trigger.');
               return;
@@ -293,9 +451,12 @@ function App() {
       const triggerNode = formatNode ? nodes.find(n => n.id === formatNode.parentId) : undefined;
       const angleNode = triggerNode ? nodes.find(n => n.id === triggerNode.parentId) : undefined;
       const awarenessNode = angleNode ? nodes.find(n => n.id === angleNode.parentId) : undefined;
-      const personaNode = awarenessNode ? nodes.find(n => n.id === awarenessNode.parentId) : undefined;
+      const offerNode = awarenessNode ? nodes.find(n => n.id === awarenessNode.parentId) : undefined;
+      const objectionNode = offerNode ? nodes.find(n => n.id === offerNode.parentId) : undefined;
+      const painDesireNode = objectionNode ? nodes.find(n => n.id === objectionNode.parentId) : undefined;
+      const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
 
-      if (!formatNode || !awarenessNode || !triggerNode || !angleNode || !personaNode) {
+      if (!formatNode || !awarenessNode || !triggerNode || !angleNode || !personaNode || !offerNode) {
           setError("Konteks untuk brief ini tidak dapat ditemukan.");
           return;
       }
@@ -306,13 +467,14 @@ function App() {
       const format = formatNode.label as CreativeFormat;
       const angle = angleNode.label;
       const awareness = awarenessNode.label as AwarenessStage;
+      const offer = (offerNode.content as { offer: OfferTypeObject }).offer;
       
       setIsLoading(true);
       setLoadingMessage(`Membuat ide ${placement} untuk format "${format}"...`);
 
       try {
           const ideas = await generateCreativeIdeas(
-              campaignBlueprint, angle, trigger, awareness, format, placement, persona, placementNode.id, allowVisualExploration
+              campaignBlueprint, angle, trigger, awareness, format, placement, persona, placementNode.id, allowVisualExploration, offer
           );
           
           const newCreativeNodes: MindMapNode[] = ideas.map(concept => ({
@@ -322,8 +484,8 @@ function App() {
               label: concept.headline,
               content: { concept },
               position: { x: 0, y: 0 },
-              width: 320,
-              height: 480,
+              width: 160,
+              height: 240,
           }));
 
           setNodes(prev => [
@@ -345,6 +507,9 @@ function App() {
       
       const messageMap = {
           'persona': 'Anda yakin ingin menghapus persona ini beserta semua turunannya?',
+          'pain_desire': 'Anda yakin ingin menghapus Pain/Desire ini dan semua turunannya?',
+          'objection': 'Anda yakin ingin menghapus keberatan ini dan semua turunannya?',
+          'offer': 'Anda yakin ingin menghapus penawaran ini dan semua turunannya?',
           'angle': 'Anda yakin ingin menghapus angle ini beserta semua turunannya?',
           'trigger': 'Anda yakin ingin menghapus trigger ini dan semua turunannya?',
           'creative': 'Anda yakin ingin menghapus konsep kreatif ini?',
@@ -493,8 +658,8 @@ function App() {
                   label: newConcept.headline,
                   content: { concept: newConcept },
                   position: { x: 0, y: 0 },
-                  width: 320,
-                  height: 480,
+                  width: 160,
+                  height: 240,
               };
               setNodes(prev => [...prev, newCreativeNode]);
           } else {
@@ -569,7 +734,7 @@ function App() {
     .map(n => (n.content as { concept: AdConcept }).concept), [nodes]);
 
   const editingConcept = allConcepts.find(c => c.id === editingConceptId) || null;
-
+  
   const renderContent = () => {
     switch(currentStep) {
         case 'input':
@@ -614,6 +779,9 @@ function App() {
                 <MindMapView
                     nodes={nodes}
                     onTogglePersona={handleTogglePersona}
+                    onTogglePainDesire={handleTogglePainDesire}
+                    onToggleObjection={handleToggleObjection}
+                    onToggleOffer={handleToggleOffer}
                     onToggleAngle={handleToggleAngle}
                     onToggleTrigger={handleToggleTrigger}
                     onToggleAwareness={handleToggleAwareness}
