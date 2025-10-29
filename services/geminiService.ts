@@ -600,8 +600,8 @@ export const generateAdImage = async (prompt: string, referenceImageBase64?: str
     if (referenceImageBase64) {
         parts.push(imageB64ToGenerativePart(referenceImageBase64));
         if (allowVisualExploration) {
-            // When exploration is allowed, the reference image is "inspiration".
-            textPrompt = `${salesIntent} The provided image is a reference for the original campaign's style. Use it as **inspiration** for the mood, color palette, and general feel, but you have creative freedom to generate a completely new and different scene based on the following prompt. The goal is creative variation that feels fresh but still plausibly from the same brand family. The new scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`;
+            // When exploration is allowed, the reference image is "inspiration" for STYLE ONLY.
+            textPrompt = `${salesIntent} The provided image is a **STYLE REFERENCE ONLY**. Your task is to extract its artistic style (e.g., color palette, lighting, composition, texture) and apply it to a **COMPLETELY NEW SCENE** described in the following prompt. **IMPORTANT: DO NOT replicate the subject matter, objects, or people from the reference image.** The content for the new image must come *exclusively* from the text that follows. The new scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`;
         } else {
             // When exploration is NOT allowed, the reference image is a strict guide.
             textPrompt = `${salesIntent} Using the provided reference image for style, lighting, and mood, create this new scene: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo.`;
