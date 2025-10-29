@@ -1,6 +1,6 @@
 
-import { GoogleGenAI, Modality } from "@google/genai";
-import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject } from '../types';
+import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide } from '../types';
 
 // Utility to convert file to base64
 const fileToGenerativePart = async (file: File) => {
@@ -25,6 +25,131 @@ const imageB64ToGenerativePart = (base64Data: string, mimeType: string = 'image/
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+// --- Strategic Constants ---
+
+const COMPOSITION_FOR_ADS: Record<PlacementFormat, string> = {
+    'Instagram Story': 'Leave top 25% clear for headline. Main subject in middle-lower third.',
+    'Instagram Feed': 'Rule of thirds. Leave space in either top-left or bottom-right for text overlay.',
+    'Carousel': 'Slide 1: Center subject with clear bg. Slides 2-5: Varied composition with consistent text zones.'
+};
+
+const CAROUSEL_ARCS: Record<string, string> = {
+    'PAS': 'Problem-Agitate-Solution. Ideal for direct response and problem-focused formats. (Hook -> Agitate -> Solution -> Proof -> CTA)',
+    'Transformation': 'Before & After narrative. Perfect for formats like "Before & After" or "Testimonial". (Before state -> The struggle -> The discovery/solution -> The glorious After state -> CTA)',
+    'Educational': 'Teach something valuable. Best for "Educational/Tip" or "Demo" formats. (Intriguing Hook -> Bust Myth 1 -> Bust Myth 2 -> Reveal The Truth/Method -> CTA/Product Link)',
+    'Testimonial Story': 'Customer-centric story. Use for "Testimonial" or "UGC" formats. (Hook with a powerful quote -> Introduce the customer & their story -> The specific result they got -> How the product made it possible -> CTA)'
+};
+
+
+// --- JSON Schemas for robust generation ---
+
+const campaignBlueprintSchema = {
+    type: Type.OBJECT,
+    properties: {
+        productAnalysis: {
+            type: Type.OBJECT,
+            properties: {
+                name: { type: Type.STRING },
+                keyBenefit: { type: Type.STRING }
+            },
+            required: ['name', 'keyBenefit']
+        },
+        targetPersona: {
+            type: Type.OBJECT,
+            properties: {
+                description: { type: Type.STRING },
+                age: { type: Type.STRING },
+                creatorType: { type: Type.STRING },
+                painPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+                desiredOutcomes: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['description', 'age', 'creatorType', 'painPoints', 'desiredOutcomes']
+        },
+        adDna: {
+            type: Type.OBJECT,
+            properties: {
+                salesMechanism: { type: Type.STRING },
+                copyPattern: { type: Type.STRING },
+                persuasionFormula: { type: Type.STRING },
+                specificLanguagePatterns: { type: Type.ARRAY, items: { type: Type.STRING } },
+                toneOfVoice: { type: Type.STRING },
+                socialProofElements: { type: Type.STRING },
+                objectionHandling: { type: Type.STRING },
+                visualStyle: { type: Type.STRING },
+                offerSummary: { type: Type.STRING },
+                cta: { type: Type.STRING },
+                targetCountry: { type: Type.STRING }
+            },
+            required: [
+                'salesMechanism', 'copyPattern', 'persuasionFormula', 'specificLanguagePatterns', 
+                'toneOfVoice', 'socialProofElements', 'objectionHandling', 'visualStyle', 
+                'offerSummary', 'cta', 'targetCountry'
+            ]
+        }
+    },
+    required: ['productAnalysis', 'targetPersona', 'adDna']
+};
+
+const targetPersonaSchema = {
+    type: Type.OBJECT,
+    properties: {
+        description: { type: Type.STRING },
+        age: { type: Type.STRING },
+        creatorType: { type: Type.STRING },
+        painPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+        desiredOutcomes: { type: Type.ARRAY, items: { type: Type.STRING } }
+    },
+    required: ['description', 'age', 'creatorType', 'painPoints', 'desiredOutcomes']
+};
+
+const buyingTriggerObjectSchema = {
+    type: Type.OBJECT,
+    properties: {
+        name: { type: Type.STRING },
+        description: { type: Type.STRING },
+        example: { type: Type.STRING }
+    },
+    required: ['name', 'description', 'example']
+};
+
+const carouselSlideSchema = {
+    type: Type.OBJECT,
+    properties: {
+        slideNumber: { type: Type.INTEGER },
+        visualPrompt: { type: Type.STRING },
+        headline: { type: Type.STRING },
+        description: { type: Type.STRING }
+    },
+    required: ['slideNumber', 'visualPrompt', 'headline', 'description']
+};
+
+const adConceptSchema = {
+    type: Type.OBJECT,
+    properties: {
+        id: { type: Type.STRING },
+        angle: { type: Type.STRING },
+        trigger: { type: Type.STRING }, // AI returns a string, we map it to object later
+        format: { type: Type.STRING },
+        placement: { type: Type.STRING },
+        awarenessStage: { type: Type.STRING },
+        strategicPathId: { type: Type.STRING },
+        personaDescription: { type: Type.STRING },
+        personaAge: { type: Type.STRING },
+        personaCreatorType: { type: Type.STRING },
+        visualVehicle: { type: Type.STRING },
+        hook: { type: Type.STRING },
+        headline: { type: Type.STRING },
+        visualPrompt: { type: Type.STRING },
+        adSetName: { type: Type.STRING },
+        carouselSlides: { type: Type.ARRAY, items: carouselSlideSchema }
+    },
+     required: [
+        'id', 'angle', 'trigger', 'format', 'placement', 'awarenessStage', 'strategicPathId', 
+        'personaDescription', 'personaAge', 'personaCreatorType', 'visualVehicle', 'hook', 
+        'headline', 'visualPrompt', 'adSetName'
+    ]
+};
+
 export const analyzeCampaignBlueprint = async (imageBase64: string, caption: string, productInfo: string, offerInfo: string): Promise<CampaignBlueprint> => {
   const imagePart = imageB64ToGenerativePart(imageBase64, 'image/jpeg');
   const prompt = `
@@ -35,34 +160,9 @@ export const analyzeCampaignBlueprint = async (imageBase64: string, caption: str
     - Product/Service Description: "${productInfo || 'Not provided. Infer from ad.'}"
     - Offer/CTA: "${offerInfo || 'Not provided. Infer from ad.'}"
 
-    Based on all the provided information (image and text), generate a structured JSON object for the Campaign Blueprint with the following fields:
+    Based on all the provided information (image and text), generate a structured JSON object for the Campaign Blueprint.
 
-    1.  "productAnalysis": {
-          "name": "The product/service name, inferred.",
-          "keyBenefit": "The single most important benefit the product offers to the customer."
-        }
-    2.  "targetPersona": {
-          "description": "A brief description of the target audience (e.g., 'Busy young mothers who value convenience').",
-          "age": "Estimate the age range (e.g., '25-35').",
-          "creatorType": "Describe the person in the ad (e.g., 'Real Customer', 'Expert', 'Model').",
-          "painPoints": ["List 2-3 key problems or frustrations this persona faces that the product solves."],
-          "desiredOutcomes": ["List 2-3 key goals or aspirations this persona has that the product helps achieve."]
-        }
-    3.  "adDna": {
-          "salesMechanism": "The exact persuasion flow from start to finish (e.g., 'Agitate pain -> Show transformation -> Create urgency').",
-          "copyPattern": "The structure of the copy (e.g., 'Open loop question -> Testimonial proof -> Limited offer').",
-          "persuasionFormula": "The proven copywriting framework used (e.g., 'PAS (Problem-Agitate-Solution)', 'AIDA', 'Story-based').",
-          "specificLanguagePatterns": ["An array of exact phrases, words, or sentence structures that create desire, urgency, or relatability (e.g., 'Capek...', 'Coba deh...', 'sekali usap')."],
-          "toneOfVoice": "Describe the tone and personality of the copy (e.g., 'Conversational, empathetic, casual Indonesian').",
-          "socialProofElements": "How does the ad use social proof, authority, or tribe membership? (e.g., 'Implied community ('everyone's doing it')', 'Features a doctor').",
-          "objectionHandling": "What fears or doubts does the ad preemptively address? (e.g., 'Addresses 'too much effort' objection upfront').",
-          "visualStyle": "Describe the overall visual style (e.g., 'Candid influencer photo, natural lighting', 'Professional studio shot, clean background', 'Dark and moody cinematic look').",
-          "offerSummary": "A brief summary of the offer.",
-          "cta": "The primary call to action.",
-          "targetCountry": "Infer the target country for the audience based on language, currency, cultural cues, or other context. (e.g., 'Indonesia', 'United States', 'Global')."
-        }
-
-    Respond ONLY with the single, valid JSON object.
+    Respond ONLY with the single, valid JSON object that conforms to the provided schema.
   `;
 
   const response = await ai.models.generateContent({
@@ -70,6 +170,7 @@ export const analyzeCampaignBlueprint = async (imageBase64: string, caption: str
     contents: [{ parts: [imagePart, { text: prompt }] }],
     config: {
         responseMimeType: "application/json",
+        responseSchema: campaignBlueprintSchema,
     }
   });
 
@@ -91,14 +192,7 @@ export const generatePersonaVariations = async (blueprint: CampaignBlueprint, ex
         Existing Persona Descriptions to avoid:
         ${existingPersonas.map(p => `- ${p.description}`).join('\n')}
 
-        For each new persona, create a JSON object with the following structure:
-        {
-          "description": "A brief, new description of the target audience (e.g., 'Eco-conscious college students').",
-          "age": "A plausible age range for this new persona (e.g., '18-22').",
-          "creatorType": "A suitable creator type for this persona (e.g., 'Regular User', 'Student Influencer').",
-          "painPoints": ["List 2-3 key problems this new persona faces that the product solves."],
-          "desiredOutcomes": ["List 2-3 key goals this new persona has that the product helps achieve."]
-        }
+        For each new persona, create a JSON object with the structure defined in the schema.
         
         Respond ONLY with a JSON array of these persona objects.
     `;
@@ -106,7 +200,13 @@ export const generatePersonaVariations = async (blueprint: CampaignBlueprint, ex
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: [{ parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" }
+        config: { 
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: targetPersonaSchema,
+            },
+        }
     });
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
@@ -133,13 +233,19 @@ export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, pers
 
         ${existingAngles.length > 0 ? `IMPORTANT: Do not generate any of the following angles, as they already exist: ${existingAngles.join(', ')}.` : ''}
 
-        Respond ONLY with a JSON array of 4 strings. For example: ["Focus on Relieving Pain X for [Persona]", "Highlight How [Persona] Achieves Outcome Y", "Build Emotional Connection with [Persona]", "Showcase a 'Day in the Life' of [Persona]"]
+        Respond ONLY with a JSON array of 4 unique angle strings. For example: ["Focus on Relieving Pain X for [Persona]", "Highlight How [Persona] Achieves Outcome Y", "Build Emotional Connection with [Persona]", "Showcase a 'Day in the Life' of [Persona]"]
     `;
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: [{ parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" }
+        config: { 
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+            }
+        }
     });
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
@@ -173,10 +279,8 @@ export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, perso
 
         **Instructions:**
         1.  Analyze the context and choose the 4 best triggers from the list. For "Unaware" or "Problem Aware" stages, triggers like Reciprocity or Liking are better. For "Solution Aware" or "Product Aware", triggers like Scarcity or Social Proof are more effective.
-        2.  For each chosen trigger, create a JSON object with three fields: "name", "description", and "example".
-        3.  **name:** The exact name of the trigger from the list.
-        4.  **description:** A simple, one-sentence explanation of the psychological principle.
-        5.  **example:** A specific, actionable example of how to apply this trigger in an ad for *this* product, persona, angle, and awareness stage. The example should be a snippet of ad copy or a visual idea that resonates in "${blueprint.adDna.targetCountry}".
+        2.  For each chosen trigger, create a JSON object with three fields as defined in the schema: "name", "description", and "example".
+        3.  The example should be a specific, actionable ad copy snippet or visual idea that resonates in "${blueprint.adDna.targetCountry}".
 
         **Output:**
         Respond ONLY with a valid JSON array of these 4 objects. Do not include any other text or markdown.
@@ -184,7 +288,48 @@ export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, perso
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: [{ parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" }
+        config: { 
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: buyingTriggerObjectSchema
+            }
+        }
+    });
+    const rawJson = response.text;
+    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
+    return JSON.parse(cleanedJson);
+};
+
+export const getBuyingTriggerDetails = async (triggerName: string, blueprint: CampaignBlueprint, persona: TargetPersona, angle: string): Promise<BuyingTriggerObject> => {
+    const prompt = `
+        You are a Direct Response Copywriting Coach.
+        Your task is to provide the details for a specific psychological trigger within a given campaign context.
+
+        **Psychological Trigger to Detail:** "${triggerName}"
+
+        **Campaign Context:**
+        - **Product:** ${blueprint.productAnalysis.name}
+        - **Key Benefit:** ${blueprint.productAnalysis.keyBenefit}
+        - **Target Persona:** ${persona.description} (Pain Points: ${persona.painPoints.join(', ')})
+        - **Strategic Angle:** "${angle}"
+        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+
+        **Instructions:**
+        1.  Based on the predefined list of psychological triggers, provide a clear, concise "description" for "${triggerName}".
+        2.  Create a concrete "example" of how this trigger applies directly to the provided campaign context. The example should be an actionable ad copy snippet or visual idea that would resonate in "${blueprint.adDna.targetCountry}".
+        3.  Return a single JSON object with three fields: "name" (which should be "${triggerName}"), "description", and "example".
+
+        **Output:**
+        Respond ONLY with the single, valid JSON object that conforms to the schema. Do not include any other text or markdown.
+    `;
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: buyingTriggerObjectSchema
+        }
     });
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
@@ -193,24 +338,24 @@ export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, perso
 
 const HOOK_FORMULAS: Record<AwarenessStage, string[]> = {
   'Unaware': [
-    'Provocative Question: "Kenapa [negative state] padahal [should be positive]?"',
-    'Bold Statement: "[Shocking fact] yang [demographic] tidak tahu."',
-    'Pattern Interrupt: "Stop [common behavior]. Ini kenapa."'
+    'Pattern Interrupt: "Stop [common behavior]. Ini alasan tak terduga kenapa..."',
+    'Provocative Question: "Kenapa [relatable pain] makin parah padahal sudah [common effort]?"',
+    'Bold Statement: "[Shocking fact] yang [demographic] tidak tahu tentang [topic]."',
   ],
   'Problem Aware': [
-    'Agitation: "Masih [struggling]? Ini [hidden cause] yang bikin gagal terus."',
-    'Empathy: "Pernah ngerasa [frustration]? Ternyata bukan salah kamu..."',
-    'Social Proof: "[X] orang udah solve [problem]. Rahasianya cuma [Y]."'
+    'Agitation: "Masih berjuang dengan [problem]? Ternyata ini [hidden cause] yang sering diabaikan."',
+    'Empathy & Callout: "Kalau kamu sering merasa [frustration], ini bukan salahmu. Ini solusinya..."',
+    'Social Proof Hook: "Ribuan orang dengan [problem] sudah beralih ke [new method]. Ini alasannya."',
   ],
   'Solution Aware': [
-    'Comparison: "Forget [old solution]. [New approach] terbukti [X]% lebih [benefit]."',
-    'Authority: "[Expert/Study] bilang ini cara paling [effective adjective]."',
-    'Mechanism: "Ini kenapa [solution type] work 10x lebih baik..."'
+    'Comparison: "Lupakan [old solution]. [New solution type] terbukti [X]% lebih [benefit]."',
+    'Authority Angle: "Para ahli setuju: ini cara paling efektif untuk [achieve desired outcome]."',
+    'Mechanism Reveal: "Ini cara kerja [unique mechanism] yang membuat [product category] biasa jadi ketinggalan zaman."',
   ],
   'Product Aware': [
-    'Offer: "[Product] sekarang [offer]. Tapi [scarcity/urgency]."',
-    'Testimonial: "\'[Specific result]\' - [Relatable person], [timeframe]"',
-    'Exclusive: "Cuma [lucky group] yang bisa akses [benefit] ini..."'
+    'Direct Offer & Urgency: "Spesial hari ini: [Product] [offer]. Jangan sampai kehabisan!"',
+    'Testimonial Hook: "\'[Specific, impressive result]\' - [Name], salah satu dari 10.000+ customer puas."',
+    'Exclusive Benefit: "Hanya dengan [Product]: dapatkan [unique benefit] yang tidak ada di tempat lain."',
   ]
 };
 
@@ -221,7 +366,7 @@ const HEADLINE_FORMULAS: Record<AwarenessStage, string[]> = {
         'Identity: "Untuk [persona] yang [pain/desire]: [This is for you]"'
     ],
     'Problem Aware': [
-        'Solution Reveal: "[Problem] fixed dengan [simple method]. Ini caranya."',
+        'Solution Reveal: "[Problem] beres dengan [simple method]. Ini caranya."',
         'Authority: "[Expert/data] bilang ini solusi paling [superlative] untuk [problem]"',
         'New Mechanism: "Ternyata [problem] bukan karena [common belief]. Tapi karena [real cause]..."'
     ],
@@ -235,125 +380,44 @@ const HEADLINE_FORMULAS: Record<AwarenessStage, string[]> = {
         'Overcome Objection: "[Product] + [Bonus] = [Total value]. Tapi harga cuma [price]. [Reason to believe]"',
         'Exclusive: "Akses eksklusif [Product Name]: [Unique benefit] yang ga ada di [competitor]"'
     ]
-}
+};
 
 const TRIGGER_IMPLEMENTATION_CHECKLIST: Record<string, { copyMust: string[], visualMust: string[] }> = {
   'Social Proof': {
-    copyMust: [
-      'Include specific numbers (e.g., "10,000+ users", "4.8/5 stars", "Ribuan orang udah...")',
-      'Quote or reference real people, testimonials, or authority figures',
-      'Use words that imply collective action: "terbukti", "ratusan", "semua orang", "akhirnya"'
-    ],
-    visualMust: [
-      'Show multiple people using product OR',
-      'Show testimonial quotes/ratings visible in the image OR',
-      'Show "as seen on" badges, media mentions, or crowd shots OR',
-      'Show before-after comparison from real customers with visible transformation'
-    ]
+    copyMust: ["Include specific numbers (e.g., '10,000+ users', 'Ribuan orang udah...')", "Quote real people or testimonials", "Use words implying collective action: 'terbukti', 'semua orang'"],
+    visualMust: ["Show multiple people using the product", "Show testimonial quotes/ratings in the image", "Show before-afters from real customers"]
   },
   'Scarcity': {
-    copyMust: [
-      'State limited quantity/availability explicitly ("Hanya X tersisa", "Stok terbatas")',
-      'Use time/stock language that creates fear of missing out',
-      'Mention exclusivity or rarity ("Limited edition", "Jarang ada")'
-    ],
-    visualMust: [
-      'Show limited quantity indicators (countdown timer, stock level bar) OR',
-      'Show "almost sold out" or "low stock" warning in image OR',
-      'Show exclusive/limited edition packaging or badge OR',
-      'Show nearly empty shelf or product display'
-    ]
+    copyMust: ["State limited quantity explicitly ('Hanya X tersisa', 'Stok terbatas')", "Mention exclusivity ('Limited edition')", "Create fear of missing out"],
+    visualMust: ["Show a stock level bar", "Show an 'almost sold out' warning", "Show exclusive packaging"]
   },
   'Urgency': {
-    copyMust: [
-      'Include explicit deadline ("Hari ini aja", "Berakhir dalam X jam", "Sampai besok")',
-      'State consequence of delay ("Setelah ini, harga naik lagi")',
-      'Use time-sensitive language: "Sekarang", "Buruan", "Jangan sampai telat"'
-    ],
-    visualMust: [
-      'Show countdown timer or clock prominently OR',
-      'Show calendar with date circled/highlighted OR',
-      'Show person acting quickly/urgently (running, grabbing product) OR',
-      'Show visual cue of time passing (hourglass, timer app)'
-    ]
+    copyMust: ["Include explicit deadline ('Hari ini aja', 'Berakhir dalam X jam')", "State consequence of delay ('Setelah ini, harga naik')", "Use time-sensitive language: 'Sekarang', 'Buruan'"],
+    visualMust: ["Show a countdown timer", "Show a calendar with a date circled", "Show a person acting quickly"]
   },
   'Reciprocity': {
-    copyMust: [
-      'Offer something valuable for free first ("Gratis panduan", "Bonus ini dulu")',
-      'Frame as giving before asking ("Coba dulu", "Lihat hasilnya gratis")',
-      'Use language of generosity: "Kami kasih", "Khusus untuk kamu", "Hadiah dari kami"'
-    ],
-    visualMust: [
-      'Show the free item/bonus being offered prominently OR',
-      'Show person receiving or unboxing the freebie with delight OR',
-      'Show "FREE" badge or gift wrap visual OR',
-      'Show before (empty hands) and after (holding gift) state'
-    ]
+    copyMust: ["Offer something valuable for free first ('Gratis panduan', 'Bonus ini dulu')", "Frame as giving before asking ('Coba dulu', 'Lihat hasilnya gratis')", "Use language of generosity: 'Kami kasih', 'Hadiah'"],
+    visualMust: ["Show the free item/bonus prominently", "Show a person delighted to receive the freebie", "Show a 'FREE' badge or gift wrap visual"]
   },
   'Authority': {
-    copyMust: [
-      'Cite expert, doctor, scientist, or recognized authority ("Dokter X merekomendasikan")',
-      'Mention certifications, studies, or research ("Terbukti secara klinis")',
-      'Use authority language: "Ahli bilang", "Studi menunjukkan", "Sertifikasi dari"'
-    ],
-    visualMust: [
-      'Show expert/doctor/professional in their environment (lab coat, clinic) OR',
-      'Show certification badges, seals, or official logos OR',
-      'Show research data, graphs, or scientific imagery OR',
-      'Show person in position of authority holding/endorsing product'
-    ]
+    copyMust: ["Cite an expert or recognized authority ('Dokter X merekomendasikan')", "Mention certifications or studies ('Terbukti secara klinis')", "Use authority language: 'Ahli bilang', 'Studi menunjukkan'"],
+    visualMust: ["Show an expert in their environment (lab coat, clinic)", "Show certification badges or official logos", "Show research data or graphs"]
   },
   'Liking': {
-    copyMust: [
-      'Use relatable, friendly, conversational tone as if talking to a friend',
-      'Share personal story or vulnerability ("Aku dulu juga gitu")',
-      'Use inclusive language: "Kita", "Sama-sama", "Buat kamu yang..."'
-    ],
-    visualMust: [
-      'Show relatable influencer or person similar to persona using product naturally OR',
-      'Show genuine smile, warm eye contact, inviting body language OR',
-      'Show casual, authentic setting (home, coffee shop, not studio) OR',
-      'Show person who looks like the target persona (age, style, vibe)'
-    ]
+    copyMust: ["Use a relatable, friendly, conversational tone", "Share a personal story or vulnerability ('Aku dulu juga gitu')", "Use inclusive language: 'Kita', 'Sama-sama'"],
+    visualMust: ["Show a relatable influencer or person similar to the persona", "Show a genuine smile and warm eye contact", "Show a casual, authentic setting (home, not a studio)"]
   },
   'Fear of Missing Out (FOMO)': {
-    copyMust: [
-      'Highlight what others are experiencing ("10,000 orang udah ngerasain ini")',
-      'Emphasize trend or movement ("Viral di TikTok", "Yang lagi hits")',
-      'Use FOMO language: "Jangan sampai ketinggalan", "Semua orang udah coba", "Kamu belum?"'
-    ],
-    visualMust: [
-      'Show crowd of people enjoying the product or experience OR',
-      'Show trending/viral visual cues (phone screens with high engagement) OR',
-      'Show "everyone else has it" scenario (empty shelf, sold out signs) OR',
-      'Show person looking sad/left out vs. person happy with product'
-    ]
+    copyMust: ["Highlight what others are experiencing ('10,000 orang udah ngerasain ini')", "Emphasize a trend or movement ('Viral di TikTok')", "Use FOMO language: 'Jangan sampai ketinggalan', 'Kamu belum?'"],
+    visualMust: ["Show a crowd of people enjoying the product", "Show 'everyone else has it' scenario (e.g., an empty shelf)", "Show a person looking left out vs. a person happy with the product"]
   },
   'Exclusivity': {
-    copyMust: [
-      'Emphasize limited access ("Khusus member", "Hanya untuk select few")',
-      'Mention VIP, premium, or elite status ("Akses VIP", "Edisi khusus")',
-      'Use exclusive language: "Invite-only", "Private community", "Tidak dijual bebas"'
-    ],
-    visualMust: [
-      'Show VIP pass, membership card, or exclusive badge OR',
-      'Show velvet rope, locked door, or "members only" sign OR',
-      'Show luxury packaging or premium presentation OR',
-      'Show small, intimate group of people (not a crowd)'
-    ]
+    copyMust: ["Emphasize limited access ('Khusus member', 'Invite-only')", "Mention VIP or premium status", "Use exclusive language: 'Tidak dijual bebas'"],
+    visualMust: ["Show a VIP pass or membership card", "Show a velvet rope or 'members only' sign", "Show luxury packaging"]
   },
   'Instant Gratification': {
-    copyMust: [
-      'Promise quick results ("Hasil dalam 3 hari", "Langsung terasa")',
-      'Emphasize speed and ease ("Cepat", "Instan", "Tanpa ribet")',
-      'Use immediate language: "Sekarang juga", "Langsung", "Dalam hitungan menit"'
-    ],
-    visualMust: [
-      'Show rapid transformation or instant result (fast-forward visual) OR',
-      'Show clock/timer showing short duration OR',
-      'Show person expressing surprise at how fast it worked OR',
-      'Show side-by-side immediate before/after'
-    ]
+    copyMust: ["Promise quick results ('Hasil dalam 3 hari', 'Langsung terasa')", "Emphasize speed and ease ('Cepat', 'Instan', 'Tanpa ribet')", "Use immediate language: 'Sekarang juga', 'Langsung'"],
+    visualMust: ["Show a rapid transformation (fast-forward visual)", "Show a clock/timer showing a short duration", "Show a person expressing surprise at how fast it worked"]
   }
 };
 
@@ -361,7 +425,7 @@ const injectDynamicValues = (formula: string, blueprint: CampaignBlueprint, pers
     return formula
         .replace(/\[Product Name\]/g, blueprint.productAnalysis.name)
         .replace(/\[Product\]/g, blueprint.productAnalysis.name)
-        .replace(/\[Offer\]/g, blueprint.adDna.offerSummary)
+        .replace(/\[offer\]/g, blueprint.adDna.offerSummary)
         .replace(/\[persona\]/g, persona.description)
         .replace(/\[problem\]/g, persona.painPoints[0] || 'masalah utama')
         .replace(/\[benefit\]/g, blueprint.productAnalysis.keyBenefit)
@@ -382,39 +446,16 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
     };
 
     const placementInstructions: Record<PlacementFormat, string> = {
-        'Carousel': `**CAROUSEL CREATION MANDATE**: You MUST generate a 'carouselSlides' array with exactly 5 slides. Each slide needs: slideNumber, visualPrompt, headline, and description. Follow this EXACT story arc:
-
-**Slide 1 (HOOK) - Purpose: STOP THE SCROLL**
-- Visual: Your most eye-catching, scroll-stopping image (the "visual hook" from Step 1). Should trigger curiosity or pattern interrupt.
-- Headline: Use one of the hook formulas. Max 8 words. Should create open loop.
-- Description: 1-2 sentences expanding on the curiosity gap. DO NOT reveal solution yet.
-- Example: Visual = "Person looking shocked at their phone screen showing dramatic before/after", Headline = "Kenapa aku baru tahu ini sekarang?!", Description = "Selama ini salah cara. Pantesan ga efektif..."
-
-**Slide 2 (AGITATE) - Purpose: "ME TOO!" MOMENT**
-- Visual: Show the persona's pain point VIVIDLY. Make them feel seen and understood. Should show frustration, tiredness, or problem state clearly.
-- Headline: Describe the pain in relatable language. 6-10 words.
-- Description: Agitate the pain. Describe consequences or frustrations. 2-3 sentences.
-- Example: Visual = "Person exhausted, surrounded by messy cleaning supplies, looking defeated", Headline = "Udah capek bersih-bersih tapi tetep kotor", Description = "Rasanya kayak ga ada habisnya. Udah ngabisin waktu berjam-jam, tapi besoknya kotor lagi..."
-
-**Slide 3 (SOLUTION) - Purpose: INTRODUCE THE MECHANISM**
-- Visual: Product in action OR transformation moment. Show HOW it solves the problem simply.
-- Headline: Reveal the solution simply. Use "Ternyata cuma perlu..." or "Solusinya: ...". 5-8 words.
-- Description: Explain the simple mechanism or how it works. 2-3 sentences.
-- Example: Visual = "Product being used, with visible results happening (sparkles, shine appearing)", Headline = "Ternyata cuma butuh ${blueprint.productAnalysis.name}", Description = "Formulanya dirancang khusus buat... Cukup [simple action], langsung bersih maksimal."
-
-**Slide 4 (PROOF) - Purpose: BUILD BELIEVABILITY**
-- Visual: WAJIB mengimplementasikan trigger "${trigger.name}" secara visual. Pilih dan deskripsikan secara spesifik SATU ide dari checklist visual untuk trigger ini. Contohnya: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust[0] || 'Tunjukkan hasil yang nyata.'}
-- Headline: Proof statement. Include numbers if possible. 6-10 words.
-- Description: Specific results, testimonial snippet, or data point. 2-3 sentences.
-- Example: Visual = "Collage of user testimonials or before/after results from multiple people", Headline = "10,000+ orang udah buktiin hasilnya", Description = "Rating 4.9/5 dari ribuan review. 'Beneran game changer!' - Sarah, 29..."
-
-**Slide 5 (CTA) - Purpose: DRIVE ACTION WITH ${trigger.name.toUpperCase()}**
-- Visual: Product + offer visualization. If applicable, show scarcity/urgency cues for the offer. Clear, clean, product-focused shot.
-- Headline: ${blueprint.adDna.offerSummary} + ${blueprint.adDna.cta} + urgency/scarcity element (from trigger). 8-12 words.
-- Description: Clear CTA. Restate offer + create urgency. 2-3 sentences.
-- Example: Visual = "Product shot with price tag, FREE badge, and countdown timer visible", Headline = "Beli sekarang GRATIS ongkir + bonus brush. Promo cuma sampai besok!", Description = "Klik link di bio. Jangan sampai nyesel ga kebagian harga spesial ini. Stok terbatas!"
-
-All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${blueprint.adDna.toneOfVoice} tone.`,
+        'Carousel': `**CAROUSEL CREATION MANDATE**: 
+1.  First, you MUST choose the MOST SUITABLE story arc from the list below based on the creative format ("${format}") and strategic angle.
+    - **PAS (Problem-Agitate-Solution)**: ${CAROUSEL_ARCS['PAS']}
+    - **Transformation**: ${CAROUSEL_ARCS['Transformation']}
+    - **Educational**: ${CAROUSEL_ARCS['Educational']}
+    - **Testimonial Story**: ${CAROUSEL_ARCS['Testimonial Story']}
+2.  After choosing an arc, generate a 'carouselSlides' array with exactly 5 slides that follow its narrative structure.
+3.  **CRITICAL**: You must follow a COPY-FIRST workflow. First, write the copy (headline, description) for all 5 slides. THEN, for each slide's copy, create a 'visualPrompt' that is a direct visual interpretation of that specific slide's message and follows the composition rule for Carousels.
+4.  The final slide MUST always be the Call to Action (CTA).
+5.  All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${blueprint.adDna.toneOfVoice} tone.`,
         'Instagram Feed': "Design for a 1:1 or 4:5 aspect ratio. The visual should be high-quality and scroll-stopping. The hook should be an engaging question or a bold statement to encourage interaction in the caption.",
         'Instagram Story': "Design for a 9:16 vertical aspect ratio. The visual should feel native and authentic to the platform. The hook should be quick and punchy. The visual prompt can suggest text overlays or interactive elements."
     };
@@ -425,15 +466,13 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
 
     const prompt = `
-        You are a world-class direct response creative director. Your task is to generate an array of 3 **strategically distinct** ad concepts based on a single brief.
+        You are a world-class direct response creative director. Your task is to generate an array of 3 **strategically distinct** ad concepts based on a single brief. Your process must mimic a real agency workflow: **COPY FIRST, then VISUALS**.
 
         **🔥 YOUR CORE MISSION: A/B TEST VARIATIONS**
         It is CRITICAL that the three concepts are NOT just reworded versions of each other. You MUST generate three genuinely different creative hypotheses by following this exact variation strategy:
-        - **Concept 1 - "Emotional Entry"**: The entire concept (hook, headline, visual) must lead with emotion, feeling, or identity.
+        - **Concept 1 - "Emotional Entry"**: The entire concept (copy and visual) must lead with emotion, feeling, or identity.
         - **Concept 2 - "Logical Entry"**: The entire concept must lead with logic, mechanism, proof, or data.
         - **Concept 3 - "Social Entry"**: The entire concept must lead with community, tribe, or social proof.
-
-        All three concepts will still use the same foundational elements, but will approach the audience from these three different psychological angles.
 
         ---
         **Campaign Blueprint (The Foundation):**
@@ -457,134 +496,85 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
         - Ad Placement: "${placement}" (Guidelines: ${placementInstructions[placement]})
 
         **🔥 TRIGGER IMPLEMENTATION CHECKLIST for "${trigger.name}":**
-        
-        Your HOOK must include at least ONE of these:
-        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.copyMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
-
-        Your VISUAL PROMPT must include at least ONE of these:
-        ${(TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust || []).map((req, i) => `${i + 1}. ${req}`).join('\n')}
-
+        Your COPY must include at least ONE of these: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.copyMust.join(', ')}.
+        Your VISUAL PROMPT must include at least ONE of these: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust.join(', ')}.
         ⚠️ If your concept doesn't pass this checklist, it FAILS the trigger requirement.
         
         ---
-        **CREATION PROCESS FOR EACH CONCEPT (APPLYING THE VARIATION STRATEGY):**
+        **CREATION PROCESS FOR EACH CONCEPT (APPLYING THE "COPY-FIRST" WORKFLOW):**
         
-        For each of the 3 concepts (Emotional, Logical, Social), follow these steps to ensure strategic distinctness:
+        For each of the 3 concepts (Emotional, Logical, Social), follow these steps:
 
-        **STEP 1: Visual-Text Synergy.** First, design the "3-Second Scroll-Stop Moment" specifically for that concept's entry point (e.g., for "Emotional Entry", what is the most emotionally resonant visual?). Describe this visual hook idea in one vivid sentence.
-        
-        **STEP 2: Write the Hook.** Based on the visual hook idea, write the text hook.
+        **STEP 1: Generate the Selling Copy.**
+        - As a Copywriter, your only focus is on the words.
         - **HOOK CREATION MANDATE**: You MUST use one of these proven formulas for the "${awarenessStage}" stage:
         ${HOOK_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f}`).join('\n')}
-        - The formula you choose MUST align with the trigger "${trigger.name}" and be localized for ${blueprint.adDna.targetCountry}.
-        
-        **HOOK FORMULA IMPLEMENTATION EXAMPLE**:
-        Formula: "${HOOK_FORMULAS[awarenessStage][0]}"
-        Context: Persona = "Busy moms", Pain = "Constantly cleaning floors", Product = "Super floor cleaner"
-        
-        ❌ BAD HOOK (too generic): "Tired of cleaning?"
-        ✅ GOOD HOOK (follows formula perfectly): "Kenapa lantai rumah kamu kotor lagi setelah 2 jam ngepel? (Hint: Bukan karena anakmu)"
-        
-        ^ Notice: Uses provocative question, addresses specific negative state ("kotor lagi setelah 2 jam"), hints at unexpected cause, uses conversational Indonesian.
-        
-        NOW write YOUR hook following one formula above using:
-        - Persona pains: ${persona.painPoints.join(', ')}
-        - Product benefit: ${blueprint.productAnalysis.keyBenefit}
-        - Trigger feeling: ${trigger.name}
-        - ${blueprint.adDna.targetCountry} language with ${blueprint.adDna.toneOfVoice} tone
-
-        **STEP 3: Write the Headline.**
         - **HEADLINE FORMULAS MANDATE**: You MUST use one of these formulas for the "${awarenessStage}" stage:
         ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${injectDynamicValues(f, blueprint, persona)}`).join('\n')}
-        - It must include the key benefit ("${blueprint.productAnalysis.keyBenefit}"), embed the "${trigger.name}" feeling, and be localized for ${blueprint.adDna.targetCountry}.
+        - The copy must align with the trigger "${trigger.name}" and be localized for ${blueprint.adDna.targetCountry}.
 
-        **STEP 4: Write the Visual Prompt.** Expand your visual hook idea into a full, detailed prompt using this EXACT structure:
+        **STEP 2: Generate the Visual Interpretation.**
+        - Now, as an Art Director, your job is to create a visual that RESPONDS to the copy you just wrote.
+        - Create a detailed **visualPrompt** using this EXACT structure:
 
         **[COMMERCIAL GOAL & PSYCHOLOGY]**
-        - **Primary Goal**: The image MUST visually communicate the main benefit ("${blueprint.productAnalysis.keyBenefit}") and evoke a specific, powerful emotion relevant to the solution (e.g., 'relief', 'desire', 'curiosity').
-        - **Psychological Impact**: The scene should make the persona feel that achieving their desired outcome ("${persona.desiredOutcomes[0] || 'their goal'}") is easy and attainable with this product.
-        - **Sales Focus**: The image must be a "scroll-stopper" that compels the user to stop, feel an emotion, and read the headline. It must look like a high-converting ad, not a generic stock photo.
+        - **Primary Goal**: The image MUST visually communicate the core message of the copy and the main benefit ("${blueprint.productAnalysis.keyBenefit}").
+        - **Psychological Impact**: The scene must make the persona feel the emotion from the copy and believe their desired outcome ("${persona.desiredOutcomes[0] || 'their goal'}") is attainable.
+        - **Sales Focus**: It must be a "scroll-stopper" that looks like a high-converting ad, not a generic stock photo.
 
         **[SCENE FOUNDATION]**
-        - **Setting**: Where exactly is this happening? (Be ultra-specific: "Bright minimalist kitchen with white marble countertop and succulents in background" NOT just "kitchen"). The setting must feel authentic and relatable for an audience in **${blueprint.adDna.targetCountry}**.
-        - **Time/Lighting**: What time of day? What's the lighting quality? (e.g., "Golden hour sunlight streaming through sheer curtains creating soft shadows", "Bright ring light setup for selfie video")
-        - **Camera Angle**: Exact camera position (e.g., "Eye-level straight-on POV", "Overhead flat lay 90 degrees", "Low angle looking up at 45 degrees", "Over-the-shoulder shot")
+        - **Setting**: Ultra-specific, relatable for an audience in **${blueprint.adDna.targetCountry}**.
+        - **Time/Lighting**: Specific time of day and lighting (e.g., "Golden hour sunlight").
+        - **Camera Angle**: Exact camera position (e.g., "Eye-level straight-on POV").
 
         **[SUBJECT]**
-        - **Who**: ${persona.description}, age ${persona.age}, with ${persona.creatorType} aesthetic
-        - **Doing What**: Use active verbs + object (e.g., "Enthusiastically demonstrating the product's feature while making direct eye contact with camera")
-        - **Expression**: Must clearly convey the emotional 'AFTER' state of using the product (e.g., 'visibly relieved and happy', 'feeling confident and successful', 'surprised and delighted by the result').
-        - **Clothing/Styling**: Must be authentic to **${blueprint.adDna.targetCountry}** culture and ${persona.creatorType} style (e.g., "Wearing casual oversized hoodie and jeans, natural makeup, messy bun")
+        - **Who**: ${persona.description}, age ${persona.age}, with ${persona.creatorType} aesthetic.
+        - **Doing What**: Active verbs that reflect the copy's message.
+        - **Expression**: Must clearly convey the emotional 'AFTER' state promised in the copy.
+        - **Styling**: Authentic to **${blueprint.adDna.targetCountry}** culture.
 
         **[TRIGGER VISUALIZATION - CRITICAL]**
-        How does the scene physically SHOW the "${trigger.name}" trigger? This is NOT optional.
-        ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust[0] || 'Visualize the trigger somehow.'}
-        Be extremely specific about HOW the trigger appears in the frame.
+        How does the scene physically SHOW the "${trigger.name}" trigger? Be extremely specific. Example: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust[0] || 'Visualize the trigger somehow.'}
 
         **[PRODUCT INTEGRATION]**
-        - **Product Positioning**: Where is the product in frame? (Foreground hero shot / background lifestyle prop / being held at chest level)
-        - **Brand Visibility**: Is logo/branding clearly visible? From what angle?
-        - **Product in Action**: Show the product as the clear 'hero' or 'solution'. The result of using the product (e.g., 'the sparkling clean surface', 'the flawless skin') should be as prominent, or more prominent, than the product itself.
+        - **Positioning**: Where is the product? Is it the hero? How does it relate to the subject?
+        - **In Action**: Show the product as the clear 'solution' mentioned in the copy.
 
         **[STYLE DNA FUSION]**
         ${visualStyleInstruction}
-        Describe the COLOR PALETTE, COMPOSITION STYLE, and MOOD that results from this fusion.
+        Describe the resulting COLOR PALETTE, COMPOSITION, and MOOD.
 
-        **[TECHNICAL SPECS]**
-        Photorealistic, commercial quality, shot with high-end camera, sharp focus on subject's face and product, authentic NOT AI-illustration-looking, ${placement === 'Instagram Story' ? '9:16 vertical aspect ratio' : placement === 'Instagram Feed' ? '1:1 or 4:5 aspect ratio' : 'optimized for digital advertising'}.
+        **[TECHNICAL SPECS & COMPOSITION]**
+        - **Quality**: Photorealistic, commercial quality, high-end camera look, sharp focus.
+        - **Composition for Ads (NON-NEGOTIABLE)**: The composition MUST leave appropriate negative space for text overlays. For a '${placement}' placement, you must adhere to this rule: **"${COMPOSITION_FOR_ADS[placement]}"**.
+        - **Aspect Ratio**: ${placement === 'Instagram Story' ? '9:16 vertical' : placement === 'Instagram Feed' ? '1:1 or 4:5' : 'digital ad optimized'}.
         ---
         
-        ---
-        **BEFORE YOU RESPOND - INTERNAL QUALITY CHECK:**
-        
-        For EACH of the 3 concepts you generated, silently score these (don't include scores in JSON):
-        
-        1. **Hook Clarity (1-10)**: Does it follow a proven formula from the list? Is it immediately understandable?
-        2. **Trigger Visibility (1-10)**: Is the "${trigger.name}" trigger OBVIOUS in both copy AND visual? Can you see/feel it?
-        3. **Persona Authenticity (1-10)**: Does it feel 100% genuine to "${persona.description}" living in ${blueprint.adDna.targetCountry}? No cringe?
-        4. **Visual-Text Synergy (1-10)**: Do hook and visual amplify each other, or are they disconnected?
-        5. **Sales DNA Consistency (1-10)**: Does it feel like part of the original campaign family? Same persuasion style?
-        6. **Variation Distinctness (1-10)**: Are your 3 concepts truly DIFFERENT from each other (Emotional vs Logical vs Social)? **THIS IS THE MOST IMPORTANT CHECK. IF THEY ARE TOO SIMILAR, REWRITE THEM FROM SCRATCH.**
-        
-        **If ANY concept scores below 8 on ANY criteria, REGENERATE that specific element before responding.**
+        **INTERNAL QUALITY CHECK:**
+        Before responding, ensure your 3 concepts are truly DIFFERENT (Emotional vs Logical vs Social) and that each one follows the COPY-FIRST workflow and passes the trigger checklist. If not, REGENERATE.
         
         ---
 
-        Now, generate an array of 3 JSON objects using the process above. Each object must have the following structure:
-        - id: A unique string identifier.
-        - angle: Must be "${angle}".
-        - trigger: Must be "${trigger.name}".
-        - format: Must be "${format}".
-        - placement: Must be "${placement}".
-        - awarenessStage: Must be "${awarenessStage}".
-        - strategicPathId: Must be "${strategicPathId}".
-        - personaDescription: Must be "${persona.description}".
-        - personaAge: Must be "${persona.age}".
-        - personaCreatorType: Must be "${persona.creatorType}".
-        - visualVehicle: A brief description of the visual format (e.g., "Authentic-looking vertical user video").
-        - hook: Your generated hook.
-        - headline: Your generated headline.
-        - visualPrompt: Your generated visual prompt.
-        - adSetName: A suggested ad set name. **MUST follow this EXACT format, replacing bracketed items and using underscores**: [PersonaShortDescription]_[AngleKeyword]_[TriggerName]_[AwarenessStage]_[Format]_[Placement]_v[1, 2, or 3]. Example: BusyMoms_HematWaktu_SocialProof_ProblemAware_UGC_Story_v1.
-        - carouselSlides: (Only if placement is "Carousel") An array of 3-5 slide objects, following the specified story arc. All text must be localized.
-
+        Now, generate an array of 3 JSON objects using the process above. Adhere strictly to the provided JSON schema. For 'adSetName', follow this format: [PersonaShort]_[AngleKeyword]_[Trigger]_[Awareness]_[Format]_[Placement]_v[1, 2, or 3].
         Respond ONLY with the JSON array.
     `;
     
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: [{ parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" }
+        config: { 
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: adConceptSchema
+            }
+        }
     });
 
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    // FIX: Add parentheses around the intersection type to ensure it's parsed as an array of objects, not an intersection with an array.
     const ideas = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'trigger'> & { trigger: string })[];
     
-    // Augment the AI's response with the full trigger object
-    // FIX: The direct spread `{ ...idea, trigger }` can cause a TypeScript type inference issue.
-    // Destructuring the string `trigger` out and spreading the rest helps TypeScript correctly construct the new object type.
     return ideas.map(idea => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { trigger: _, ...restOfIdea } = idea;
@@ -595,7 +585,8 @@ All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${bl
 
 export const generateAdImage = async (prompt: string, referenceImageBase64?: string, allowVisualExploration: boolean = false): Promise<string> => {
     
-    const salesIntent = "A highly persuasive, high-converting, and scroll-stopping advertisement image designed to sell a product. The image must be ultra-photorealistic, high-contrast, and emotionally resonant. The central focus must be on the user's benefit or transformation.";
+    const NEGATIVE_PROMPT = "NO generic stock photo look, NO obvious AI artifacts (weird hands, distorted faces), NO text in image (we'll add overlay), NO watermarks or logos unless product branding, NO cluttered composition, NO excessive filters that look unnatural.";
+    const salesIntent = `A highly persuasive, high-converting, and scroll-stopping advertisement image designed to sell a product. The image must be ultra-photorealistic, high-contrast, and emotionally resonant. The central focus must be on the user's benefit or transformation. Negative prompt: ${NEGATIVE_PROMPT}`;
     
     let textPrompt: string;
     const parts: any[] = [];
@@ -681,12 +672,12 @@ export const evolveConcept = async (
     baseConcept: AdConcept,
     blueprint: CampaignBlueprint,
     evolutionType: 'angle' | 'trigger' | 'format' | 'placement',
-    newValue: string
+    newValue: string | BuyingTriggerObject
 ): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     
     const evolutionInstructions = {
         angle: `Adapt the concept to a new strategic angle: "${newValue}". The trigger ("${baseConcept.trigger.name}") and format ("${baseConcept.format}") should remain consistent, but the core message (headline, hook) and visual must be re-imagined to reflect this new angle.`,
-        trigger: `Adapt the concept to use a new psychological trigger: "${newValue}". The angle ("${baseConcept.angle}") and format ("${baseConcept.format}") should remain consistent, but the headline, hook, and visual must be rewritten to powerfully evoke the feeling of "${newValue}".`,
+        trigger: `Adapt the concept to use a new psychological trigger: "${(newValue as BuyingTriggerObject).name}" (Description: ${(newValue as BuyingTriggerObject).description}). The angle ("${baseConcept.angle}") and format ("${baseConcept.format}") should remain consistent, but the headline, hook, and visual must be rewritten to powerfully evoke the feeling of "${(newValue as BuyingTriggerObject).name}".`,
         format: `Adapt the concept to a new creative format: "${newValue}". The angle ("${baseConcept.angle}") and trigger ("${baseConcept.trigger.name}") are the same, but the entire execution (headline, hook, visual) must be re-imagined for the new format. If the new format is "Carousel", you MUST generate a "carouselSlides" array.`,
         placement: `Adapt the concept for a new placement: "${newValue}". The core creative (angle, trigger, format) is the same, but the execution must be optimized. For "Instagram Story", this means a 9:16 aspect ratio and a punchier hook. For "Carousel", it means telling a story across multiple slides.`
     };
@@ -715,27 +706,8 @@ export const evolveConcept = async (
         **🔥 Evolution Mandate: ${evolutionInstructions[evolutionType]}**
 
         Now, generate an array containing ONE new JSON object for the evolved concept.
-        
-        The object must have the following structure:
-        - id: A new unique string identifier.
-        - angle: The angle for the new concept.
-        - trigger: The name of the trigger for the new concept (string).
-        - format: The format for the new concept.
-        - placement: The placement for the new concept.
-        - awarenessStage: Must be "${baseConcept.awarenessStage}".
-        - strategicPathId: Must be "${baseConcept.strategicPathId}".
-        - personaDescription: Must be "${baseConcept.personaDescription}".
-        - personaAge: Must be "${baseConcept.personaAge}".
-        - personaCreatorType: Must be "${baseConcept.personaCreatorType}".
-        - visualVehicle: A brief description of the new visual format.
-        - hook: A compelling new opening line for the ad copy, adapted for the evolution mandate and localized for ${blueprint.adDna.targetCountry}.
-        - headline: A powerful new headline, adapted for the evolution mandate and localized for ${blueprint.adDna.targetCountry}.
-        - visualPrompt: A new, detailed, specific prompt for an AI image generator.
-            - It MUST be a creative re-interpretation based on the evolution mandate.
-            - It MUST incorporate the Visual Style DNA: "${blueprint.adDna.visualStyle}".
-            - It MUST be appropriate for the persona and the cultural context of ${blueprint.adDna.targetCountry}.
-        - adSetName: A suggested ad set name. **MUST follow a strict format reflecting the new evolved parameters**, like: [Persona]_[NewAngle/Trigger/etc]_[...]_v1.
-        - carouselSlides: (Only if the new format is "Carousel") An array of 3-5 slide objects.
+        Adhere strictly to the provided JSON schema.
+        For 'adSetName', create a new name reflecting the new evolved parameters, like: [Persona]_[NewAngle/Trigger/etc]_[...]_v1.
 
         Respond ONLY with a JSON array containing the single new concept object.
     `;
@@ -743,26 +715,26 @@ export const evolveConcept = async (
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: [{ parts: [{ text: prompt }] }],
-        config: { responseMimeType: "application/json" }
+        config: { 
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: adConceptSchema,
+            }
+        }
     });
     
     const rawJson = response.text;
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
     const result = JSON.parse(cleanedJson) as (Omit<AdConcept, 'trigger' | 'imageUrls'> & { trigger: string })[];
     
-    // Augment the AI response to ensure the trigger is a BuyingTriggerObject
     return result.map((concept): Omit<AdConcept, 'imageUrls'> => {
-        let triggerObject: BuyingTriggerObject;
-        if (evolutionType === 'trigger') {
-            triggerObject = { name: newValue, description: 'Evolved trigger', example: 'Evolved trigger' };
-        } else {
-            triggerObject = baseConcept.trigger;
-        }
-        // FIX: The direct spread `{ ...concept, trigger: triggerObject }` was causing a TypeScript
-        // type inference issue. Destructuring `trigger` out and spreading the rest
-        // helps TypeScript correctly construct the new object type.
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { trigger: _, ...restOfConcept } = concept;
+
+        const triggerObject = evolutionType === 'trigger'
+            ? (newValue as BuyingTriggerObject)
+            : baseConcept.trigger;
 
         return {
             ...restOfConcept,

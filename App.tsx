@@ -7,7 +7,7 @@ import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
 import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject } from './types';
-import { analyzeCampaignBlueprint, generatePersonaVariations, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept } from './services/geminiService';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
 import { EvolveModal } from './components/EvolveModal';
@@ -449,15 +449,50 @@ function App() {
       setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: true } } } : n));
 
       try {
-          const [newConcept] = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, newValue);
-          if (newConcept) {
+          let evolvedConcepts: Omit<AdConcept, 'imageUrls'>[] = [];
+
+          if (evolutionType === 'trigger') {
+              setLoadingMessage(`Mendapatkan detail untuk trigger "${newValue}"...`);
+
+              const findParent = (startNodeId: string, type: 'angle' | 'persona'): MindMapNode | undefined => {
+                  let currentNode = nodes.find(n => n.id === startNodeId);
+                  while (currentNode) {
+                      if (currentNode.type === type) return currentNode;
+                      currentNode = currentNode.parentId ? nodes.find(n => n.id === currentNode.parentId) : undefined;
+                  }
+                  return undefined;
+              };
+
+              const placementNode = nodes.find(n => n.id === baseConcept.strategicPathId);
+              const angleNode = findParent(placementNode?.id || '', 'angle');
+              const personaNode = findParent(angleNode?.id || '', 'persona');
+
+              if (!angleNode || !personaNode) {
+                  throw new Error("Konteks (angle/persona) tidak ditemukan untuk evolusi trigger.");
+              }
+
+              const persona = (personaNode.content as { persona: TargetPersona }).persona;
+              const angle = angleNode.label;
+              
+              const triggerObject = await getBuyingTriggerDetails(newValue, campaignBlueprint, persona, angle);
+              
+              setLoadingMessage(`Mengevolusikan konsep dengan trigger "${newValue}"...`);
+              
+              evolvedConcepts = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, triggerObject);
+
+          } else {
+              evolvedConcepts = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, newValue);
+          }
+          
+          if (evolvedConcepts.length > 0) {
+              const newConcept = evolvedConcepts[0];
               const newCreativeNode: MindMapNode = {
                   id: newConcept.id,
-                  parentId: baseConcept.strategicPathId, // Attach to the same placement for simplicity
+                  parentId: baseConcept.strategicPathId,
                   type: 'creative',
                   label: newConcept.headline,
                   content: { concept: newConcept },
-                  position: { x: 0, y: 0 }, // Let layout handle it
+                  position: { x: 0, y: 0 },
                   width: 320,
                   height: 480,
               };
