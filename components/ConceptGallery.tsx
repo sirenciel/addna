@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { MindMapNode, AdConcept, CampaignBlueprint } from '../types';
 import { FilterControls } from './FilterControls';
@@ -15,6 +16,9 @@ interface ConceptGalleryProps {
     onGenerateImage: (conceptId: string) => void;
     onEditConcept: (conceptId: string) => void;
     onInitiateEvolution: (conceptId: string) => void;
+    onInitiateQuickPivot: (conceptId: string) => void;
+    // FIX: Added onInitiateRemix to props to be passed down to CreativeCard.
+    onInitiateRemix: (conceptId: string) => void;
     onSaveConcept: (conceptId: string, updatedContent: AdConcept) => void;
     onCloseModal: () => void;
     onReset: () => void;
@@ -57,13 +61,50 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
 
     const creativeNodes = useMemo(() => nodes.filter(n => n.type === 'creative'), [nodes]);
 
+    const filteredConceptGroups = useMemo(() => {
+        const groups: Record<string, AdConcept[]> = {};
+        filteredConcepts.forEach(concept => {
+            const pathId = concept.strategicPathId;
+            if (!groups[pathId]) {
+                groups[pathId] = [];
+            }
+            groups[pathId].push(concept);
+        });
+
+        const entryPointOrder = ['Emotional', 'Logical', 'Social', 'Evolved', 'Pivoted'];
+        Object.values(groups).forEach(group => {
+            group.sort((a, b) => {
+                const indexA = entryPointOrder.indexOf(a.entryPoint);
+                const indexB = entryPointOrder.indexOf(b.entryPoint);
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                if (indexA !== -1) return -1;
+                if (indexB !== -1) return 1;
+                return a.id.localeCompare(b.id);
+            });
+        });
+        
+        return Object.entries(groups).map(([pathId, groupConcepts]) => {
+            const placementNode = nodes.find(n => n.id === pathId);
+            const formatNode = placementNode ? nodes.find(n => n.id === placementNode.parentId) : undefined;
+            const triggerNode = formatNode ? nodes.find(n => n.id === formatNode.parentId) : undefined;
+            
+            let title = "Creative Hypothesis";
+            if (triggerNode && formatNode && placementNode) {
+                title = `${triggerNode.label} → ${formatNode.label} → ${placementNode.label}`;
+            }
+            
+            return { pathId, concepts: groupConcepts, title };
+        });
+    }, [filteredConcepts, nodes]);
+
+
     return (
         <div className="w-full h-screen flex flex-col bg-brand-background">
             <header className="flex-shrink-0 bg-brand-surface/80 backdrop-blur-md border-b border-gray-700 p-4 z-10">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div>
                         <h1 className="text-xl font-bold">Galeri Konsep Kreatif</h1>
-                        <p className="text-sm text-brand-text-secondary">{filteredConcepts.length} dari {concepts.length} konsep ditampilkan</p>
+                        <p className="text-sm text-brand-text-secondary">{filteredConcepts.length} dari {concepts.length} konsep ditampilkan dalam {filteredConceptGroups.length} grup hipotesis</p>
                     </div>
                     <div className="flex items-center gap-4">
                         <button onClick={onReset} className="px-3 py-2 bg-gray-700 rounded-md shadow-lg text-sm font-semibold hover:bg-gray-600">Mulai dari Awal</button>
@@ -81,17 +122,31 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
             </div>
 
             <main className="flex-grow overflow-y-auto p-4 md:p-6">
-                {filteredConcepts.length > 0 ? (
-                    <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {creativeNodes.filter(node => filteredConcepts.some(c => c.id === node.id)).map(node => (
-                            <CreativeCard 
-                                key={node.id} 
-                                node={node}
-                                onGenerateImage={props.onGenerateImage}
-                                onEditConcept={props.onEditConcept}
-                                onInitiateEvolution={props.onInitiateEvolution}
-                                onOpenLightbox={props.onOpenLightbox}
-                            />
+                {filteredConceptGroups.length > 0 ? (
+                    <div className="max-w-7xl mx-auto space-y-10">
+                        {filteredConceptGroups.map(({ pathId, concepts: groupConcepts, title }) => (
+                            <div key={pathId} className="bg-brand-surface/50 rounded-lg p-4 border border-gray-800">
+                                <h2 className="text-lg font-bold text-brand-text-primary mb-4">{title}</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {groupConcepts.map(concept => {
+                                        const node = creativeNodes.find(n => n.id === concept.id);
+                                        if (!node) return null;
+                                        return (
+                                            <CreativeCard 
+                                                key={node.id} 
+                                                node={node}
+                                                onGenerateImage={props.onGenerateImage}
+                                                onEditConcept={props.onEditConcept}
+                                                onInitiateEvolution={props.onInitiateEvolution}
+                                                onInitiateQuickPivot={props.onInitiateQuickPivot}
+                                                // FIX: Passed the onInitiateRemix prop to CreativeCard.
+                                                onInitiateRemix={props.onInitiateRemix}
+                                                onOpenLightbox={props.onOpenLightbox}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 ) : (

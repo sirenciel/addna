@@ -1,18 +1,20 @@
 
 import React, { useState } from 'react';
 import { AdConcept, CreativeFormat, PlacementFormat, MindMapNode } from '../types';
-import { EditIcon, ClipboardCopyIcon, SparklesIcon, RefreshCwIcon } from './icons';
+import { EditIcon, ClipboardCopyIcon, SparklesIcon, RefreshCwIcon, ZapIcon, RemixIcon } from './icons';
 
 interface CreativeCardProps {
   node: MindMapNode;
   onGenerateImage: (id: string) => void;
   onEditConcept: (id: string) => void;
   onInitiateEvolution: (id: string) => void;
+  onInitiateQuickPivot: (id: string) => void;
+  onInitiateRemix: (id: string) => void;
   onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
   className?: string;
 }
 
-export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImage, onEditConcept, onInitiateEvolution, onOpenLightbox, className = '' }) => {
+export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImage, onEditConcept, onInitiateEvolution, onInitiateQuickPivot, onInitiateRemix, onOpenLightbox, className = '' }) => {
     const [copyButtonText, setCopyButtonText] = useState('Salin Teks');
     const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -42,12 +44,37 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
         'Problem/Solution': 'bg-rose-500',
         'Educational/Tip': 'bg-lime-500',
         'Storytelling': 'bg-fuchsia-500',
+        'Article Ad': 'bg-slate-500',
+        'Split Screen': 'bg-cyan-500',
+        'Advertorial': 'bg-indigo-500',
+        'Listicle': 'bg-blue-500',
+        'MultiProduct': 'bg-orange-500',
+        'US vs Them': 'bg-red-500',
+        'Meme/Ugly Ad': 'bg-green-500',
+        'Direct Offer': 'bg-yellow-500 text-black',
     };
     
     const placementColorMap: Record<PlacementFormat, string> = {
         'Carousel': 'bg-indigo-500',
         'Instagram Feed': 'bg-cyan-500',
         'Instagram Story': 'bg-violet-500',
+    };
+
+    const entryPointColorMap = {
+        'Emotional': 'bg-pink-600',
+        'Logical': 'bg-blue-600',
+        'Social': 'bg-emerald-600',
+        'Evolved': 'bg-purple-600',
+        'Pivoted': 'bg-yellow-600 text-black',
+        'Remixed': 'bg-cyan-500 text-black',
+    };
+    const entryPointIconMap = {
+        'Emotional': '💖',
+        'Logical': '🧠',
+        'Social': '💬',
+        'Evolved': '✨',
+        'Pivoted': '⚡️',
+        'Remixed': '🧬',
     };
     
     const totalImages = concept.imageUrls?.length || 0;
@@ -120,6 +147,11 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                      <div className="flex justify-between items-start gap-2 mb-1">
                         <h5 className="font-bold text-sm leading-tight pr-1">{concept.headline}</h5>
                         <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                            {concept.entryPoint && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap ${entryPointColorMap[concept.entryPoint] || 'bg-gray-400'}`}>
+                                    {entryPointIconMap[concept.entryPoint]} {concept.entryPoint}
+                                </span>
+                            )}
                             {concept.trigger && (
                                 <span className="text-xs px-1.5 py-0.5 rounded-full text-white font-semibold whitespace-nowrap bg-orange-600">
                                     🔥 {concept.trigger.name}
@@ -142,17 +174,34 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                     </div>
                     <p className="text-xs text-brand-text-secondary line-clamp-2">{concept.hook}</p>
                 </div>
-                <div className="flex items-center gap-1 mt-2">
-                    <button onClick={() => onEditConcept(node.id)} title="Edit Detail & Prompt" className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><EditIcon className="w-3 h-3"/> Detail</button>
-                    <button onClick={handleCopy} title="Salin Teks" className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><ClipboardCopyIcon className="w-3 h-3"/> {copyButtonText}</button>
+                <div className="grid grid-cols-2 gap-1 mt-2">
+                    <button onClick={() => onEditConcept(node.id)} title="Edit Detail & Prompt" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><EditIcon className="w-3 h-3"/> Detail</button>
+                    <button onClick={handleCopy} title="Salin Teks" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><ClipboardCopyIcon className="w-3 h-3"/> {copyButtonText}</button>
                     <button 
                         onClick={() => onInitiateEvolution(node.id)} 
                         disabled={concept.isEvolving}
                         title="Buat variasi dari konsep ini" 
-                        className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 disabled:opacity-50"
+                        className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 disabled:opacity-50"
                     >
                         {concept.isEvolving ? <RefreshCwIcon className="w-3 h-3 animate-spin" /> : <SparklesIcon className="w-3 h-3"/>}
                         Evolusi
+                    </button>
+                    <button 
+                        onClick={() => onInitiateQuickPivot(node.id)}
+                        disabled={concept.isPivoting}
+                        className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 font-bold disabled:opacity-50"
+                        title="Buat variasi cepat untuk audience berbeda"
+                      >
+                        {concept.isPivoting ? <RefreshCwIcon className="w-3 h-3 animate-spin" /> : <ZapIcon className="w-3 h-3"/>}
+                         Pivot
+                    </button>
+                    <button 
+                        onClick={() => onInitiateRemix(node.id)}
+                        className="col-span-2 text-xs bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 p-1.5 rounded-md flex items-center justify-center gap-1 font-bold"
+                        title="Buka Smart Remix Dashboard"
+                      >
+                        <RemixIcon className="w-3 h-3"/>
+                         Smart Remix
                     </button>
                 </div>
             </div>

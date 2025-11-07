@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CampaignBlueprint, MindMapNode, AdConcept, AwarenessStage, CreativeFormat, PlacementFormat, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject } from '../types';
 import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon, ShieldAlertIcon, HeartIcon, HeartCrackIcon, TagIcon } from './icons';
@@ -301,6 +302,9 @@ const NodeComponent: React.FC<{
     onGenerateImage: (id: string) => void;
     onEditConcept: (id: string) => void;
     onInitiateEvolution: (id: string) => void;
+    onInitiateQuickPivot: (id: string) => void;
+    // FIX: Added onInitiateRemix to the props type for NodeComponent.
+    onInitiateRemix: (id: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (id: string) => void;
     onNodeHover: (id: string | null, event: React.MouseEvent | null) => void;
@@ -320,7 +324,8 @@ const NodeComponent: React.FC<{
             {node.type === 'trigger' && <TriggerNode node={node} onToggle={onToggleTrigger} onEducationHover={onEducationHover} />}
             {node.type === 'format' && <FormatNode node={node} onToggle={onToggleFormat} />}
             {node.type === 'placement' && <PlacementNode node={node} onToggle={onTogglePlacement} />}
-            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" />}
+            {/* FIX: Passed the onInitiateRemix prop to CreativeCard. */}
+            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onInitiateQuickPivot={props.onInitiateQuickPivot} onInitiateRemix={props.onInitiateRemix} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" />}
             
             {node.type !== 'dna' && (
                 <button
@@ -500,6 +505,9 @@ interface MindMapViewProps {
     onGenerateImage: (conceptId: string) => void;
     onEditConcept: (conceptId: string) => void;
     onInitiateEvolution: (conceptId: string) => void;
+    onInitiateQuickPivot: (conceptId: string) => void;
+    // FIX: Added onInitiateRemix to the props type for MindMapView.
+    onInitiateRemix: (conceptId: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (nodeId: string) => void;
     onReset: () => void;

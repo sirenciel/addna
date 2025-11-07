@@ -59,8 +59,11 @@ export type BuyingTrigger = string;
 export type AwarenessStage = "Unaware" | "Problem Aware" | "Solution Aware" | "Product Aware";
 export const ALL_AWARENESS_STAGES: AwarenessStage[] = ["Unaware", "Problem Aware", "Solution Aware", "Product Aware"];
 
-export type CreativeFormat = 'UGC' | 'Before & After' | 'Comparison' | 'Demo' | 'Testimonial' | 'Problem/Solution' | 'Educational/Tip' | 'Storytelling';
-export const ALL_CREATIVE_FORMATS: CreativeFormat[] = ['UGC', 'Before & After', 'Comparison', 'Demo', 'Testimonial', 'Problem/Solution', 'Educational/Tip', 'Storytelling'];
+export type CreativeFormat = 'UGC' | 'Before & After' | 'Comparison' | 'Demo' | 'Testimonial' | 'Problem/Solution' | 'Educational/Tip' | 'Storytelling' | 'Article Ad' | 'Split Screen' | 'Advertorial' | 'Listicle' | 'MultiProduct' | 'US vs Them' | 'Meme/Ugly Ad' | 'Direct Offer';
+export const ALL_CREATIVE_FORMATS: CreativeFormat[] = [
+    'UGC', 'Before & After', 'Comparison', 'Demo', 'Testimonial', 'Problem/Solution', 'Educational/Tip', 'Storytelling',
+    'Article Ad', 'Split Screen', 'Advertorial', 'Listicle', 'MultiProduct', 'US vs Them', 'Meme/Ugly Ad', 'Direct Offer'
+];
 
 export type PlacementFormat = 'Carousel' | 'Instagram Story' | 'Instagram Feed';
 export const ALL_PLACEMENT_FORMATS: PlacementFormat[] = ['Carousel', 'Instagram Story', 'Instagram Feed'];
@@ -80,12 +83,13 @@ export interface AdConcept {
   format: CreativeFormat;
   placement: PlacementFormat;
   awarenessStage: AwarenessStage;
+  entryPoint: 'Emotional' | 'Logical' | 'Social' | 'Evolved' | 'Pivoted' | 'Remixed';
   visualVehicle: string;
   visualPrompt: string;
   hook: string;
   headline:string;
   adSetName: string;
-  offerName: string;
+  offer: OfferTypeObject;
   carouselSlides?: CarouselSlide[];
   // Persona metadata denormalized for easier access and export
   personaDescription: string;
@@ -95,6 +99,7 @@ export interface AdConcept {
   imageUrls?: string[];
   isGenerating?: boolean;
   isEvolving?: boolean;
+  isPivoting?: boolean;
   error?: string;
   // For linking back to strategy
   strategicPathId: string;
@@ -116,5 +121,41 @@ export interface MindMapNode {
   height?: number; // for layout
 }
 
-export type AppStep = 'input' | 'validateBlueprint' | 'mindmap';
+export type AppStep = 'input' | 'validateBlueprint' | 'mindmap' | 'remix';
 export type ViewMode = 'mindmap' | 'gallery';
+
+export type PivotType =
+  | 'age-shift'
+  | 'gender-flip'
+  | 'lifestyle-swap'
+  | 'market-expand'
+  | 'awareness-shift'
+  | 'channel-adapt';
+
+export type PivotConfig = {
+    targetAge?: string;
+    targetGender?: 'Male' | 'Female';
+    targetLifestyle?: string;
+    targetCountry?: string;
+    targetAwareness?: AwarenessStage;
+    targetPlatform?: 'TikTok' | 'Facebook' | 'YouTube';
+};
+
+export type AdDnaComponent = 'persona' | 'painDesire' | 'trigger' | 'format' | 'placement' | 'awareness' | 'angle' | 'offer';
+
+export interface AdDna {
+    persona: TargetPersona;
+    painDesire: PainDesireObject;
+    trigger: BuyingTriggerObject;
+    format: CreativeFormat;
+    placement: PlacementFormat;
+    awareness: AwarenessStage;
+    angle: string;
+    offer: OfferTypeObject;
+}
+
+export interface RemixSuggestion {
+  title: string;
+  description: string;
+  payload: TargetPersona; // Currently supports persona, can be expanded later
+}

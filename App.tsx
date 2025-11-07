@@ -6,11 +6,14 @@ import { MindMapView } from './components/MindMapView';
 import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
-import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject } from './types';
-import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails } from './services/geminiService';
+import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDna, NodeType, AdDnaComponent, RemixSuggestion } from './types';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails, generateQuickPivot, generateRemixSuggestions, generateConceptFromRemix, generateConceptsFromPersona } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
 import { EvolveModal } from './components/EvolveModal';
+import { QuickPivotModal } from './components/QuickPivotModal';
+import { RemixDashboard } from './components/RemixDashboard';
+
 
 // Simple UUID generator
 function simpleUUID() {
@@ -29,6 +32,14 @@ const FORMAT_PLACEMENT_MAP: Record<CreativeFormat, PlacementFormat[]> = {
     'Problem/Solution': ['Carousel', 'Instagram Feed'],
     'Educational/Tip': ['Carousel', 'Instagram Story'],
     'Storytelling': ['Carousel', 'Instagram Feed'],
+    'Article Ad': ['Instagram Feed', 'Carousel'],
+    'Split Screen': ['Instagram Feed', 'Carousel'],
+    'Advertorial': ['Instagram Feed', 'Carousel'],
+    'Listicle': ['Carousel', 'Instagram Feed'],
+    'MultiProduct': ['Carousel', 'Instagram Feed'],
+    'US vs Them': ['Instagram Feed', 'Carousel'],
+    'Meme/Ugly Ad': ['Instagram Story', 'Instagram Feed'],
+    'Direct Offer': ['Instagram Story', 'Instagram Feed', 'Carousel'],
 };
 
 function App() {
@@ -40,6 +51,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [editingConceptId, setEditingConceptId] = useState<string | null>(null);
   const [evolutionTarget, setEvolutionTarget] = useState<AdConcept | null>(null);
+  const [pivotTarget, setPivotTarget] = useState<AdConcept | null>(null);
+  const [remixTarget, setRemixTarget] = useState<AdConcept | null>(null);
+  const [remixDna, setRemixDna] = useState<AdDna | null>(null);
+  const [remixingComponent, setRemixingComponent] = useState<AdDnaComponent | null>(null);
+  const [remixSuggestions, setRemixSuggestions] = useState<RemixSuggestion[] | null>(null);
   const [currentStep, setCurrentStep] = useState<AppStep>('input');
   const [viewMode, setViewMode] = useState<ViewMode>('mindmap');
   const [lightboxData, setLightboxData] = useState<{ concept: AdConcept, startIndex: number } | null>(null);
@@ -91,6 +107,68 @@ function App() {
 
     setNodes([dnaNode, initialPersonaNode]);
   };
+
+  const handleStartSmartRemix = async (validatedBlueprint: CampaignBlueprint) => {
+    setCampaignBlueprint(validatedBlueprint);
+    setCurrentStep('mindmap');
+    setViewMode('gallery');
+    (window as any).appState = { referenceImage };
+    setIsLoading(true);
+    setError(null);
+
+    try {
+        setLoadingMessage('Membuat Campaign Blueprint...');
+        const dnaNode: MindMapNode = {
+            id: 'dna-root', type: 'dna', label: 'Campaign Blueprint', content: validatedBlueprint,
+            position: { x: 0, y: 0 }, width: 300, height: 420
+        };
+        
+        setLoadingMessage('Menghasilkan variasi persona...');
+        const newPersonas = await generatePersonaVariations(validatedBlueprint, [validatedBlueprint.targetPersona]);
+        const allPersonas = [validatedBlueprint.targetPersona, ...newPersonas];
+
+        const personaNodes: MindMapNode[] = allPersonas.map(persona => ({
+            id: simpleUUID(),
+            parentId: dnaNode.id,
+            type: 'persona',
+            label: persona.description,
+            content: { persona },
+            position: { x: 0, y: 0 },
+            isExpanded: false,
+            width: 250, height: 140,
+        }));
+        
+        setNodes([dnaNode, ...personaNodes]);
+
+        setLoadingMessage(`Menghasilkan konsep iklan untuk ${allPersonas.length} persona...`);
+        const conceptPromises = allPersonas.map((persona, index) => 
+            generateConceptsFromPersona(validatedBlueprint, persona, personaNodes[index].id)
+        );
+
+        const conceptArrays = await Promise.all(conceptPromises);
+        const allNewConcepts = conceptArrays.flat();
+
+        const creativeNodes: MindMapNode[] = allNewConcepts.map(concept => ({
+            id: concept.id,
+            parentId: concept.strategicPathId, // This is the persona node ID
+            type: 'creative',
+            label: concept.headline,
+            content: { concept },
+            position: { x: 0, y: 0 },
+            width: 160,
+            height: 240,
+        }));
+        
+        setNodes(prev => [...prev, ...creativeNodes]);
+
+    } catch (e: any) {
+        console.error("Smart Remix failed:", e);
+        setError(e.message || "Gagal menjalankan Smart Remix.");
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+};
   
   const handleTogglePersona = async (nodeId: string) => {
       const personaNode = nodes.find(n => n.id === nodeId);
@@ -675,6 +753,160 @@ function App() {
       }
   };
 
+  const handleInitiateQuickPivot = (conceptId: string) => {
+    const conceptNode = nodes.find(n => n.id === conceptId);
+    if (!conceptNode || conceptNode.type !== 'creative') return;
+    const concept = (conceptNode.content as { concept: AdConcept }).concept;
+    setPivotTarget(concept);
+  };
+
+  const handleExecuteQuickPivot = async (pivotType: PivotType, config: PivotConfig) => {
+    if (!pivotTarget || !campaignBlueprint) return;
+    const baseConcept = pivotTarget;
+    setPivotTarget(null);
+    setIsLoading(true);
+    setLoadingMessage(`Melakukan Quick Pivot: ${pivotType}...`);
+    setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isPivoting: true } } } : n));
+    
+    try {
+      const pivotedConcepts = await generateQuickPivot(baseConcept, campaignBlueprint, pivotType, config);
+      if (pivotedConcepts.length > 0) {
+          const newConcept = pivotedConcepts[0];
+          const newCreativeNode: MindMapNode = {
+              id: newConcept.id,
+              parentId: newConcept.strategicPathId, // Use the pathId from the new concept
+              type: 'creative',
+              label: newConcept.headline,
+              content: { concept: newConcept },
+              position: { x: 0, y: 0 },
+              width: 160,
+              height: 240,
+          };
+          setNodes(prev => [...prev, newCreativeNode]);
+      } else {
+          throw new Error("Quick Pivot tidak menghasilkan konsep baru.");
+      }
+    } catch(e: any) {
+        console.error("Gagal melakukan Quick Pivot:", e);
+        setError(e.message || "Gagal melakukan Quick Pivot.");
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+        setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isPivoting: false } } } : n));
+    }
+  };
+
+  // --- Smart Remix Handlers ---
+
+  const assembleAdDna = (concept: AdConcept, allNodes: MindMapNode[]): AdDna | null => {
+      const nodesMap = new Map(allNodes.map(n => [n.id, n]));
+      
+      const findParent = (startNodeId: string, type: NodeType): MindMapNode | undefined => {
+          let currentNode = nodesMap.get(startNodeId);
+          while(currentNode) {
+              if (currentNode.type === type) return currentNode;
+              currentNode = currentNode.parentId ? nodesMap.get(currentNode.parentId) : undefined;
+          }
+          return undefined;
+      };
+
+      const placementNode = findParent(concept.strategicPathId, 'placement');
+      if (!placementNode) return null;
+
+      const formatNode = findParent(placementNode.id, 'format');
+      const triggerNode = findParent(formatNode?.id || '', 'trigger');
+      const angleNode = findParent(triggerNode?.id || '', 'angle');
+      const awarenessNode = findParent(angleNode?.id || '', 'awareness');
+      const offerNode = findParent(awarenessNode?.id || '', 'offer');
+      const objectionNode = findParent(offerNode?.id || '', 'objection');
+      const painDesireNode = findParent(objectionNode?.id || '', 'pain_desire');
+      const personaNode = findParent(painDesireNode?.id || '', 'persona');
+
+      if (!personaNode || !painDesireNode || !triggerNode || !formatNode || !awarenessNode || !angleNode || !offerNode) {
+          console.error("Could not assemble full DNA path", { personaNode, painDesireNode, triggerNode, formatNode, awarenessNode, angleNode, offerNode });
+          return null;
+      }
+
+      return {
+          persona: (personaNode.content as { persona: TargetPersona }).persona,
+          painDesire: (painDesireNode.content as { painDesire: PainDesireObject }).painDesire,
+          trigger: (triggerNode.content as { trigger: BuyingTriggerObject }).trigger,
+          format: (formatNode.content as { format: CreativeFormat }).format,
+          placement: (placementNode.content as { placement: PlacementFormat }).placement,
+          awareness: (awarenessNode.content as { awareness: AwarenessStage }).awareness,
+          angle: (angleNode.content as { angle: string }).angle,
+          offer: (offerNode.content as { offer: OfferTypeObject }).offer,
+      };
+  };
+
+  const handleInitiateRemix = (conceptId: string) => {
+    const conceptNode = nodes.find(n => n.id === conceptId);
+    if (!conceptNode || conceptNode.type !== 'creative') return;
+    const concept = (conceptNode.content as { concept: AdConcept }).concept;
+    
+    const dna = assembleAdDna(concept, nodes);
+    if (dna) {
+      setRemixTarget(concept);
+      setRemixDna(dna);
+      setCurrentStep('remix');
+    } else {
+      setError("Gagal memuat DNA iklan. Jalur strategis tidak lengkap.");
+    }
+  };
+  
+  const handleRequestRemixSuggestions = async (component: AdDnaComponent) => {
+    if (!remixDna || !remixTarget || !campaignBlueprint) return;
+    setRemixingComponent(component);
+    setRemixSuggestions(null);
+    setIsLoading(true);
+    setLoadingMessage(`Mencari variasi untuk ${component}...`);
+    try {
+      const suggestions = await generateRemixSuggestions(component, remixTarget, remixDna, campaignBlueprint);
+      setRemixSuggestions(suggestions);
+    } catch (e: any) {
+        console.error(e);
+        setError(e.message || `Gagal membuat saran untuk ${component}.`);
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+  };
+
+  const handleExecuteRemix = async (suggestion: RemixSuggestion) => {
+      if (!remixTarget || !remixingComponent || !campaignBlueprint) return;
+      const baseConcept = remixTarget;
+      setIsLoading(true);
+      setLoadingMessage(`Membuat konsep baru dari remix ${remixingComponent}...`);
+      
+      try {
+          const newConcept = await generateConceptFromRemix(baseConcept, remixingComponent, suggestion.payload, campaignBlueprint);
+          const newCreativeNode: MindMapNode = {
+              id: newConcept.id,
+              parentId: newConcept.strategicPathId,
+              type: 'creative',
+              label: newConcept.headline,
+              content: { concept: newConcept },
+              position: { x: 0, y: 0 },
+              width: 160,
+              height: 240,
+          };
+          setNodes(prev => [...prev, newCreativeNode]);
+          setCurrentStep('mindmap');
+          setViewMode('gallery'); // Switch to gallery to show the new result
+      } catch (e: any) {
+          console.error(e);
+          setError(e.message || "Gagal membuat konsep dari remix.");
+      } finally {
+          setIsLoading(false);
+          setLoadingMessage('');
+          setRemixTarget(null);
+          setRemixDna(null);
+          setRemixingComponent(null);
+          setRemixSuggestions(null);
+      }
+  };
+
+
   const handleGenerateImage = async (conceptId: string) => {
     const conceptNode = nodes.find(n => n.id === conceptId);
     if (!conceptNode || conceptNode.type !== 'creative') return;
@@ -755,9 +987,22 @@ function App() {
                     initialBlueprint={campaignBlueprint} 
                     referenceImage={referenceImage}
                     onContinue={handleBlueprintValidated}
+                    onStartSmartRemix={handleStartSmartRemix}
                     onBack={handleReset}
                     allowVisualExploration={allowVisualExploration}
                     onAllowVisualExplorationChange={setAllowVisualExploration}
+                />
+            );
+        case 'remix':
+            return remixTarget && remixDna && (
+                <RemixDashboard
+                    remixTarget={remixTarget}
+                    remixDna={remixDna}
+                    suggestions={remixSuggestions}
+                    remixingComponent={remixingComponent}
+                    onRequestSuggestions={handleRequestRemixSuggestions}
+                    onExecuteRemix={handleExecuteRemix}
+                    onBack={() => setCurrentStep('mindmap')}
                 />
             );
         case 'mindmap':
@@ -768,6 +1013,8 @@ function App() {
                 onGenerateImage: handleGenerateImage,
                 onEditConcept: handleEditConcept,
                 onInitiateEvolution: handleInitiateEvolution,
+                onInitiateQuickPivot: handleInitiateQuickPivot,
+                onInitiateRemix: handleInitiateRemix,
                 onSaveConcept: handleSaveConcept,
                 onCloseModal: () => setEditingConceptId(null),
                 onOpenLightbox: handleOpenLightbox,
@@ -790,6 +1037,8 @@ function App() {
                     onGenerateImage={handleGenerateImage}
                     onEditConcept={handleEditConcept}
                     onInitiateEvolution={handleInitiateEvolution}
+                    onInitiateQuickPivot={handleInitiateQuickPivot}
+                    onInitiateRemix={handleInitiateRemix}
                     onOpenLightbox={handleOpenLightbox}
                     onDeleteNode={handleDeleteNode}
                     onReset={handleReset}
@@ -854,6 +1103,14 @@ function App() {
           nodes={nodes}
           onClose={() => setEvolutionTarget(null)}
           onEvolve={handleExecuteEvolution}
+        />
+      )}
+      {pivotTarget && campaignBlueprint && (
+        <QuickPivotModal
+          baseConcept={pivotTarget}
+          blueprint={campaignBlueprint}
+          onGenerate={handleExecuteQuickPivot}
+          onClose={() => setPivotTarget(null)}
         />
       )}
     </main>
