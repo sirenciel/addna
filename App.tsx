@@ -67,7 +67,7 @@ function App() {
     setError(null);
     setCampaignBlueprint(null);
     setNodes([]);
-    setLoadingMessage('Menganalisis Campaign Blueprint...');
+    setLoadingMessage('Analyzing Campaign Blueprint...');
 
     try {
       const blueprint = await analyzeCampaignBlueprint(imageBase64, caption, productInfo, offerInfo);
@@ -76,7 +76,7 @@ function App() {
       setCurrentStep('validateBlueprint');
     } catch (e: any) {
       console.error(e);
-      setError(e.message || 'Gagal menganalisis blueprint kampanye.');
+      setError(e.message || 'Failed to analyze campaign blueprint.');
     } finally {
       setIsLoading(false);
       setLoadingMessage('');
@@ -117,13 +117,13 @@ function App() {
     setError(null);
 
     try {
-        setLoadingMessage('Membuat Campaign Blueprint...');
+        setLoadingMessage('Creating Campaign Blueprint...');
         const dnaNode: MindMapNode = {
             id: 'dna-root', type: 'dna', label: 'Campaign Blueprint', content: validatedBlueprint,
             position: { x: 0, y: 0 }, width: 300, height: 420
         };
         
-        setLoadingMessage('Menghasilkan variasi persona...');
+        setLoadingMessage('Generating persona variations...');
         const newPersonas = await generatePersonaVariations(validatedBlueprint, [validatedBlueprint.targetPersona]);
         const allPersonas = [validatedBlueprint.targetPersona, ...newPersonas];
 
@@ -140,7 +140,7 @@ function App() {
         
         setNodes([dnaNode, ...personaNodes]);
 
-        setLoadingMessage(`Menghasilkan konsep iklan untuk ${allPersonas.length} persona...`);
+        setLoadingMessage(`Generating ad concepts for ${allPersonas.length} personas...`);
         const conceptPromises = allPersonas.map((persona, index) => 
             generateConceptsFromPersona(validatedBlueprint, persona, personaNodes[index].id)
         );
@@ -163,7 +163,7 @@ function App() {
 
     } catch (e: any) {
         console.error("Smart Remix failed:", e);
-        setError(e.message || "Gagal menjalankan Smart Remix.");
+        setError(e.message || "Failed to run Smart Remix.");
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -180,7 +180,7 @@ function App() {
           setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
       } else {
           setIsLoading(true);
-          setLoadingMessage(`Menganalisis Pain & Desire untuk persona "${personaNode.label}"...`);
+          setLoadingMessage(`Analyzing Pain & Desire for persona "${personaNode.label}"...`);
           try {
               const persona = (personaNode.content as { persona: TargetPersona }).persona;
               const painDesires = await generatePainDesires(campaignBlueprint, persona);
@@ -203,7 +203,7 @@ function App() {
               ]);
           } catch (e: any) {
               console.error(e);
-              setError(e.message || 'Gagal menganalisis Pain & Desire.');
+              setError(e.message || 'Failed to analyze Pain & Desire.');
           } finally {
               setIsLoading(false);
               setLoadingMessage('');
@@ -223,12 +223,12 @@ function App() {
 
       const personaNode = nodes.find(n => n.id === painDesireNode.parentId);
       if (!personaNode) {
-          setError('Konteks persona tidak ditemukan.');
+          setError('Persona context not found.');
           return;
       }
       
       setIsLoading(true);
-      setLoadingMessage(`Menganalisis potensi keberatan terkait "${painDesireNode.label}"...`);
+      setLoadingMessage(`Analyzing potential objections for "${painDesireNode.label}"...`);
       try {
           const persona = (personaNode.content as { persona: TargetPersona }).persona;
           const painDesire = (painDesireNode.content as { painDesire: PainDesireObject }).painDesire;
@@ -252,7 +252,7 @@ function App() {
           ]);
       } catch (e: any) {
           console.error(e);
-          setError(e.message || 'Gagal menganalisis keberatan.');
+          setError(e.message || 'Failed to analyze objections.');
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -273,12 +273,12 @@ function App() {
       const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
   
       if (!personaNode) {
-          setError('Konteks persona tidak ditemukan.');
+          setError('Persona context not found.');
           return;
       }
   
       setIsLoading(true);
-      setLoadingMessage(`Mencari tipe penawaran untuk mengatasi "${objectionNode.label}"...`);
+      setLoadingMessage(`Finding offer types to address "${objectionNode.label}"...`);
       try {
           const persona = (personaNode.content as { persona: TargetPersona }).persona;
           const objection = (objectionNode.content as { objection: ObjectionObject }).objection;
@@ -302,7 +302,7 @@ function App() {
           ]);
       } catch (e: any) {
           console.error(e);
-          setError(e.message || 'Gagal membuat tipe penawaran.');
+          setError(e.message || 'Failed to create offer types.');
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -352,12 +352,12 @@ function App() {
           const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
   
           if (!personaNode || !objectionNode || !painDesireNode || !offerNode) {
-              setError('Konteks persona, pain/desire, keberatan, atau penawaran tidak ditemukan untuk membuat angle.');
+              setError('Persona, pain/desire, objection, or offer context not found for creating an angle.');
               return;
           }
   
           setIsLoading(true);
-          setLoadingMessage(`Membuat angle strategis untuk tahap "${awarenessNode.label}"...`);
+          setLoadingMessage(`Creating strategic angles for "${awarenessNode.label}" stage...`);
           
           try {
               const personaContent = personaNode.content as { persona: TargetPersona };
@@ -391,7 +391,7 @@ function App() {
               ]);
           } catch (e: any) {
               console.error(e);
-              setError(e.message || 'Gagal membuat angle strategis.');
+              setError(e.message || 'Failed to create strategic angles.');
           } finally {
               setIsLoading(false);
               setLoadingMessage('');
@@ -415,12 +415,12 @@ function App() {
           const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
           
           if (!personaNode || !awarenessNode) {
-              setError('Konteks tidak ditemukan untuk membuat trigger.');
+              setError('Context not found for creating a trigger.');
               return;
           }
   
           setIsLoading(true);
-          setLoadingMessage(`Menganalisis pemicu (trigger) untuk angle "${angleNode.label}"...`);
+          setLoadingMessage(`Analyzing triggers for angle "${angleNode.label}"...`);
           try {
               const persona = (personaNode.content as { persona: TargetPersona }).persona;
               const triggers: BuyingTriggerObject[] = await generateBuyingTriggers(
@@ -449,7 +449,7 @@ function App() {
   
           } catch (e: any) {
               console.error(e);
-              setError(e.message || 'Gagal menganalisis buying triggers.');
+              setError(e.message || 'Failed to analyze buying triggers.');
           } finally {
               setIsLoading(false);
               setLoadingMessage('');
@@ -535,7 +535,7 @@ function App() {
       const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
 
       if (!formatNode || !awarenessNode || !triggerNode || !angleNode || !personaNode || !offerNode) {
-          setError("Konteks untuk brief ini tidak dapat ditemukan.");
+          setError("Context for this brief could not be found.");
           return;
       }
 
@@ -548,7 +548,7 @@ function App() {
       const offer = (offerNode.content as { offer: OfferTypeObject }).offer;
       
       setIsLoading(true);
-      setLoadingMessage(`Membuat ide ${placement} untuk format "${format}"...`);
+      setLoadingMessage(`Generating ${placement} ideas for "${format}" format...`);
 
       try {
           const ideas = await generateCreativeIdeas(
@@ -572,7 +572,7 @@ function App() {
           ]);
       } catch(e: any) {
           console.error(e);
-          setError(`Gagal membuat ide untuk "${placement}".`);
+          setError(`Failed to generate ideas for "${placement}".`);
       } finally {
           setIsLoading(false); 
           setLoadingMessage('');
@@ -584,16 +584,16 @@ function App() {
       if (!nodeToDelete) return;
       
       const messageMap = {
-          'persona': 'Anda yakin ingin menghapus persona ini beserta semua turunannya?',
-          'pain_desire': 'Anda yakin ingin menghapus Pain/Desire ini dan semua turunannya?',
-          'objection': 'Anda yakin ingin menghapus keberatan ini dan semua turunannya?',
-          'offer': 'Anda yakin ingin menghapus penawaran ini dan semua turunannya?',
-          'angle': 'Anda yakin ingin menghapus angle ini beserta semua turunannya?',
-          'trigger': 'Anda yakin ingin menghapus trigger ini dan semua turunannya?',
-          'creative': 'Anda yakin ingin menghapus konsep kreatif ini?',
+          'persona': 'Are you sure you want to delete this persona and all its children?',
+          'pain_desire': 'Are you sure you want to delete this Pain/Desire and all its children?',
+          'objection': 'Are you sure you want to delete this objection and all its children?',
+          'offer': 'Are you sure you want to delete this offer and all its children?',
+          'angle': 'Are you sure you want to delete this angle and all its children?',
+          'trigger': 'Are you sure you want to delete this trigger and all its children?',
+          'creative': 'Are you sure you want to delete this creative concept?',
       };
       // @ts-ignore
-      const message = messageMap[nodeToDelete.type] || 'Anda yakin ingin menghapus node ini dan semua turunannya?';
+      const message = messageMap[nodeToDelete.type] || 'Are you sure you want to delete this node and all its children?';
 
       if (!window.confirm(message)) return;
 
@@ -616,7 +616,7 @@ function App() {
   const handleGenerateMorePersonas = async () => {
     if (!campaignBlueprint) return;
     setIsLoading(true);
-    setLoadingMessage('Mencari variasi persona baru...');
+    setLoadingMessage('Generating new persona variations...');
     try {
         const existingPersonas = nodes
             .filter(n => n.type === 'persona')
@@ -625,7 +625,7 @@ function App() {
         const newPersonas = await generatePersonaVariations(campaignBlueprint, existingPersonas);
 
         if (newPersonas.length === 0) {
-            setLoadingMessage('Tidak ada persona baru yang ditemukan.');
+            setLoadingMessage('No new personas were found.');
             setTimeout(() => setLoadingMessage(''), 2000);
             return;
         }
@@ -642,14 +642,14 @@ function App() {
         setNodes(prev => [...prev, ...newPersonaNodes]);
     } catch (e: any) {
         console.error(e);
-        setError('Gagal membuat persona baru.');
+        setError('Failed to generate new personas.');
     } finally {
         setIsLoading(false); setLoadingMessage('');
     }
   };
   
    const handleAddCustomPersona = () => {
-    const description = window.prompt("Masukkan deskripsi singkat untuk persona baru Anda:");
+    const description = window.prompt("Enter a brief description for your new persona:");
     if (!description || description.trim() === "") return;
     
     const newPersona: TargetPersona = {
@@ -688,14 +688,14 @@ function App() {
       if (!campaignBlueprint) return;
       setEvolutionTarget(null);
       setIsLoading(true);
-      setLoadingMessage(`Mengevolusikan konsep ke ${evolutionType} "${newValue}"...`);
+      setLoadingMessage(`Evolving concept to ${evolutionType} "${newValue}"...`);
       setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: true } } } : n));
 
       try {
           let evolvedConcepts: Omit<AdConcept, 'imageUrls'>[] = [];
 
           if (evolutionType === 'trigger') {
-              setLoadingMessage(`Mendapatkan detail untuk trigger "${newValue}"...`);
+              setLoadingMessage(`Getting details for trigger "${newValue}"...`);
 
               const findParent = (startNodeId: string, type: 'angle' | 'persona'): MindMapNode | undefined => {
                   let currentNode = nodes.find(n => n.id === startNodeId);
@@ -711,7 +711,7 @@ function App() {
               const personaNode = findParent(angleNode?.id || '', 'persona');
 
               if (!angleNode || !personaNode) {
-                  throw new Error("Konteks (angle/persona) tidak ditemukan untuk evolusi trigger.");
+                  throw new Error("Context (angle/persona) not found for trigger evolution.");
               }
 
               const persona = (personaNode.content as { persona: TargetPersona }).persona;
@@ -719,7 +719,7 @@ function App() {
               
               const triggerObject = await getBuyingTriggerDetails(newValue, campaignBlueprint, persona, angle);
               
-              setLoadingMessage(`Mengevolusikan konsep dengan trigger "${newValue}"...`);
+              setLoadingMessage(`Evolving concept with trigger "${newValue}"...`);
               
               evolvedConcepts = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, triggerObject);
 
@@ -741,11 +741,11 @@ function App() {
               };
               setNodes(prev => [...prev, newCreativeNode]);
           } else {
-              throw new Error("Evolusi tidak menghasilkan konsep baru.");
+              throw new Error("Evolution did not yield a new concept.");
           }
       } catch (e: any) {
           console.error(e);
-          setError(`Gagal mengevolusikan konsep.`);
+          setError(`Failed to evolve concept.`);
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -765,7 +765,7 @@ function App() {
     const baseConcept = pivotTarget;
     setPivotTarget(null);
     setIsLoading(true);
-    setLoadingMessage(`Melakukan Quick Pivot: ${pivotType}...`);
+    setLoadingMessage(`Performing Quick Pivot: ${pivotType}...`);
     setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isPivoting: true } } } : n));
     
     try {
@@ -784,11 +784,11 @@ function App() {
           };
           setNodes(prev => [...prev, newCreativeNode]);
       } else {
-          throw new Error("Quick Pivot tidak menghasilkan konsep baru.");
+          throw new Error("Quick Pivot did not yield a new concept.");
       }
     } catch(e: any) {
-        console.error("Gagal melakukan Quick Pivot:", e);
-        setError(e.message || "Gagal melakukan Quick Pivot.");
+        console.error("Failed to perform Quick Pivot:", e);
+        setError(e.message || "Failed to perform Quick Pivot.");
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -850,7 +850,7 @@ function App() {
       setRemixDna(dna);
       setCurrentStep('remix');
     } else {
-      setError("Gagal memuat DNA iklan. Jalur strategis tidak lengkap.");
+      setError("Failed to load ad DNA. The strategic path is incomplete.");
     }
   };
   
@@ -859,13 +859,13 @@ function App() {
     setRemixingComponent(component);
     setRemixSuggestions(null);
     setIsLoading(true);
-    setLoadingMessage(`Mencari variasi untuk ${component}...`);
+    setLoadingMessage(`Finding variations for ${component}...`);
     try {
       const suggestions = await generateRemixSuggestions(component, remixTarget, remixDna, campaignBlueprint);
       setRemixSuggestions(suggestions);
     } catch (e: any) {
         console.error(e);
-        setError(e.message || `Gagal membuat saran untuk ${component}.`);
+        setError(e.message || `Failed to generate suggestions for ${component}.`);
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -876,7 +876,7 @@ function App() {
       if (!remixTarget || !remixingComponent || !campaignBlueprint) return;
       const baseConcept = remixTarget;
       setIsLoading(true);
-      setLoadingMessage(`Membuat konsep baru dari remix ${remixingComponent}...`);
+      setLoadingMessage(`Creating new concept from ${remixingComponent} remix...`);
       
       try {
           const newConcept = await generateConceptFromRemix(baseConcept, remixingComponent, suggestion.payload, campaignBlueprint);
@@ -895,7 +895,7 @@ function App() {
           setViewMode('gallery'); // Switch to gallery to show the new result
       } catch (e: any) {
           console.error(e);
-          setError(e.message || "Gagal membuat konsep dari remix.");
+          setError(e.message || "Failed to create concept from remix.");
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -928,7 +928,7 @@ function App() {
         setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, imageUrls: urls, isGenerating: false} } } : n));
     } catch(e: any) {
         console.error(`Failed to generate image(s) for concept ${conceptId}`, e);
-        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, error: e.message || 'Gagal membuat gambar', isGenerating: false} } } : n));
+        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, error: e.message || 'Failed to generate image', isGenerating: false} } } : n));
     }
   };
 
@@ -975,7 +975,7 @@ function App() {
                     <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-brand-primary/20 via-brand-background to-brand-background -z-10"></div>
                     <header className="text-center mb-12">
                         <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Ad Concept Generator</h1>
-                        <p className="text-brand-text-secondary mt-2 text-lg">Ubah satu iklan menjadi puluhan variasi berperforma tinggi.</p>
+                        <p className="text-brand-text-secondary mt-2 text-lg">Turn one ad into dozens of high-performing variations.</p>
                     </header>
                     {error && <div className="max-w-4xl mx-auto bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-8" role="alert">{error}</div>}
                     <InputForm onGenerate={handleGenerate} />
@@ -1067,14 +1067,14 @@ function App() {
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-brand-surface p-1 rounded-lg shadow-2xl flex items-center border border-gray-700">
            <button
              onClick={() => setViewMode('mindmap')}
-             title="Tampilan Mind Map"
+             title="Mind Map View"
              className={`p-2 rounded-md transition-colors ${viewMode === 'mindmap' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
            >
              <NetworkIcon className="w-5 h-5" />
            </button>
            <button
              onClick={() => setViewMode('gallery')}
-             title="Tampilan Galeri"
+             title="Gallery View"
              className={`p-2 rounded-md transition-colors ${viewMode === 'gallery' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
            >
              <LayoutGridIcon className="w-5 h-5" />

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AdConcept, CreativeFormat, PlacementFormat, MindMapNode } from '../types';
+import { AdConcept, CreativeFormat, PlacementFormat, MindMapNode, AwarenessStage } from '../types';
 import { EditIcon, ClipboardCopyIcon, SparklesIcon, RefreshCwIcon, ZapIcon, RemixIcon } from './icons';
 
 interface CreativeCardProps {
@@ -15,7 +15,7 @@ interface CreativeCardProps {
 }
 
 export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImage, onEditConcept, onInitiateEvolution, onInitiateQuickPivot, onInitiateRemix, onOpenLightbox, className = '' }) => {
-    const [copyButtonText, setCopyButtonText] = useState('Salin Teks');
+    const [copyButtonText, setCopyButtonText] = useState('Copy Text');
     const [currentSlide, setCurrentSlide] = useState(0);
 
     if (node.type !== 'creative') return null;
@@ -24,11 +24,11 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
     const handleCopy = () => {
         const textToCopy = `Headline: ${concept.headline}\nHook: ${concept.hook}`;
         navigator.clipboard.writeText(textToCopy);
-        setCopyButtonText('Disalin!');
-        setTimeout(() => setCopyButtonText('Salin Teks'), 2000);
+        setCopyButtonText('Copied!');
+        setTimeout(() => setCopyButtonText('Copy Text'), 2000);
     };
 
-    const awarenessColorMap = {
+    const awarenessColorMap: Record<AwarenessStage, string> = {
         "Unaware": "bg-red-500",
         "Problem Aware": "bg-orange-500",
         "Solution Aware": "bg-yellow-500",
@@ -106,13 +106,13 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                  {concept.isGenerating ? (
                     <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900/50">
                         <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        <p className="text-xs mt-2">{isCarousel ? 'Membuat gambar carousel...' : 'Membuat gambar...'}</p>
+                        <p className="text-xs mt-2">{isCarousel ? 'Generating carousel...' : 'Generating image...'}</p>
                     </div>
                 ) : concept.error ? (
                     <div className="w-full h-full flex flex-col items-center justify-center bg-red-900/50 p-2 text-center">
-                        <p className="text-sm font-semibold">Gagal</p>
+                        <p className="text-sm font-semibold">Failed</p>
                         <p className="text-xs text-white/70 mt-1">{concept.error}</p>
-                         <button onClick={() => onGenerateImage(node.id)} className="mt-2 text-xs bg-brand-primary px-2 py-1 rounded hover:bg-indigo-500">Coba Lagi</button>
+                         <button onClick={() => onGenerateImage(node.id)} className="mt-2 text-xs bg-brand-primary px-2 py-1 rounded hover:bg-indigo-500">Retry</button>
                     </div>
                 ) : totalImages > 0 ? (
                     <>
@@ -137,7 +137,7 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-900/50">
                         <button onClick={(e) => { e.stopPropagation(); onGenerateImage(node.id); }} className="px-4 py-2 bg-brand-secondary text-white font-semibold rounded-lg hover:bg-green-500 transition-colors">
-                            {isCarousel ? 'Buat Gambar Carousel' : 'Buat Gambar'}
+                            {isCarousel ? 'Generate Carousel' : 'Generate Image'}
                         </button>
                     </div>
                 )}
@@ -158,7 +158,7 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                                 </span>
                             )}
                             <span className={`text-xs px-1.5 py-0.5 rounded-full text-black font-semibold whitespace-nowrap ${awarenessColorMap[concept.awarenessStage] || 'bg-gray-400'}`}>
-                                {concept.awarenessStage.replace(' Aware', '')}
+                                {concept.awarenessStage}
                             </span>
                             {concept.format && (
                                 <span className={`text-xs px-1.5 py-0.5 rounded-full text-white font-semibold whitespace-nowrap ${formatColorMap[concept.format] || 'bg-gray-400'}`}>
@@ -175,22 +175,22 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                     <p className="text-xs text-brand-text-secondary line-clamp-2">{concept.hook}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-1 mt-2">
-                    <button onClick={() => onEditConcept(node.id)} title="Edit Detail & Prompt" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><EditIcon className="w-3 h-3"/> Detail</button>
-                    <button onClick={handleCopy} title="Salin Teks" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><ClipboardCopyIcon className="w-3 h-3"/> {copyButtonText}</button>
+                    <button onClick={() => onEditConcept(node.id)} title="Edit Details & Prompt" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><EditIcon className="w-3 h-3"/> Details</button>
+                    <button onClick={handleCopy} title="Copy Text" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><ClipboardCopyIcon className="w-3 h-3"/> {copyButtonText}</button>
                     <button 
                         onClick={() => onInitiateEvolution(node.id)} 
                         disabled={concept.isEvolving}
-                        title="Buat variasi dari konsep ini" 
+                        title="Create variations of this concept" 
                         className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 disabled:opacity-50"
                     >
                         {concept.isEvolving ? <RefreshCwIcon className="w-3 h-3 animate-spin" /> : <SparklesIcon className="w-3 h-3"/>}
-                        Evolusi
+                        Evolve
                     </button>
                     <button 
                         onClick={() => onInitiateQuickPivot(node.id)}
                         disabled={concept.isPivoting}
                         className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 font-bold disabled:opacity-50"
-                        title="Buat variasi cepat untuk audience berbeda"
+                        title="Create quick variations for different audiences"
                       >
                         {concept.isPivoting ? <RefreshCwIcon className="w-3 h-3 animate-spin" /> : <ZapIcon className="w-3 h-3"/>}
                          Pivot
@@ -198,7 +198,7 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                     <button 
                         onClick={() => onInitiateRemix(node.id)}
                         className="col-span-2 text-xs bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 p-1.5 rounded-md flex items-center justify-center gap-1 font-bold"
-                        title="Buka Smart Remix Dashboard"
+                        title="Open Smart Remix Dashboard"
                       >
                         <RemixIcon className="w-3 h-3"/>
                          Smart Remix

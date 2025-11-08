@@ -17,7 +17,6 @@ interface ConceptGalleryProps {
     onEditConcept: (conceptId: string) => void;
     onInitiateEvolution: (conceptId: string) => void;
     onInitiateQuickPivot: (conceptId: string) => void;
-    // FIX: Added onInitiateRemix to props to be passed down to CreativeCard.
     onInitiateRemix: (conceptId: string) => void;
     onSaveConcept: (conceptId: string, updatedContent: AdConcept) => void;
     onCloseModal: () => void;
@@ -55,7 +54,7 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
         setIsExporting(true);
         try {
             await exportConceptsToZip(filteredConcepts);
-        } catch (error) { console.error("Export failed:", error); alert("Gagal mengunduh aset."); }
+        } catch (error) { console.error("Export failed:", error); alert("Failed to download assets."); }
         finally { setIsExporting(false); }
     };
 
@@ -103,12 +102,12 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
             <header className="flex-shrink-0 bg-brand-surface/80 backdrop-blur-md border-b border-gray-700 p-4 z-10">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div>
-                        <h1 className="text-xl font-bold">Galeri Konsep Kreatif</h1>
-                        <p className="text-sm text-brand-text-secondary">{filteredConcepts.length} dari {concepts.length} konsep ditampilkan dalam {filteredConceptGroups.length} grup hipotesis</p>
+                        <h1 className="text-xl font-bold">Creative Concept Gallery</h1>
+                        <p className="text-sm text-brand-text-secondary">{filteredConcepts.length} of {concepts.length} concepts shown in {filteredConceptGroups.length} hypothesis groups</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={onReset} className="px-3 py-2 bg-gray-700 rounded-md shadow-lg text-sm font-semibold hover:bg-gray-600">Mulai dari Awal</button>
-                        <button onClick={handleExport} disabled={isExporting || filteredConcepts.length === 0} title="Unduh Konsep yang Difilter" className="bg-brand-primary p-2 rounded-md shadow-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                        <button onClick={onReset} className="px-3 py-2 bg-gray-700 rounded-md shadow-lg text-sm font-semibold hover:bg-gray-600">Start Over</button>
+                        <button onClick={handleExport} disabled={isExporting || filteredConcepts.length === 0} title="Download Filtered Concepts" className="bg-brand-primary p-2 rounded-md shadow-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
                             {isExporting ? <RefreshCwIcon className="w-5 h-5 animate-spin"/> : <DownloadIcon className="w-5 h-5" />}
                         </button>
                     </div>
@@ -139,7 +138,6 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
                                                 onEditConcept={props.onEditConcept}
                                                 onInitiateEvolution={props.onInitiateEvolution}
                                                 onInitiateQuickPivot={props.onInitiateQuickPivot}
-                                                // FIX: Passed the onInitiateRemix prop to CreativeCard.
                                                 onInitiateRemix={props.onInitiateRemix}
                                                 onOpenLightbox={props.onOpenLightbox}
                                             />
@@ -151,8 +149,8 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full text-brand-text-secondary">
-                        <p className="text-lg">Tidak ada konsep kreatif.</p>
-                        <p>Coba pilih filter lain atau kembali ke Mind Map untuk membuat ide baru.</p>
+                        <p className="text-lg">No creative concepts found.</p>
+                        <p>Try selecting different filters or go back to the Mind Map to generate new ideas.</p>
                     </div>
                 )}
             </main>

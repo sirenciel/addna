@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { CampaignBlueprint, TargetPersona } from '../types';
 import { RemixIcon } from './icons';
@@ -79,8 +80,8 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
   return (
     <div className="w-full min-h-screen flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
         <div className="text-center mb-8 flex-shrink-0">
-            <h1 className="text-3xl md:text-4xl font-extrabold">Validasi & Pilih Alur Kerja</h1>
-            <p className="text-brand-text-secondary mt-2 text-lg">Periksa fondasi strategis AI, lalu pilih cara Anda membuat konsep.</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold">Validate & Choose Workflow</h1>
+            <p className="text-brand-text-secondary mt-2 text-lg">Review the AI's strategic foundation, then choose how you want to create concepts.</p>
         </div>
 
         <div className="w-full max-w-6xl bg-brand-surface rounded-xl shadow-2xl">
@@ -89,13 +90,13 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                     onClick={() => setActiveTab('manual')}
                     className={`flex-1 py-3 font-semibold transition-colors ${activeTab === 'manual' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-brand-text-secondary hover:bg-gray-800'}`}
                 >
-                    Eksplorasi Manual
+                    Manual Exploration
                 </button>
                 <button 
                     onClick={() => setActiveTab('remix')}
                     className={`flex-1 py-3 font-semibold transition-colors ${activeTab === 'remix' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-brand-text-secondary hover:bg-gray-800'}`}
                 >
-                    🚀 Smart Remix (Cepat)
+                    🚀 Smart Remix (Fast)
                 </button>
             </div>
 
@@ -107,10 +108,10 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                               <img src={`data:image/jpeg;base64,${referenceImage}`} alt="Reference Ad" className="max-h-full max-w-full object-contain rounded-md" />
                           </div>
                           <div>
-                              <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Produk</h3>
+                              <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Product</h3>
                                <div className="space-y-3">
-                                  <EditableField label="Nama Produk/Layanan" name="name" value={blueprint.productAnalysis.name} onChange={e => handleProductChange(e, 'name')} />
-                                  <EditableField label="Manfaat Utama" name="keyBenefit" value={blueprint.productAnalysis.keyBenefit} onChange={e => handleProductChange(e, 'keyBenefit')} />
+                                  <EditableField label="Product/Service Name" name="name" value={blueprint.productAnalysis.name} onChange={e => handleProductChange(e, 'name')} />
+                                  <EditableField label="Key Benefit" name="keyBenefit" value={blueprint.productAnalysis.keyBenefit} onChange={e => handleProductChange(e, 'keyBenefit')} />
                                </div>
                           </div>
                         </div>
@@ -119,26 +120,26 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                             <div className="md:col-span-2">
                                 <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Target Persona</h3>
                             </div>
-                            <EditableTextarea label="Deskripsi Persona" name="description" value={blueprint.targetPersona.description} onChange={e => handlePersonaChange(e, 'description')} />
-                            <EditableField label="Rentang Usia" name="age" value={blueprint.targetPersona.age} onChange={e => handlePersonaChange(e, 'age')} />
-                            <EditableField label="Tipe Kreator" name="creatorType" value={blueprint.targetPersona.creatorType} onChange={e => handlePersonaChange(e, 'creatorType')} />
-                            <EditableTextarea label="Pain Points (pisahkan koma)" name="painPoints" value={blueprint.targetPersona.painPoints.join(', ')} onChange={e => handlePersonaChange(e, 'painPoints')} />
-                            <EditableTextarea label="Desired Outcomes (pisahkan koma)" name="desiredOutcomes" value={blueprint.targetPersona.desiredOutcomes.join(', ')} onChange={e => handlePersonaChange(e, 'desiredOutcomes')} />
+                            <EditableTextarea label="Persona Description" name="description" value={blueprint.targetPersona.description} onChange={e => handlePersonaChange(e, 'description')} />
+                            <EditableField label="Age Range" name="age" value={blueprint.targetPersona.age} onChange={e => handlePersonaChange(e, 'age')} />
+                            <EditableField label="Creator Type" name="creatorType" value={blueprint.targetPersona.creatorType} onChange={e => handlePersonaChange(e, 'creatorType')} />
+                            <EditableTextarea label="Pain Points (comma-separated)" name="painPoints" value={blueprint.targetPersona.painPoints.join(', ')} onChange={e => handlePersonaChange(e, 'painPoints')} />
+                            <EditableTextarea label="Desired Outcomes (comma-separated)" name="desiredOutcomes" value={blueprint.targetPersona.desiredOutcomes.join(', ')} onChange={e => handlePersonaChange(e, 'desiredOutcomes')} />
                             
                             <div className="md:col-span-2 mt-2">
-                                <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Analisis Iklan (Sales DNA)</h3>
+                                <h3 className="text-lg font-semibold text-brand-primary border-b border-brand-primary/30 pb-1 mb-2">Ad Analysis (Sales DNA)</h3>
                             </div>
                             <EditableField label="Sales Mechanism" name="salesMechanism" value={blueprint.adDna.salesMechanism} onChange={e => handleDnaChange(e, 'salesMechanism')} />
-                            <EditableField label="Formula Persuasi" name="persuasionFormula" value={blueprint.adDna.persuasionFormula} onChange={e => handleDnaChange(e, 'persuasionFormula')} />
-                            <EditableTextarea label="Pola Copy" name="copyPattern" value={blueprint.adDna.copyPattern} onChange={e => handleDnaChange(e, 'copyPattern')} />
-                            <EditableTextarea label="Pola Bahasa Spesifik (pisahkan koma)" name="specificLanguagePatterns" value={blueprint.adDna.specificLanguagePatterns.join(', ')} onChange={e => handleDnaChange(e, 'specificLanguagePatterns')} />
+                            <EditableField label="Persuasion Formula" name="persuasionFormula" value={blueprint.adDna.persuasionFormula} onChange={e => handleDnaChange(e, 'persuasionFormula')} />
+                            <EditableTextarea label="Ad Copy Pattern" name="copyPattern" value={blueprint.adDna.copyPattern} onChange={e => handleDnaChange(e, 'copyPattern')} />
+                            <EditableTextarea label="Specific Language Patterns (comma-separated)" name="specificLanguagePatterns" value={blueprint.adDna.specificLanguagePatterns.join(', ')} onChange={e => handleDnaChange(e, 'specificLanguagePatterns')} />
                             <EditableField label="Tone of Voice" name="toneOfVoice" value={blueprint.adDna.toneOfVoice} onChange={e => handleDnaChange(e, 'toneOfVoice')} />
-                            <EditableField label="Elemen Social Proof" name="socialProofElements" value={blueprint.adDna.socialProofElements} onChange={e => handleDnaChange(e, 'socialProofElements')} />
-                            <EditableTextarea label="Penanganan Keberatan (Objection Handling)" name="objectionHandling" value={blueprint.adDna.objectionHandling} onChange={e => handleDnaChange(e, 'objectionHandling')} />
-                            <EditableField label="Gaya Visual" name="visualStyle" value={blueprint.adDna.visualStyle} onChange={e => handleDnaChange(e, 'visualStyle')} />
-                            <EditableField label="Ringkasan Penawaran" name="offerSummary" value={blueprint.adDna.offerSummary} onChange={e => handleDnaChange(e, 'offerSummary')} />
+                            <EditableField label="Social Proof Elements" name="socialProofElements" value={blueprint.adDna.socialProofElements} onChange={e => handleDnaChange(e, 'socialProofElements')} />
+                            <EditableTextarea label="Objection Handling" name="objectionHandling" value={blueprint.adDna.objectionHandling} onChange={e => handleDnaChange(e, 'objectionHandling')} />
+                            <EditableField label="Visual Style" name="visualStyle" value={blueprint.adDna.visualStyle} onChange={e => handleDnaChange(e, 'visualStyle')} />
+                            <EditableField label="Offer Summary" name="offerSummary" value={blueprint.adDna.offerSummary} onChange={e => handleDnaChange(e, 'offerSummary')} />
                             <EditableField label="Call to Action (CTA)" name="cta" value={blueprint.adDna.cta} onChange={e => handleDnaChange(e, 'cta')} />
-                            <EditableField label="Target Negara" name="targetCountry" value={blueprint.adDna.targetCountry} onChange={e => handleDnaChange(e, 'targetCountry')} />
+                            <EditableField label="Target Country" name="targetCountry" value={blueprint.adDna.targetCountry} onChange={e => handleDnaChange(e, 'targetCountry')} />
                             
                             <div className="md:col-span-2 flex items-center space-x-2 mt-2 p-3 bg-gray-900/50 rounded-lg">
                                 <input
@@ -149,17 +150,17 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                                     className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary"
                                 />
                                 <label htmlFor="allowVisualExploration" className="text-sm font-medium text-brand-text-secondary">
-                                    Izinkan AI bereksplorasi dengan gaya visual baru (berbeda dari referensi).
+                                    Allow AI to explore new visual styles (different from reference).
                                 </label>
                             </div>
                         </div>
                         
                         <div className="lg:col-span-3 flex justify-between items-center pt-4 border-t border-gray-700 mt-2">
                             <button type="button" onClick={onBack} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">
-                                Kembali
+                                Back
                             </button>
                             <button type="submit" className="px-8 py-3 bg-brand-primary text-white font-bold rounded-lg hover:bg-indigo-500 transition-transform transform hover:scale-105">
-                                Lanjutkan ke Mind Map
+                                Continue to Mind Map
                             </button>
                         </div>
                     </form>
@@ -172,9 +173,9 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                         <div className="w-48 h-48 bg-gray-900 rounded-full overflow-hidden flex items-center justify-center border-4 border-gray-700 mb-6">
                             <img src={`data:image/jpeg;base64,${referenceImage}`} alt="Reference Ad" className="w-full h-full object-cover" />
                         </div>
-                        <h3 className="text-2xl font-bold">Smart Remix: Hasilkan Konsep Secara Otomatis</h3>
+                        <h3 className="text-2xl font-bold">Smart Remix: Auto-Generate Concepts</h3>
                         <p className="max-w-2xl text-brand-text-secondary mt-2 mb-6">
-                            Ini adalah alur kerja cepat. AI akan secara otomatis menghasilkan beberapa variasi persona baru berdasarkan blueprint Anda, lalu membuat serangkaian konsep iklan yang beragam untuk setiap persona.
+                            This is the fast track. The AI will automatically generate several new persona variations based on your blueprint, then create a diverse set of ad concepts for each one.
                         </p>
                         <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 w-full max-w-3xl mb-8">
                              <div className="flex items-center space-x-2">
@@ -186,18 +187,18 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                                     className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary"
                                 />
                                 <label htmlFor="remixAllowVisualExploration" className="text-sm font-medium text-brand-text-secondary">
-                                    Izinkan AI bereksplorasi dengan gaya visual baru (berbeda dari referensi).
+                                    Allow AI to explore new visual styles (different from reference).
                                 </label>
                             </div>
                         </div>
 
                          <div className="flex w-full max-w-md justify-between items-center pt-4 border-t border-gray-700 mt-2">
                             <button type="button" onClick={onBack} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">
-                                Kembali
+                                Back
                             </button>
                             <button type="submit" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-lg transition-transform transform hover:scale-105 flex items-center gap-2">
                                 <RemixIcon className="w-5 h-5"/>
-                                Mulai Smart Remix
+                                Start Smart Remix
                             </button>
                         </div>
                     </form>

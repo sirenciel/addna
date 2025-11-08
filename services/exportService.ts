@@ -1,4 +1,3 @@
-
 import JSZip from 'jszip';
 import * as FileSaver from 'file-saver';
 import { AdConcept } from '../types';

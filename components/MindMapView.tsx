@@ -79,9 +79,9 @@ const DnaNode: React.FC<{ node: MindMapNode }> = ({ node }) => {
                 </div>
             )}
             <div className="text-xs space-y-1.5 text-brand-text-secondary overflow-y-auto pr-2">
-                <p><strong className="text-brand-text-primary">Produk:</strong> {blueprint.productAnalysis.name}</p>
-                <p><strong className="text-brand-text-primary">Manfaat Utama:</strong> {blueprint.productAnalysis.keyBenefit}</p>
-                <p><strong className="text-brand-text-primary">Persona Awal:</strong> {blueprint.targetPersona.description}</p>
+                <p><strong className="text-brand-text-primary">Product:</strong> {blueprint.productAnalysis.name}</p>
+                <p><strong className="text-brand-text-primary">Key Benefit:</strong> {blueprint.productAnalysis.keyBenefit}</p>
+                <p><strong className="text-brand-text-primary">Initial Persona:</strong> {blueprint.targetPersona.description}</p>
             </div>
         </div>
     );
@@ -107,7 +107,7 @@ const PersonaNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void 
                 </div>
             </div>
             {!node.isExpanded && (
-                 <p className="text-xs text-purple-200 mt-2">Klik untuk analisis Pain/Desire</p>
+                 <p className="text-xs text-purple-200 mt-2">Click to analyze Pain/Desire</p>
             )}
         </div>
     );
@@ -119,7 +119,7 @@ const PainDesireNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => vo
     const bgColor = isPain ? 'bg-rose-600 hover:bg-rose-500 border-rose-600' : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-600';
     const iconColor = isPain ? 'text-rose-200' : 'text-emerald-200';
     const textColor = isPain ? 'text-rose-100' : 'text-emerald-100';
-    const promptText = 'Klik untuk analisis keberatan';
+    const promptText = 'Click to analyze objections';
 
     return (
         <div
@@ -160,7 +160,7 @@ const ObjectionNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => voi
                  <p className="text-xs text-red-200 mt-1 line-clamp-2">{objection.description}</p>
             </div>
             {!node.isExpanded && (
-                 <p className="text-xs text-red-100 mt-2">Klik untuk ide penawaran</p>
+                 <p className="text-xs text-red-100 mt-2">Click for offer ideas</p>
             )}
         </div>
     );
@@ -183,7 +183,7 @@ const OfferNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }>
                 <p className={`text-xs mt-1 line-clamp-2 ${node.isExpanded ? 'text-gray-400' : 'text-cyan-100'}`}>{offer.description}</p>
             </div>
             {!node.isExpanded && (
-                 <p className="text-xs text-cyan-100 mt-2">Klik untuk memilih tahap</p>
+                 <p className="text-xs text-cyan-100 mt-2">Click to select stage</p>
             )}
         </div>
     );
@@ -201,7 +201,7 @@ const AwarenessStageNode: React.FC<{ node: MindMapNode, onToggle: (id: string) =
         <div>
             <h4 className="font-semibold text-md">{node.label}</h4>
             {!node.isExpanded && (
-                 <p className="text-xs text-yellow-100 mt-1">Klik untuk buat angle</p>
+                 <p className="text-xs text-yellow-100 mt-1">Click to create angles</p>
             )}
         </div>
     </div>
@@ -220,8 +220,8 @@ const AngleNode: React.FC<{ node: MindMapNode; onToggle: (id: string) => void; o
             <p className="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Level 4: Strategic Angle</p>
         </div>
         <div>
-            <h4 className="font-bold text-base mt-1">Angle: {node.label}</h4>
-            {!node.isExpanded && <p className="text-xs text-indigo-200 mt-2">Klik untuk buat trigger</p>}
+            <h4 className="font-bold text-base mt-1">{node.label}</h4>
+            {!node.isExpanded && <p className="text-xs text-indigo-200 mt-2">Click to create triggers</p>}
         </div>
     </div>
 );
@@ -242,7 +242,7 @@ const TriggerNode: React.FC<{ node: MindMapNode; onToggle: (id: string) => void;
         <div>
             <h4 className="font-semibold text-md mt-1">Trigger: {node.label}</h4>
             {!node.isExpanded && (
-                 <p className="text-xs text-orange-100 mt-1">Klik untuk buat format</p>
+                 <p className="text-xs text-orange-100 mt-1">Click to create formats</p>
             )}
         </div>
     </div>
@@ -263,7 +263,7 @@ const FormatNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }
         <div>
             <h4 className="font-semibold text-md mt-1">Format: {node.label}</h4>
             {!node.isExpanded && (
-                 <p className="text-xs text-green-100 mt-1">Klik untuk buat penempatan</p>
+                 <p className="text-xs text-green-100 mt-1">Click to create placements</p>
             )}
         </div>
     </div>
@@ -281,7 +281,7 @@ const PlacementNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => voi
         <div>
             <h4 className="font-semibold text-md">{node.label}</h4>
             {!node.isExpanded && (
-                 <p className="text-xs text-teal-100 mt-1">Klik untuk buat ide</p>
+                 <p className="text-xs text-teal-100 mt-1">Click to generate ideas</p>
             )}
         </div>
     </div>
@@ -303,7 +303,6 @@ const NodeComponent: React.FC<{
     onEditConcept: (id: string) => void;
     onInitiateEvolution: (id: string) => void;
     onInitiateQuickPivot: (id: string) => void;
-    // FIX: Added onInitiateRemix to the props type for NodeComponent.
     onInitiateRemix: (id: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (id: string) => void;
@@ -324,13 +323,12 @@ const NodeComponent: React.FC<{
             {node.type === 'trigger' && <TriggerNode node={node} onToggle={onToggleTrigger} onEducationHover={onEducationHover} />}
             {node.type === 'format' && <FormatNode node={node} onToggle={onToggleFormat} />}
             {node.type === 'placement' && <PlacementNode node={node} onToggle={onTogglePlacement} />}
-            {/* FIX: Passed the onInitiateRemix prop to CreativeCard. */}
             {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onInitiateQuickPivot={props.onInitiateQuickPivot} onInitiateRemix={props.onInitiateRemix} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" />}
             
             {node.type !== 'dna' && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id); }}
-                    title="Hapus Node"
+                    title="Delete Node"
                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 z-10"
                 >
                     <Trash2Icon className="w-4 h-4 text-white" />
@@ -506,7 +504,6 @@ interface MindMapViewProps {
     onEditConcept: (conceptId: string) => void;
     onInitiateEvolution: (conceptId: string) => void;
     onInitiateQuickPivot: (conceptId: string) => void;
-    // FIX: Added onInitiateRemix to the props type for MindMapView.
     onInitiateRemix: (conceptId: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (nodeId: string) => void;
@@ -572,8 +569,8 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
             return;
         }
         let content = '';
-        if (type === 'angle') content = "Level ini menentukan 'APA' pesan utama Anda (Strategi Pesan).";
-        if (type === 'trigger') content = "Level ini menentukan 'BAGAIMANA' Anda menyampaikan pesan agar persuasif (Taktik Psikologis).";
+        if (type === 'angle') content = "This level determines 'WHAT' your core message is (Message Strategy).";
+        if (type === 'trigger') content = "This level determines 'HOW' you deliver the message persuasively (Psychological Tactic).";
 
         if (content) {
             setEducationTooltip({ content, x: event.clientX, y: event.clientY });
@@ -603,9 +600,9 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                 content = (
                      <div>
                         <strong className="text-brand-text-primary block">{persona.description}</strong>
-                        <p className="mt-1"><strong>Usia:</strong> {persona.age} | <strong>Tipe:</strong> {persona.creatorType}</p>
-                        <p><strong>Pains:</strong> {persona.painPoints.join(', ')}</p>
-                        <p><strong>Outcomes:</strong> {persona.desiredOutcomes.join(', ')}</p>
+                        <p className="mt-1"><strong>Age:</strong> {persona.age} | <strong>Type:</strong> {persona.creatorType}</p>
+                        <p><strong>Pain Points:</strong> {persona.painPoints.join(', ')}</p>
+                        <p><strong>Desired Outcomes:</strong> {persona.desiredOutcomes.join(', ')}</p>
                     </div>
                 );
                 break;
@@ -626,9 +623,9 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                 const { objection } = node.content as { objection: ObjectionObject };
                 content = (
                      <div>
-                        <strong className="text-brand-text-primary block">Keberatan: {objection.name}</strong>
+                        <strong className="text-brand-text-primary block">Objection: {objection.name}</strong>
                         <p className="mt-1">{objection.description}</p>
-                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Strategi Balasan:</strong> {objection.counterAngle}</p>
+                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Counter-Angle:</strong> {objection.counterAngle}</p>
                     </div>
                 );
                 break;
@@ -636,9 +633,9 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                 const { offer } = node.content as { offer: OfferTypeObject };
                 content = (
                      <div>
-                        <strong className="text-brand-text-primary block">Penawaran: {offer.name}</strong>
+                        <strong className="text-brand-text-primary block">Offer: {offer.name}</strong>
                         <p className="mt-1">{offer.description}</p>
-                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Prinsip Psikologis:</strong> {offer.psychologicalPrinciple}</p>
+                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Psychological Principle:</strong> {offer.psychologicalPrinciple}</p>
                     </div>
                 );
                 break;
@@ -651,9 +648,9 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                     <div>
                         <strong className="text-brand-text-primary block">🔥 {trigger.name}</strong>
                         <p className="mt-1 border-t border-gray-600 pt-1">{trigger.description}</p>
-                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Contoh:</strong> {trigger.example}</p>
+                        <p className="mt-2 text-xs italic bg-gray-900 p-2 rounded-md"><strong className="text-brand-text-primary/80 not-italic">Example:</strong> {trigger.example}</p>
                         {trigger.analysis && (
-                            <p className="mt-2 text-xs bg-yellow-900/50 text-yellow-200 p-2 rounded-md"><strong className="font-bold">Kenapa Efektif:</strong> {trigger.analysis}</p>
+                            <p className="mt-2 text-xs bg-yellow-900/50 text-yellow-200 p-2 rounded-md"><strong className="font-bold">Why it works:</strong> {trigger.analysis}</p>
                         )}
                     </div>
                 );
@@ -756,18 +753,18 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
             `}</style>
 
             <header className="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
-                <button onClick={props.onReset} className="px-3 py-2 bg-brand-surface rounded-md shadow-lg text-sm font-semibold hover:bg-gray-700">Mulai dari Awal</button>
+                <button onClick={props.onReset} className="px-3 py-2 bg-brand-surface rounded-md shadow-lg text-sm font-semibold hover:bg-gray-700">Start Over</button>
                 <button onClick={props.onGenerateMorePersonas} className="px-3 py-2 bg-purple-600 rounded-md shadow-lg text-sm font-bold text-white hover:bg-purple-500 flex items-center gap-2">
-                    <RefreshCwIcon className="w-4 h-4" /> Buat Persona Baru
+                    <RefreshCwIcon className="w-4 h-4" /> Generate New Personas
                 </button>
-                <button onClick={props.onAddCustomPersona} className="px-3 py-2 bg-brand-surface rounded-md shadow-lg text-sm font-semibold hover:bg-gray-700">+ Tambah Persona Sendiri</button>
+                <button onClick={props.onAddCustomPersona} className="px-3 py-2 bg-brand-surface rounded-md shadow-lg text-sm font-semibold hover:bg-gray-700">+ Add Custom Persona</button>
             </header>
 
             <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
                 <div className="bg-brand-surface p-1 rounded-md shadow-lg flex flex-col">
-                    <button onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.2) }))} title="Perbesar" className="p-1.5 hover:bg-gray-700 rounded-md"><ZoomInIcon className="w-5 h-5"/></button>
-                    <button onClick={() => setView(v => ({ ...v, k: Math.max(0.2, v.k / 1.2) }))} title="Perkecil" className="p-1.5 hover:bg-gray-700 rounded-md"><ZoomOutIcon className="w-5 h-5"/></button>
-                    <button onClick={centerView} title="Pusatkan Tampilan" className="p-1.5 hover:bg-gray-700 rounded-md"><LocateIcon className="w-5 h-5"/></button>
+                    <button onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.2) }))} title="Zoom In" className="p-1.5 hover:bg-gray-700 rounded-md"><ZoomInIcon className="w-5 h-5"/></button>
+                    <button onClick={() => setView(v => ({ ...v, k: Math.max(0.2, v.k / 1.2) }))} title="Zoom Out" className="p-1.5 hover:bg-gray-700 rounded-md"><ZoomOutIcon className="w-5 h-5"/></button>
+                    <button onClick={centerView} title="Center View" className="p-1.5 hover:bg-gray-700 rounded-md"><LocateIcon className="w-5 h-5"/></button>
                 </div>
             </div>
              

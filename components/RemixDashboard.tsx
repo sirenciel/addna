@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { AdConcept, AdDna, AdDnaComponent, RemixSuggestion } from '../types';
 import { RefreshCwIcon } from './icons';
@@ -51,13 +52,13 @@ export const RemixDashboard: React.FC<RemixDashboardProps> = ({
              <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-purple-600/10 via-brand-background to-brand-background -z-10"></div>
             <header className="text-center mb-8">
                 <h1 className="text-4xl md:text-5xl font-extrabold">Smart Remix</h1>
-                <p className="text-brand-text-secondary mt-2 text-lg">Buat variasi dari konsep unggulan dengan mengubah satu elemen DNA.</p>
+                <p className="text-brand-text-secondary mt-2 text-lg">Create variations from a winning concept by changing one DNA element.</p>
             </header>
 
             <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Kolom Kiri: DNA */}
                 <div className="bg-brand-surface border border-gray-700 rounded-xl p-6 space-y-3">
-                    <h2 className="text-xl font-bold mb-4">DNA Iklan Unggulan</h2>
+                    <h2 className="text-xl font-bold mb-4">Winning Ad DNA</h2>
                     <DnaRow label="👤 Persona" value={remixDna.persona.description} component="persona" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
                     <DnaRow label="😰 Pain / Desire" value={remixDna.painDesire.name} component="painDesire" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} disabled={true} />
                     <DnaRow label="🎯 Trigger" value={remixDna.trigger.name} component="trigger" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} disabled={true} />
@@ -68,11 +69,11 @@ export const RemixDashboard: React.FC<RemixDashboardProps> = ({
 
                 {/* Kolom Kanan: Opsi Remix */}
                 <div className="bg-brand-surface/50 border border-gray-800 rounded-xl p-6">
-                    <h2 className="text-xl font-bold mb-4">Opsi Remix</h2>
+                    <h2 className="text-xl font-bold mb-4">Remix Options</h2>
                     {remixingComponent && !suggestions ? (
                          <div className="flex items-center justify-center h-full text-brand-text-secondary">
                             <RefreshCwIcon className="w-6 h-6 animate-spin mr-3" />
-                            <span>Menghasilkan ide remix untuk <strong>{remixingComponent}</strong>...</span>
+                            <span>Generating remix ideas for <strong>{remixingComponent}</strong>...</span>
                          </div>
                     ) : suggestions ? (
                         <div className="space-y-4">
@@ -84,21 +85,21 @@ export const RemixDashboard: React.FC<RemixDashboardProps> = ({
                                         onClick={() => onExecuteRemix(suggestion)}
                                         className="mt-3 w-full px-4 py-2 bg-brand-secondary text-white font-bold rounded-lg hover:bg-green-500"
                                     >
-                                        Pilih & Hasilkan Konsep
+                                        Select & Generate Concept
                                     </button>
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full text-center text-brand-text-secondary">
-                            <p>Klik tombol [Remix] di sebelah kiri untuk memulai.</p>
+                            <p>Click a [Remix] button on the left to get started.</p>
                         </div>
                     )}
                 </div>
             </div>
             <div className="mt-8">
                 <button onClick={onBack} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">
-                    Kembali ke Mind Map
+                    Back to Mind Map
                 </button>
             </div>
         </div>

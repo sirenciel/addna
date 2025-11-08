@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AdConcept, CarouselSlide, ALL_AWARENESS_STAGES, ALL_CREATIVE_FORMATS, CampaignBlueprint } from '../types';
 import { refineVisualPrompt } from '../services/geminiService';
@@ -56,7 +55,7 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
 
   const handleRefinePrompt = async () => {
     if (!campaignBlueprint) {
-        alert("Campaign blueprint is not available. Cannot refine prompt.");
+        alert("Campaign blueprint is unavailable. Cannot refine prompt.");
         return;
     }
     setIsRefining(true);
@@ -65,7 +64,7 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
         setFormData(prev => ({ ...prev, visualPrompt: newPrompt }));
     } catch (error) {
         console.error("Failed to refine visual prompt:", error);
-        alert("Gagal menyempurnakan visual prompt. Silakan coba lagi.");
+        alert("Failed to refine visual prompt. Please try again.");
     } finally {
         setIsRefining(false);
     }
@@ -114,7 +113,7 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
           </div>
 
           <div>
-            <label htmlFor="visualVehicle" className="block text-sm font-medium text-brand-text-secondary mb-1">Visual Vehicle (Arahan Visual)</label>
+            <label htmlFor="visualVehicle" className="block text-sm font-medium text-brand-text-secondary mb-1">Visual Direction (Visual Vehicle)</label>
             <input
               type="text"
               name="visualVehicle"
@@ -122,21 +121,21 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
               value={formData.visualVehicle}
               onChange={handleChange}
               className="w-full bg-gray-900 border border-gray-700 rounded-md p-2 focus:ring-2 focus:ring-brand-primary"
-              placeholder="e.g., 'Foto 'problem' yang sangat relatable', 'Ekspresi 'aha!' saat menemukan solusi', 'Hasil 'after' yang dramatis dan memuaskan'"
+              placeholder="Example: 'A highly relatable 'problem' photo', 'An 'aha!' expression on finding the solution', 'A dramatic and satisfying 'after' result'"
             />
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-1">
-                <label htmlFor="visualPrompt" className="block text-sm font-medium text-brand-text-secondary">Visual Prompt Utama</label>
+                <label htmlFor="visualPrompt" className="block text-sm font-medium text-brand-text-secondary">Main Visual Prompt</label>
                 <button
                     onClick={handleRefinePrompt}
                     disabled={isRefining || !campaignBlueprint}
                     className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Buat visual prompt baru berdasarkan Visual Vehicle di atas"
+                    title="Generate a new visual prompt based on the Visual Vehicle above"
                 >
                     {isRefining ? <RefreshCwIcon className="w-3 h-3 animate-spin" /> : <SparklesIcon className="w-3 h-3" />}
-                    Sempurnakan Prompt
+                    Refine Prompt
                 </button>
             </div>
             <textarea name="visualPrompt" id="visualPrompt" rows={4} value={formData.visualPrompt} onChange={handleChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-2 focus:ring-2 focus:ring-brand-primary"></textarea>
@@ -153,7 +152,7 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
                       <input type="text" value={slide.headline} onChange={e => handleSlideChange(e, index, 'headline')} className="w-full text-sm bg-gray-800 border border-gray-700 rounded-md p-1.5 focus:ring-1 focus:ring-brand-primary" />
                   </div>
                   <div>
-                      <label className="text-xs font-medium text-brand-text-secondary">Deskripsi</label>
+                      <label className="text-xs font-medium text-brand-text-secondary">Description</label>
                       <textarea rows={2} value={slide.description} onChange={e => handleSlideChange(e, index, 'description')} className="w-full text-sm bg-gray-800 border border-gray-700 rounded-md p-1.5 focus:ring-1 focus:ring-brand-primary"></textarea>
                   </div>
                   <div>
@@ -168,11 +167,11 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
         
         <footer className="p-4 flex justify-between items-center border-t border-gray-700 bg-brand-surface rounded-b-xl">
             <button onClick={handleGenerate} className="px-4 py-2 bg-brand-secondary text-white font-bold rounded-lg hover:bg-green-500 transition-colors">
-                Simpan & Buat Ulang Gambar
+                Save & Regenerate Image
             </button>
             <div>
-              <button onClick={onClose} className="px-4 py-2 mr-2 text-brand-text-secondary hover:bg-gray-700 rounded-lg">Batal</button>
-              <button onClick={handleSave} className="px-4 py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-indigo-500">Simpan Perubahan</button>
+              <button onClick={onClose} className="px-4 py-2 mr-2 text-brand-text-secondary hover:bg-gray-700 rounded-lg">Cancel</button>
+              <button onClick={handleSave} className="px-4 py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-indigo-500">Save Changes</button>
             </div>
         </footer>
       </div>

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDnaComponent, AdDna, RemixSuggestion } from '../types';
+import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDnaComponent, AdDna, RemixSuggestion, VisualStyleDNA } from '../types';
 
 // Utility to convert file to base64
 const fileToGenerativePart = async (file: File) => {
@@ -28,16 +28,16 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 // --- Strategic Constants ---
 
 const COMPOSITION_FOR_ADS: Record<PlacementFormat, string> = {
-    'Instagram Story': 'Leave top 25% clear for headline. Main subject in middle-lower third. Never cover the subject\'s face with text.',
-    'Instagram Feed': 'Follow Rule of thirds or Z-pattern reading flow. Leave clear space for text overlay. Never cover the subject\'s face.',
-    'Carousel': 'Slide 1: Center subject with clear bg. Slides 2-5: Varied composition with consistent text zones. Never cover the main subject\'s face.'
+    'Instagram Story': 'Biarkan 25% bagian atas kosong untuk headline. Subjek utama di sepertiga tengah-bawah. Jangan pernah menutupi wajah subjek dengan teks.',
+    'Instagram Feed': 'Ikuti Aturan Sepertiga atau alur baca pola-Z. Sediakan ruang kosong untuk teks overlay. Jangan pernah menutupi wajah subjek.',
+    'Carousel': 'Slide 1: Subjek di tengah dengan latar belakang jelas. Slide 2-5: Komposisi bervariasi dengan zona teks yang konsisten. Jangan pernah menutupi wajah subjek utama.'
 };
 
 const CAROUSEL_ARCS: Record<string, string> = {
-    'PAS': 'Problem-Agitate-Solution. Ideal for direct response. Slide 1 (Hook): State the PROBLEM in a shocking or relatable way. Slide 2 (Agitate): Describe the PAIN and frustration of the problem. Why is it so bad? Slide 3 (Solution): Introduce your product as the SOLUTION. The "aha!" moment. Slide 4 (Proof): Show evidence it works (testimonial, data, before/after). Slide 5 (CTA): Tell them exactly what to do next.',
-    'Transformation': 'Before & After narrative. Best for Before & After, Testimonials. Slide 1 (Hook): Show the glorious AFTER state. Slide 2 (Before): Reveal the painful BEFORE state. Slide 3 (The Struggle): Detail the journey and failed attempts. Slide 4 (The Discovery): How they found your solution. Slide 5 (CTA): Invite others to start their transformation.',
-    'Educational': 'Teach something valuable. Best for "Educational/Tip" or "Demo" formats. Structure: (Intriguing Hook -> Bust Myth 1 -> Bust Myth 2 -> Reveal The Truth/Method -> CTA/Product Link)',
-    'Testimonial Story': 'Customer-centric story. Use for "Testimonial" or "UGC" formats. Structure: (Hook with a powerful quote -> Introduce the customer & their story -> The specific result they got -> How the product made it possible -> CTA)'
+    'PAS': 'PAS (Problem-Agitate-Solution). Ideal untuk respons langsung. Slide 1 (Hook): Sebutkan MASALAH dengan cara yang mengejutkan atau relatable. Slide 2 (Agitate): Deskripsikan RASA SAKIT dan frustrasi dari masalah tersebut. Mengapa begitu buruk? Slide 3 (Solution): Perkenalkan produk Anda sebagai SOLUSI. Momen "aha!". Slide 4 (Proof): Tunjukkan bukti bahwa itu berhasil (testimoni, data, sebelum/sesudah). Slide 5 (CTA): Beri tahu mereka apa yang harus dilakukan selanjutnya.',
+    'Transformation': 'Transformasi: Narasi Sebelum & Sesudah. Terbaik untuk format Sebelum & Sesudah, Testimoni. Slide 1 (Hook): Tunjukkan kondisi SETELAH yang luar biasa. Slide 2 (Sebelum): Ungkap kondisi SEBELUM yang menyakitkan. Slide 3 (Perjuangan): Rincikan perjalanan dan upaya yang gagal. Slide 4 (Penemuan): Bagaimana mereka menemukan solusi Anda. Slide 5 (CTA): Ajak orang lain untuk memulai transformasi mereka.',
+    'Educational': 'Edukasi: Ajarkan sesuatu yang berharga. Terbaik untuk format "Edukasi/Tip" atau "Demo". Struktur: (Hook yang Menarik -> Patahkan Mitos 1 -> Patahkan Mitos 2 -> Ungkap Kebenaran/Metode -> Tautan CTA/Produk)',
+    'Testimonial Story': 'Kisah Testimoni: Cerita yang berpusat pada pelanggan. Gunakan untuk format "Testimoni" atau "UGC". Struktur: (Hook dengan kutipan kuat -> Perkenalkan pelanggan & kisah mereka -> Hasil spesifik yang mereka dapatkan -> Bagaimana produk memungkinkannya -> CTA)'
 };
 
 // --- JSON Schemas for robust generation ---
@@ -173,12 +173,26 @@ const adConceptSchema = {
         visualPrompt: { type: Type.STRING },
         adSetName: { type: Type.STRING },
         offer: offerTypeObjectSchema,
-        carouselSlides: { type: Type.ARRAY, items: carouselSlideSchema }
+        carouselSlides: { type: Type.ARRAY, items: carouselSlideSchema },
+        triggerImplementationProof: {
+            type: Type.OBJECT,
+            properties: {
+                copyChecklistItemUsed: {
+                    type: Type.STRING,
+                    description: "Quote the specific copy element that implements the trigger checklist"
+                },
+                visualChecklistItemUsed: {
+                    type: Type.STRING,
+                    description: "Describe the specific visual element that implements the trigger checklist"
+                }
+            },
+            required: ['copyChecklistItemUsed', 'visualChecklistItemUsed']
+        }
     },
      required: [
         'id', 'angle', 'trigger', 'format', 'placement', 'awarenessStage', 'strategicPathId', 
         'personaDescription', 'personaAge', 'personaCreatorType', 'visualVehicle', 'hook', 
-        'headline', 'visualPrompt', 'adSetName', 'offer'
+        'headline', 'visualPrompt', 'adSetName', 'offer', 'triggerImplementationProof'
     ]
 };
 
@@ -188,6 +202,19 @@ const pivotAdConceptSchema = {
         ...adConceptSchema.properties,
     },
     required: adConceptSchema.required,
+};
+
+const visualStyleDnaSchema = {
+    type: Type.OBJECT,
+    properties: {
+        colorPalette: { type: Type.STRING, description: "Describe dominant colors and mood (e.g., 'Warm earth tones with vibrant orange accents')" },
+        lightingStyle: { type: Type.STRING, description: "Natural/Studio/Dramatic/etc + time of day" },
+        compositionApproach: { type: Type.STRING, description: "Rule of thirds/Center-focused/Z-pattern/etc" },
+        photographyStyle: { type: Type.STRING, description: "UGC raw/Professional editorial/Lifestyle/etc" },
+        modelStyling: { type: Type.STRING, description: "Describe hair, makeup, clothing aesthetic" },
+        settingType: { type: Type.STRING, description: "Indoor studio/Outdoor urban/Home setting/etc" },
+    },
+    required: ["colorPalette", "lightingStyle", "compositionApproach", "photographyStyle", "modelStyling", "settingType"]
 };
 
 
@@ -573,62 +600,70 @@ const TRIGGER_IMPLEMENTATION_CHECKLIST: Record<string, { copyMust: string[], vis
 
 export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const formatInstructions: Record<CreativeFormat, string> = {
-        'UGC': "Simulate a genuine user-generated video or photo. The tone should be authentic, not overly polished. Visual prompt should describe a realistic setting.",
-        'Before & After': "Clearly show a 'before' state demonstrating a problem and an 'after' state showing the solution provided by the product. The transformation should be obvious.",
-        'Comparison': "Compare the product directly or indirectly with an alternative (e.g., 'the old way'). Highlight the product's superior features or benefits.",
-        'Demo': "Show the product in action. The visual prompt should focus on the product being used and its key functionality.",
-        'Testimonial': "Feature a satisfied customer. The hook and headline should read like a quote. The visual prompt should depict a person representing the target persona, looking happy and confident.",
-        'Problem/Solution': "Start by clearly presenting a common problem the target persona faces. Agitate the problem by describing the frustrations it causes. Finally, present the product as the perfect solution. The visual should depict the 'problem' or the 'solution' state vividly.",
-        'Educational/Tip': "Provide genuine value by teaching the audience something useful related to the product's domain. Frame the ad as a helpful tip or a quick 'how-to'. The product should be naturally integrated as a tool to achieve the tip's outcome.",
-        'Storytelling': "Tell a short, relatable story where a character (representing the persona) overcomes a challenge using the product. The narrative should have a clear beginning, middle, and end. The focus should be on the emotional journey and transformation.",
-        'Article Ad': "Simulate a snippet of a news article or an authoritative blog post. The visual should look like a screenshot of a high-quality online publication, with a compelling headline and image that feels like editorial content.",
-        'Split Screen': "Create a visual that is literally split in half. One side shows the 'problem' or 'the old way,' and the other side shows the 'solution' with your product. The contrast should be stark and instantly understandable.",
-        'Advertorial': "Design an ad that mimics the style of editorial content from a trusted magazine or blog. It should be visually appealing, informative, and less 'salesy' at first glance. The copy should be educational or story-driven.",
-        'Listicle': "Frame the ad as a list, like '5 Reasons Why...' or 'Top 3 Mistakes...'. For carousels, each slide is one point on the list. For static images, the visual should represent the #1 point, with the headline teasing the list.",
-        'MultiProduct': "Showcase multiple products at once, either as a bundle, a collection, or a range of options. The visual prompt should clearly arrange the products in an attractive way, highlighting the value of the group.",
-        'US vs Them': "Create a strong contrast between your brand/product (Us) and the competition or the old, inferior way of doing things (Them). The visual and copy should clearly establish two opposing sides and position your product as the obvious winner.",
-        'Meme/Ugly Ad': "Utilize a currently popular meme format or create an intentionally 'ugly,' low-fidelity design that looks like a native, organic post. The goal is to stop the scroll through humor, relatability, and by avoiding the polished look of a typical ad.",
-        'Direct Offer': "Make the offer the absolute hero of the ad. The visual should be bold and centered around the discount, bonus, or special deal (e.g., '50% OFF' in large text). The copy should be direct and clearly explain the offer and its urgency/scarcity."
+        'UGC': "Simulasikan video atau foto asli buatan pengguna. Nada harus otentik, tidak terlalu dipoles. Prompt visual harus mendeskripsikan suasana yang realistis.",
+        'Before & After': "Tunjukkan dengan jelas keadaan 'sebelum' yang menunjukkan masalah dan keadaan 'sesudah' yang menunjukkan solusi yang diberikan oleh produk. Transformasi harus jelas.",
+        'Comparison': "Bandingkan produk secara langsung atau tidak langsung dengan alternatif (misalnya, 'cara lama'). Tonjolkan fitur atau manfaat unggulan produk.",
+        'Demo': "Tunjukkan produk sedang beraksi. Prompt visual harus fokus pada produk yang digunakan dan fungsionalitas utamanya.",
+        'Testimonial': "Tampilkan pelanggan yang puas. Hook dan headline harus dibaca seperti kutipan. Prompt visual harus menggambarkan seseorang yang mewakili persona target, terlihat bahagia dan percaya diri.",
+        'Problem/Solution': "Mulai dengan menyajikan masalah umum yang dihadapi persona target dengan jelas. Agitasi masalah dengan mendeskripsikan frustrasi yang ditimbulkannya. Terakhir, sajikan produk sebagai solusi sempurna. Visual harus menggambarkan keadaan 'masalah' atau 'solusi' dengan jelas.",
+        'Educational/Tip': "Berikan nilai asli dengan mengajarkan audiens sesuatu yang berguna terkait dengan domain produk. Bingkai iklan sebagai tips bermanfaat atau 'cara cepat'. Produk harus diintegrasikan secara alami sebagai alat untuk mencapai hasil dari tips tersebut.",
+        'Storytelling': "Ceritakan kisah pendek yang relatable di mana seorang karakter (mewakili persona) mengatasi tantangan menggunakan produk. Narasi harus memiliki awal, tengah, dan akhir yang jelas. Fokusnya harus pada perjalanan emosional dan transformasi.",
+        'Article Ad': "Simulasikan cuplikan artikel berita atau posting blog otoritatif. Visual harus terlihat seperti tangkapan layar publikasi online berkualitas tinggi, dengan headline dan gambar yang menarik yang terasa seperti konten editorial.",
+        'Split Screen': "Buat visual yang secara harfiah terbagi dua. Satu sisi menunjukkan 'masalah' atau 'cara lama', dan sisi lain menunjukkan 'solusi' dengan produk Anda. Kontrasnya harus tajam dan langsung dapat dipahami.",
+        'Advertorial': "Rancang iklan yang meniru gaya konten editorial dari majalah atau blog tepercaya. Harus menarik secara visual, informatif, dan tidak terlalu 'menjual' pada pandangan pertama. Teks harus bersifat edukatif atau didorong oleh cerita.",
+        'Listicle': "Bingkai iklan sebagai daftar, seperti '5 Alasan Mengapa...' atau '3 Kesalahan Teratas...'. Untuk carousel, setiap slide adalah satu poin dalam daftar. Untuk gambar statis, visual harus mewakili poin #1, dengan headline yang menggoda daftar tersebut.",
+        'MultiProduct': "Tampilkan beberapa produk sekaligus, baik sebagai bundel, koleksi, atau berbagai pilihan. Prompt visual harus dengan jelas mengatur produk-produk dengan cara yang menarik, menyoroti nilai dari grup tersebut.",
+        'US vs Them': "Ciptakan kontras yang kuat antara merek/produk Anda (Kami) dan persaingan atau cara lama yang inferior (Mereka). Visual dan teks harus dengan jelas menetapkan dua sisi yang berlawanan dan memposisikan produk Anda sebagai pemenang yang jelas.",
+        'Meme/Ugly Ad': "Gunakan format meme yang sedang populer atau buat desain 'jelek' yang disengaja dan berkualitas rendah yang terlihat seperti postingan asli dan organik. Tujuannya adalah untuk menghentikan guliran melalui humor, keterkaitan, dan dengan menghindari tampilan iklan yang dipoles.",
+        'Direct Offer': "Jadikan penawaran sebagai pahlawan mutlak dari iklan. Visual harus berani dan berpusat pada diskon, bonus, atau penawaran khusus (misalnya, 'DISKON 50%' dalam teks besar). Teks harus langsung dan jelas menjelaskan penawaran serta urgensi/kelangkaannya."
     };
 
     const placementInstructions: Record<PlacementFormat, string> = {
-        'Carousel': `**CAROUSEL CREATION MANDATE**: 
-1.  First, you MUST choose the MOST SUITABLE story arc from the list below based on the creative format ("${format}") and strategic angle.
+        'Carousel': `**MANDAT PEMBUATAN CAROUSEL**: 
+1.  **CAROUSEL VISUAL CONSISTENCY RULES**:
+    - **ALL** slides must share the same: Color palette, Lighting style (e.g., all golden hour OR all studio), Model/subject (same person across slides).
+    - **VARY** only these elements per slide: Subject's action/pose, Props/objects in scene, Text overlay zone (but keep consistent placement).
+    - **Visual Flow Example (PAS Arc)**:
+        - Slide 1: Subject looking frustrated at [problem] - CLOSE-UP face
+        - Slide 2: Wider shot showing the mess/chaos from [problem]
+        - Slide 3: Subject discovers product - "aha!" expression
+        - Slide 4: Split screen before/after OR testimonial
+        - Slide 5: Subject celebrating with product - CALL TO ACTION text zone
+2.  Pertama, Anda HARUS memilih alur cerita yang PALING SESUAI dari daftar di bawah ini berdasarkan format kreatif ("${format}") dan angle strategis.
     - **PAS (Problem-Agitate-Solution)**: ${CAROUSEL_ARCS['PAS']}
-    - **Transformation**: ${CAROUSEL_ARCS['Transformation']}
-    - **Educational**: ${CAROUSEL_ARCS['Educational']}
-    - **Testimonial Story**: ${CAROUSEL_ARCS['Testimonial Story']}
-2.  After choosing an arc, generate a 'carouselSlides' array with exactly 5 slides that follow its narrative structure.
-3.  **CRITICAL**: You must follow a COPY-FIRST workflow. First, write the copy (headline, description) for all 5 slides. THEN, for each slide's copy, create a 'visualPrompt' that is a direct visual interpretation of that specific slide's message and follows the composition rule for Carousels.
-4.  The final slide MUST always be the Call to Action (CTA) which incorporates the offer: "${offer.name}".
-5.  All text MUST be in ${blueprint.adDna.targetCountry} language and match the ${blueprint.adDna.toneOfVoice} tone.`,
-        'Instagram Feed': "Design for a 1:1 or 4:5 aspect ratio. The visual should be high-quality and scroll-stopping. The hook should be an engaging question or a bold statement to encourage interaction in the caption.",
-        'Instagram Story': "Design for a 9:16 vertical aspect ratio. The visual should feel native and authentic to the platform. The hook should be quick and punchy. The visual prompt can suggest text overlays or interactive elements."
+    - **Transformasi**: ${CAROUSEL_ARCS['Transformation']}
+    - **Edukasi**: ${CAROUSEL_ARCS['Educational']}
+    - **Kisah Testimoni**: ${CAROUSEL_ARCS['Testimonial Story']}
+3.  Setelah memilih alur, hasilkan array 'carouselSlides' dengan tepat 5 slide yang mengikuti struktur narasinya.
+4.  **KRITIS**: Anda harus mengikuti alur kerja COPY-FIRST. Pertama, tulis copy (headline, deskripsi) untuk semua 5 slide. KEMUDIAN, untuk setiap copy slide, buat 'visualPrompt' yang merupakan interpretasi visual langsung dari pesan slide spesifik tersebut dan mengikuti aturan komposisi untuk Carousel.
+5.  Slide terakhir HARUS selalu berupa Ajakan Bertindak (CTA) yang menggabungkan penawaran: "${offer.name}".
+6.  Semua teks HARUS dalam bahasa ${blueprint.adDna.targetCountry} dan sesuai dengan nada ${blueprint.adDna.toneOfVoice}.`,
+        'Instagram Feed': "Desain untuk rasio aspek 1:1 atau 4:5. Visual harus berkualitas tinggi dan menghentikan guliran. Hook harus berupa pertanyaan yang menarik atau pernyataan berani untuk mendorong interaksi di caption.",
+        'Instagram Story': "Desain untuk rasio aspek vertikal 9:16. Visual harus terasa asli dan otentik dengan platform. Hook harus cepat dan tajam. Prompt visual dapat menyarankan overlay teks atau elemen interaktif."
     };
     
      const visualStyleInstruction = allowVisualExploration
     ? `- **Style**: Anda BEBAS mengusulkan visualStyle dan visualPrompt yang sama sekali baru, TAPI **gunakan gaya visual asli ("${blueprint.adDna.visualStyle}") sebagai titik awal atau inspirasi**. Tujuannya adalah variasi kreatif, bukan sesuatu yang sama sekali tidak berhubungan. Buatlah sesuatu yang tak terduga namun tetap terasa 'on-brand'.`
-    : `- **Style**: The visual style MUST be a direct evolution of the original 'Visual Style DNA'. Blend the DNA ("${blueprint.adDna.visualStyle}") with the persona's aesthetic ("${persona.creatorType}"). The result should look like a new ad from the same brand, for a different audience segment. **DO NOT create a visual style that is completely unrelated to the original DNA.**`;
+    : `- **Style**: Gaya visual HARUS merupakan evolusi langsung dari 'DNA Gaya Visual' asli. Padukan DNA ("${blueprint.adDna.visualStyle}") dengan estetika persona ("${persona.creatorType}"). Hasilnya harus terlihat seperti iklan baru dari merek yang sama, untuk segmen audiens yang berbeda. **JANGAN membuat gaya visual yang sama sekali tidak berhubungan dengan DNA asli.**`;
 
 
     const prompt = `
         You are a world-class direct response copywriter and creative director. Your task is to generate an array of 3 **strategically distinct** ad concepts based on a single brief. You must follow all principles and workflows provided.
 
         ---
-        **NON-NEGOTIABLE CORE PRINCIPLES:**
-        1.  **Assume Zero Brand Awareness:** Write for a cold audience. Clarity > Cleverness.
-        2.  **Lead with Problem or Outcome:** Focus on what the user cares about, not features.
-        3.  **Specificity = Credibility:** Use numbers and concrete details.
+        **NON-NEGOTIALBE CORE PRINCIPLES (IN INDONESIAN CONTEXT):**
+        1.  **Asumsikan Zero Brand Awareness:** Tulis untuk audiens dingin. Kejelasan > Kecerdasan.
+        2.  **Fokus pada Masalah atau Hasil:** Fokus pada apa yang dipedulikan pengguna, bukan fitur.
+        3.  **Spesifisitas = Kredibilitas:** Gunakan angka dan detail konkret.
 
         **MANDATORY WORKFLOW: COPY-FIRST**
         Your process for EACH concept must be: First, write the selling words (hook, headline). Second, create a visual that makes those words 10x more powerful.
 
         **🔥 YOUR CORE MISSION: A/B TEST VARIATIONS (Three Entry Points Framework)**
         It is CRITICAL that the three concepts are NOT just reworded versions of each other. You MUST generate three genuinely different creative hypotheses:
-        - **Concept 1 - "Emotional Entry"**: Leads with feeling, identity, or aspiration. Answers "How will this make me feel?"
-        - **Concept 2 - "Logical Entry"**: Leads with logic, proof, data, or a unique mechanism. Answers "How does this work?"
-        - **Concept 3 - "Social Entry"**: Leads with community, tribe, or social proof. Answers "Who else uses this?"
-
+        - **Konsep 1 - "Pintu Masuk Emosional"**: Berawal dari perasaan, identitas, atau aspirasi. Menjawab "Bagaimana ini akan membuat saya merasa?"
+        - **Konsep 2 - "Pintu Masuk Logis"**: Berawal dari logika, bukti, data, atau mekanisme unik. Menjawab "Bagaimana cara kerjanya?"
+        - **Konsep 3 - "Pintu Masuk Sosial"**: Berawal dari komunitas, suku, atau bukti sosial. Menjawab "Siapa lagi yang menggunakan ini?"
         ---
         **THE BRIEF (Your Foundation):**
         - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
@@ -664,42 +699,33 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         3.  The copy must align with the trigger "${trigger.name}", the offer "${offer.name}", and be localized for ${blueprint.adDna.targetCountry}.
 
         **STEP 2: Visualize the Message (Art Director Mode)**
-        - Create a detailed **visualPrompt** using this EXACT **9-Block Visual Prompt Architecture**:
+        - Create a detailed **visualPrompt** using this EXACT **VISUAL PROMPT TEMPLATE**:
 
-        **[Block 1: Pattern Interrupt (The Scroll-Stopper)]**
-        - Describe ONE unexpected, high-contrast visual element that breaks the scroll pattern. (e.g., A vibrant neon object in a monochrome scene).
+        **VISUAL PROMPT TEMPLATE (Fill in each section explicitly):**
+        [SCROLL-STOPPER ELEMENT] One unexpected object/action: ...
+        [EMOTION & EXPRESSION] Subject's core feeling: ... | Facial expression detail: ...
+        [PERSONA AUTHENTICITY] Setting for ${persona.description} in ${blueprint.adDna.targetCountry}: ... | Subject styling authentic to ${persona.creatorType}: ...
+        [TRIGGER VISUALIZATION for "${trigger.name}"] How scene shows ${trigger.name} (Must use one of: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust.join('; ')}): ...
+        [PRODUCT PLACEMENT] Where/how product appears: ...
+        [STYLE DNA FUSION] Original DNA: "${blueprint.adDna.visualStyle}" | Resulting color palette: ... | Resulting mood: ...
+        [TECHNICAL SPECS] Composition for '${placement}': "${COMPOSITION_FOR_ADS[placement]}" | Aspect ratio: ${placement === 'Instagram Story' ? '9:16 vertical' : placement === 'Instagram Feed' ? '1:1 or 4:5' : 'digital ad optimized'}. | Camera angle: ... | Lighting: ...
 
-        **[Block 2: Emotional Anchor (The Human Element)]**
-        - **Core Feeling:** State the target emotion (e.g., Ecstatic relief, quiet confidence).
-        - **Facial Expression:** Detail the expression with intensity, ensuring direct eye contact with the camera.
+        **STEP 3: Fill Trigger Implementation Proof**
+        - For each concept, fill the 'triggerImplementationProof' object in the JSON.
+        - **copyChecklistItemUsed**: Quote the specific copy element that implements the trigger.
+        - **visualChecklistItemUsed**: Describe the specific visual element that implements the trigger.
 
-        **[Block 3: Commercial Goal (The Ad's Job)]**
-        - Start the prompt with a phrase like: "A high-converting ad image," or "Ultra-photorealistic commercial photography."
-
-        **[Block 4: Scene Foundation (The Context)]**
-        - **Setting:** Be ultra-specific and relatable for an audience in **${blueprint.adDna.targetCountry}**.
-        - **Time/Lighting:** Specific time of day and lighting style (e.g., "Golden hour sunlight").
-
-        **[Block 5: Subject (The Persona)]**
-        - Describe the main person: "${persona.description}, age ${persona.age}, with ${persona.creatorType} aesthetic." Use active verbs reflecting the copy. Style must be authentic to **${blueprint.adDna.targetCountry}** culture.
-
-        **[Block 6: Trigger Visualization (The Psychology)]**
-        - How does the scene physically SHOW the "${trigger.name}" trigger? You MUST implement one of these visual cues: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust.join('; ')}.
-
-        **[Block 7: Product Integration (The Hero)]**
-        - Where is the product? How does it relate to the subject? It must be the clear 'hero' or 'enabler' of the emotion.
-
-        **[Block 8: Style DNA Fusion (The Aesthetic)]**
-        - ${visualStyleInstruction} Describe the resulting COLOR PALETTE and MOOD.
-
-        **[Block 9: Technical Specs (The Execution)]**
-        - **Quality:** Photorealistic, high-end camera look, sharp focus.
-        - **Composition for Ads (NON-NEGOTIABLE):** Adhere to this rule for a '${placement}' placement: **"${COMPOSITION_FOR_ADS[placement]}"**.
-        - **Aspect Ratio:** ${placement === 'Instagram Story' ? '9:16 vertical' : placement === 'Instagram Feed' ? '1:1 or 4:5' : 'digital ad optimized'}.
         ---
         
-        **INTERNAL QUALITY CHECK:**
-        Before responding, ensure your 3 concepts are truly DIFFERENT (Emotional vs Logical vs Social) and that each one follows the COPY-FIRST workflow and passes the 9-Block visual architecture and trigger checklist. If not, REGENERATE.
+        **INTERNAL QUALITY CHECK BEFORE RESPONDING:**
+        For each concept you created, ask yourself:
+        1.  Does the visual prompt AMPLIFY the emotional core of the hook/headline?
+        2.  If I showed this image WITHOUT text, would it still evoke the right feeling?
+        3.  Does the subject's facial expression match the copy's emotion?
+        4.  Example of BAD alignment: Headline "Stop wasting money" + Visual "Happy person smiling"
+        5.  Example of GOOD alignment: Headline "Stop wasting money" + Visual "Frustrated person looking at bills with stressed expression"
+        
+        Ensure your 3 concepts are truly DIFFERENT (Emotional vs Logical vs Social) and that each one follows the COPY-FIRST workflow and passes the trigger checklist. If any concept fails this check, REGENERATE it before responding.
         
         ---
 
@@ -731,6 +757,33 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
     }));
 };
 
+export const analyzeReferenceImageStyle = async (imageBase64: string): Promise<VisualStyleDNA> => {
+    const imagePart = imageB64ToGenerativePart(imageBase64);
+    const prompt = `
+    Analyze this ad image and extract its VISUAL STYLE DNA.
+    Return a JSON object with:
+        {
+            "colorPalette": "Describe dominant colors and mood (e.g., 'Warm earth tones with vibrant orange accents')",
+            "lightingStyle": "Natural/Studio/Dramatic/etc + time of day",
+            "compositionApproach": "Rule of thirds/Center-focused/Z-pattern/etc",
+            "photographyStyle": "UGC raw/Professional editorial/Lifestyle/etc",
+            "modelStyling": "Describe hair, makeup, clothing aesthetic",
+            "settingType": "Indoor studio/Outdoor urban/Home setting/etc"
+        }
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ parts: [imagePart, { text: prompt }] }],
+        config: { 
+            responseMimeType: "application/json",
+            responseSchema: visualStyleDnaSchema,
+        }
+    });
+
+    return JSON.parse(response.text);
+};
+
 
 export const generateAdImage = async (prompt: string, referenceImageBase64?: string, allowVisualExploration: boolean = false): Promise<string> => {
     
@@ -741,13 +794,32 @@ export const generateAdImage = async (prompt: string, referenceImageBase64?: str
     const parts: any[] = [];
 
     if (referenceImageBase64) {
+        // STEP 1: Analyze the reference image style first for more precise control.
+        const styleDNA = await analyzeReferenceImageStyle(referenceImageBase64);
+        
+        // Always include the reference image for the model to see.
         parts.push(imageB64ToGenerativePart(referenceImageBase64));
+
         if (allowVisualExploration) {
-            // When exploration is allowed, the reference image is "inspiration" for STYLE ONLY.
-            textPrompt = `${salesIntent} The provided image is a **STYLE REFERENCE ONLY**. Your task is to extract its artistic style (e.g., color palette, lighting, composition, texture) and apply it to a **COMPLETELY NEW SCENE** described in the following prompt. **IMPORTANT: DO NOT replicate the subject matter, objects, or people from the reference image.** The content for the new image must come *exclusively* from the text that follows. The new scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`;
+            // Use the extracted DNA as INSPIRATION, but prioritize the new scene.
+            textPrompt = `${salesIntent} 
+Using the provided reference image as INSPIRATION:
+1.  Extract these style elements: color palette from "${styleDNA.colorPalette}", lighting mood from "${styleDNA.lightingStyle}", and composition principles from "${styleDNA.compositionApproach}".
+2.  You MAY evolve/remix the visual concept while keeping the brand feel.
+3.  The scene described below is your PRIMARY guide: ${prompt}
+4.  Balance the final image: 60% new scene description + 40% reference style DNA.`;
         } else {
-            // When exploration is NOT allowed, the reference image is a strict guide.
-            textPrompt = `${salesIntent} Using the provided reference image for style, lighting, and mood, create this new scene: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo.`;
+            // Use the extracted DNA as a STRICT GUIDE or TEMPLATE.
+            textPrompt = `${salesIntent} 
+Using the provided reference image as a STRICT GUIDE with the following style DNA:
+- Color Palette: ${styleDNA.colorPalette}
+- Lighting: ${styleDNA.lightingStyle}
+- Composition: ${styleDNA.compositionApproach}
+- Photography Style: ${styleDNA.photographyStyle}
+
+1.  Maintain this exact style, lighting, and composition approach.
+2.  Adapt ONLY the subject/setting to match this new scene: ${prompt}
+3.  The reference image and its DNA are your TEMPLATE - stay very close to it.`;
         }
     } else {
         // No reference image at all.
@@ -777,7 +849,7 @@ export const generateAdImage = async (prompt: string, referenceImageBase64?: str
     }
     
     console.error("Image generation failed. Response:", JSON.stringify(response, null, 2));
-    throw new Error('Image generation failed: No image data received from API or the request was blocked.');
+    throw new Error('Gagal membuat gambar: Tidak ada data gambar yang diterima dari API atau permintaan diblokir.');
 };
 
 export const refineVisualPrompt = async (concept: AdConcept, blueprint: CampaignBlueprint): Promise<string> => {
@@ -894,184 +966,184 @@ export const generateQuickPivot = async (
 
   const pivotInstructions: Record<PivotType, string> = {
     'age-shift': `
-      CRITICAL MANDATE: Adapt this WINNING concept for a different age group.
-      - **Original Age:** ${baseConcept.personaAge}
-      - **Target Age:** ${config.targetAge}
+      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk kelompok umur yang berbeda.
+      - **Usia Asli:** ${baseConcept.personaAge}
+      - **Target Usia:** ${config.targetAge}
       
-      **YOUR TASK:**
-      1. **Persona Re-profiling:** Rewrite the persona description to authentically represent the ${config.targetAge} demographic. Update pain points and desires to match their life stage.
-      2. **Language Adaptation:** Adjust tone and vocabulary:
-         - 18-24: Use Gen Z slang, meme references, irony. Be super casual.
-         - 25-34: Professional but relatable. Career & lifestyle focused.
-         - 35-44: Family-oriented language. Emphasize time-saving and quality.
-         - 45+: Clear, straightforward, trust-building. Avoid slang.
-      3. **Visual Adaptation:** Change the model/subject age in the visual prompt to ${config.targetAge}. Adjust setting to match their lifestyle (e.g., 18-24 = dorm/cafe, 35-44 = home office/kitchen).
-      4. **Pain Point Shift:** The CORE pain might change. Example:
-         - 18-24: "I want to look good for Insta" → "I want to feel confident at college"
-         - 35-44: "I want quick results" → "I need something that fits my busy schedule"
+      **TUGAS ANDA:**
+      1. **Profil Ulang Persona:** Tulis ulang deskripsi persona untuk secara otentik mewakili demografi ${config.targetAge}. Perbarui pain points dan keinginan agar sesuai dengan tahap kehidupan mereka.
+      2. **Adaptasi Bahasa:** Sesuaikan nada dan kosakata:
+         - 13-17: Gunakan bahasa gaul Gen Z, referensi meme, ironi. Sangat santai.
+         - 18-24: Profesional tapi relatable. Fokus karir & gaya hidup.
+         - 25-34: Bahasa berorientasi keluarga. Tekankan penghematan waktu dan kualitas.
+         - 35-44: Jelas, lugas, membangun kepercayaan. Hindari bahasa gaul.
+      3. **Adaptasi Visual:** Ubah usia model/subjek di prompt visual menjadi ${config.targetAge}. Sesuaikan latar agar cocok dengan gaya hidup mereka (misalnya, 18-24 = kamar kos/kafe, 35-44 = kantor rumah/dapur).
+      4. **Pergeseran Pain Point:** Pain point INTI mungkin berubah. Contoh:
+         - 18-24: "Aku ingin terlihat bagus di Insta" → "Aku ingin merasa percaya diri di kampus"
+         - 35-44: "Aku ingin hasil cepat" → "Aku butuh sesuatu yang cocok dengan jadwalku yang padat"
       
-      **KEEP CONSTANT:** 
-      - Strategic Angle: "${baseConcept.angle}"
-      - Psychological Trigger: "${baseConcept.trigger.name}"
-      - Creative Format: "${baseConcept.format}"
-      - Placement: "${baseConcept.placement}"
+      **TETAP KONSTAN:** 
+      - Angle Strategis: "${baseConcept.angle}"
+      - Pemicu Psikologis: "${baseConcept.trigger.name}"
+      - Format Kreatif: "${baseConcept.format}"
+      - Penempatan: "${baseConcept.placement}"
       
-      The STRATEGY stays the same, but EXECUTION must authentically speak to ${config.targetAge}.
+      STRATEGI tetap sama, tetapi EKSEKUSI harus secara otentik berbicara kepada ${config.targetAge}.
     `,
 
     'gender-flip': `
-      CRITICAL MANDATE: Adapt this WINNING concept for the opposite gender.
-      - **Original Persona:** ${baseConcept.personaDescription}
+      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk gender yang berlawanan.
+      - **Persona Asli:** ${baseConcept.personaDescription}
       - **Target Gender:** ${config.targetGender}
       
-      **YOUR TASK:**
-      1. **Persona Re-gender:** Rewrite the description for a ${config.targetGender} person. Be authentic - don't just swap pronouns. Consider:
-         - Different pain points (e.g., Male: "hair loss anxiety", Female: "aging skincare concerns")
-         - Different desired outcomes (e.g., Male: "confidence in dating", Female: "professional image")
-      2. **Copy Adaptation:** 
-         - Male audience: Direct, achievement-oriented, logic + emotion blend
-         - Female audience: Empathy-first, community/social proof, emotion + logic blend
-      3. **Visual Adaptation:** Change the subject in visual prompt to be a ${config.targetGender} person. Adjust styling and setting to feel authentic (not stereotypical).
-      4. **Social Proof Shift:** If using testimonials, switch gender of testimonial givers to match target.
+      **TUGAS ANDA:**
+      1. **Re-gender Persona:** Tulis ulang deskripsi untuk orang ${config.targetGender}. Jadilah otentik - jangan hanya menukar kata ganti. Pertimbangkan:
+         - Pain points yang berbeda (misalnya, Pria: "kecemasan akan rambut rontok", Wanita: "kekhawatiran perawatan kulit penuaan")
+         - Hasil yang diinginkan yang berbeda (misalnya, Pria: "percaya diri dalam berkencan", Wanita: "citra profesional")
+      2. **Adaptasi Teks:** 
+         - Audiens pria: Langsung, berorientasi pada pencapaian, campuran logika + emosi
+         - Audiens wanita: Empati-dahulu, komunitas/bukti sosial, campuran emosi + logika
+      3. **Adaptasi Visual:** Ubah subjek dalam prompt visual menjadi orang ${config.targetGender}. Sesuaikan gaya dan latar agar terasa otentik (bukan stereotip).
+      4. **Pergeseran Bukti Sosial:** Jika menggunakan testimoni, ganti gender pemberi testimoni agar sesuai dengan target.
       
-      **KEEP CONSTANT:** Same strategic angle, trigger, format, placement.
+      **TETAP KONSTAN:** Angle strategis, pemicu, format, penempatan yang sama.
       
-      ⚠️ AVOID STEREOTYPES. The pivot must feel authentic, not pandering.
+      ⚠️ HINDARI STEREOTIP. Pivot harus terasa otentik, bukan menggurui.
     `,
 
     'lifestyle-swap': `
-      CRITICAL MANDATE: Adapt this WINNING concept for a different lifestyle/creator type.
-      - **Original Type:** ${baseConcept.personaCreatorType}
-      - **Target Type:** ${config.targetLifestyle}
+      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk gaya hidup/tipe kreator yang berbeda.
+      - **Tipe Asli:** ${baseConcept.personaCreatorType}
+      - **Target Tipe:** ${config.targetLifestyle}
       
-      **YOUR TASK:**
-      1. **Lifestyle Reprofiling:** Completely reimagine the persona as a "${config.targetLifestyle}". Change:
-         - Daily routines & challenges
-         - Values & aspirations (e.g., Influencer values aesthetics, Regular User values practicality)
-         - Social proof sources they trust
-      2. **Visual Style Pivot:** 
-         - Influencer: Curated, aspirational, high-production
-         - Regular User: Authentic, relatable, "iPhone photo" quality
-         - Expert: Professional setting, credibility signals (e.g., lab coat, charts)
-      3. **Copy Tone Shift:**
-         - Influencer: "This changed my content game!" (aspirational)
-         - Regular User: "As a busy mom, this saves me so much time!" (relatable)
-         - Expert: "Based on my 10 years in the field..." (authoritative)
-      4. **Pain Point Reframing:** Same product, different "job to be done":
-         - Influencer: "I need this to create better content"
-         - Regular User: "I need this to simplify my life"
+      **TUGAS ANDA:**
+      1. **Profil Ulang Gaya Hidup:** Bayangkan kembali persona sebagai seorang "${config.targetLifestyle}". Ubah:
+         - Rutinitas & tantangan harian
+         - Nilai & aspirasi (misalnya, Influencer menghargai estetika, Pengguna Biasa menghargai kepraktisan)
+         - Sumber bukti sosial yang mereka percayai
+      2. **Pivot Gaya Visual:** 
+         - Influencer: Terkurasi, aspiratif, produksi tinggi
+         - Pengguna Biasa: Otentik, relatable, kualitas "foto iPhone"
+         - Ahli: Latar profesional, sinyal kredibilitas (misalnya, jas lab, grafik)
+      3. **Pergeseran Nada Teks:**
+         - Influencer: "Ini mengubah permainan kontenku!" (aspiratif)
+         - Pengguna Biasa: "Sebagai ibu yang sibuk, ini sangat menghemat waktuku!" (relatable)
+         - Ahli: "Berdasarkan 10 tahun pengalaman saya di bidang ini..." (otoritatif)
+      4. **Pembingkaian Ulang Pain Point:** Produk yang sama, "pekerjaan yang harus diselesaikan" yang berbeda:
+         - Influencer: "Aku butuh ini untuk membuat konten yang lebih baik"
+         - Pengguna Biasa: "Aku butuh ini untuk menyederhanakan hidupku"
       
-      **KEEP CONSTANT:** Same strategic angle, trigger, format, placement.
+      **TETAP KONSTAN:** Angle strategis, pemicu, format, penempatan yang sama.
     `,
 
     'market-expand': `
-      CRITICAL MANDATE: Localize this WINNING concept for a new market.
-      - **Original Market:** ${blueprint.adDna.targetCountry}
-      - **Target Market:** ${config.targetCountry}
+      MANDAT KRITIS: Lokalkan konsep UNGGULAN ini untuk pasar baru.
+      - **Pasar Asli:** ${blueprint.adDna.targetCountry}
+      - **Target Pasar:** ${config.targetCountry}
       
-      **YOUR TASK - DEEP CULTURAL LOCALIZATION:**
-      1. **Language Localization:**
-         - If targeting Indonesia: Use "Bahasa Gaul" (Jaksel slang), e.g., "literally", "which is"
-         - If targeting Malaysia: Mix Malay/English naturally
-         - If targeting Singapore: Singlish patterns, e.g., "lah", "lor"
-         - If targeting Philippines: Taglish, e.g., "Grabe, super effective!"
+      **TUGAS ANDA - LOKALISASI BUDAYA MENDALAM:**
+      1. **Lokalisasi Bahasa:**
+         - Jika menargetkan Indonesia: Gunakan "Bahasa Gaul" (slang Jaksel), misal, "literally", "which is"
+         - Jika menargetkan Malaysia: Campurkan Melayu/Inggris secara alami
+         - Jika menargetkan Singapura: Pola Singlish, misal, "lah", "lor"
+         - Jika menargetkan Filipina: Taglish, misal, "Grabe, super effective!"
       
-      2. **Cultural Value Shifts:**
-         - Indonesia: Family-centric, halal awareness, "gotong royong" (community)
-         - Malaysia: "Kiasu" mentality (fear of missing out), Islamic values
-         - Singapore: Efficiency, meritocracy, "chope" culture (reserving)
-         - Philippines: "Bayanihan" spirit, family pride, "utang na loob" (debt of gratitude)
+      2. **Pergeseran Nilai Budaya:**
+         - Indonesia: Berpusat pada keluarga, kesadaran halal, "gotong royong" (komunitas)
+         - Malaysia: Mentalitas "Kiasu" (takut ketinggalan), nilai-nilai Islam
+         - Singapura: Efisiensi, meritokrasi, budaya "chope" (memesan tempat)
+         - Filipina: Semangat "Bayanihan", kebanggaan keluarga, "utang na loob" (utang budi)
       
-      3. **Visual Cultural Markers:**
-         - Setting must be RECOGNIZABLE to target market (e.g., HDB flat for Singapore, "warung" for Indonesia)
-         - Models must have authentic features & styling for the region
-         - Include subtle cultural props (e.g., prayer mat for Malaysia/Indonesia Muslim demo)
+      3. **Penanda Budaya Visual:**
+         - Latar harus DAPAT DIKENALI oleh pasar target (misalnya, flat HDB untuk Singapura, "warung" untuk Indonesia)
+         - Model harus memiliki fitur & gaya otentik untuk wilayah tersebut
+         - Sertakan properti budaya yang halus (misalnya, sajadah untuk demo Muslim Malaysia/Indonesia)
       
-      4. **Payment & Pricing Localization:**
-         - Indonesia: Always mention "cicilan 0%" (installments)
-         - Singapore: Emphasize premium quality, worth the investment
-         - Philippines: Show affordability, accessible to "masa"
+      4. **Lokalisasi Pembayaran & Harga:**
+         - Indonesia: Selalu sebutkan "cicilan 0%"
+         - Singapura: Tekankan kualitas premium, sepadan dengan investasi
+         - Filipina: Tunjukkan keterjangkauan, dapat diakses oleh "masa"
       
-      5. **Social Proof Sources:**
-         - Use LOCAL influencers, testimonials from the target country
-         - Reference local trends, not global ones
+      5. **Sumber Bukti Sosial:**
+         - Gunakan influencer LOKAL, testimoni dari negara target
+         - Referensi tren lokal, bukan global
       
-      **KEEP CONSTANT:** Same strategic angle, trigger, format, placement.
+      **TETAP KONSTAN:** Angle strategis, pemicu, format, penempatan yang sama.
       
-      ⚠️ CRITICAL: This is NOT just translation. It's cultural TRANSFORMATION.
+      ⚠️ KRITIS: Ini BUKAN hanya terjemahan. Ini adalah TRANSFORMASI budaya.
     `,
 
     'awareness-shift': `
-      CRITICAL MANDATE: Retarget this WINNING concept for a different awareness stage.
-      - **Original Stage:** ${baseConcept.awarenessStage}
-      - **Target Stage:** ${config.targetAwareness}
+      MANDAT KRITIS: Targetkan ulang konsep UNGGULAN ini untuk tahap kesadaran yang berbeda.
+      - **Tahap Asli:** ${baseConcept.awarenessStage}
+      - **Target Tahap:** ${config.targetAwareness}
       
-      **YOUR TASK - AWARENESS STAGE ADAPTATION:**
-      1. **Hook Rewrite (MOST CRITICAL):**
-         - **Unaware:** Problem-focused, pattern interrupt. "Ever notice how...?"
-         - **Problem Aware:** Agitation, empathy. "Tired of struggling with...?"
-         - **Solution Aware:** Mechanism reveal, differentiation. "Unlike other solutions..."
-         - **Product Aware:** Direct offer, social proof. "Join 10,000+ customers..."
+      **TUGAS ANDA - ADAPTASI TAHAP KESADARAN:**
+      1. **Penulisan Ulang Hook (PALING KRITIS):**
+         - **Tidak Sadar:** Fokus masalah, pemecah pola. "Pernah perhatikan bagaimana...?"
+         - **Sadar Masalah:** Agitasi, empati. "Lelah berjuang dengan...?"
+         - **Sadar Solusi:** Pengungkapan mekanisme, diferensiasi. "Tidak seperti solusi lain..."
+         - **Sadar Produk:** Penawaran langsung, bukti sosial. "Bergabunglah dengan 10.000+ pelanggan..."
       
-      2. **Headline Formula Shift:**
-         - Use the appropriate formula for ${config.targetAwareness} stage from the hook formulas.
+      2. **Pergeseran Formula Headline:**
+         - Gunakan formula yang sesuai untuk tahap ${config.targetAwareness} dari formula hook.
       
-      3. **Visual Shift:**
-         - Unaware: Show relatable "problem moment" they didn't know was a problem
-         - Problem Aware: Dramatize the pain/frustration
-         - Solution Aware: Show the mechanism or comparison
-         - Product Aware: Show the product in use + results
+      3. **Pergeseran Visual:**
+         - Tidak Sadar: Tunjukkan "momen masalah" yang relatable yang tidak mereka sadari adalah masalah
+         - Sadar Masalah: Dramatisir rasa sakit/frustrasi
+         - Sadar Solusi: Tunjukkan mekanisme atau perbandingan
+         - Sadar Produk: Tunjukkan produk sedang digunakan + hasilnya
       
-      4. **Copy Depth:**
-         - Unaware: Short, curiosity-driven. Don't "sell" yet.
-         - Problem Aware: Medium, agitate then tease solution.
-         - Solution Aware: Longer, explain "how it works" and why it's better.
-         - Product Aware: Brief, direct. They know the product, just push them over the edge.
+      4. **Kedalaman Teks:**
+         - Tidak Sadar: Singkat, didorong oleh rasa ingin tahu. Jangan "menjual" dulu.
+         - Sadar Masalah: Sedang, agitasi lalu goda dengan solusi.
+         - Sadar Solusi: Lebih panjang, jelaskan "cara kerjanya" dan mengapa lebih baik.
+         - Sadar Produk: Singkat, langsung. Mereka tahu produknya, cukup dorong mereka.
       
-      **KEEP CONSTANT:** Same angle, trigger, format, placement.
+      **TETAP KONSTAN:** Angle, pemicu, format, penempatan yang sama.
       
-      The MESSAGE stays the same, but the ENTRY POINT changes based on their knowledge level.
+      PESAN tetap sama, tetapi TITIK MASUK berubah berdasarkan tingkat pengetahuan mereka.
     `,
 
     'channel-adapt': `
-      CRITICAL MANDATE: Optimize this WINNING concept for a different platform.
-      - **Original Platform:** Instagram
+      MANDAT KRITIS: Optimalkan konsep UNGGULAN ini untuk platform yang berbeda.
+      - **Platform Asli:** Instagram
       - **Target Platform:** ${config.targetPlatform}
       
-      **YOUR TASK - PLATFORM-SPECIFIC OPTIMIZATION:**
+      **TUGAS ANDA - OPTIMASI SPESIFIK PLATFORM:**
       
       ${config.targetPlatform === 'TikTok' ? `
-        **TikTok Optimization:**
-        1. **Hook:** MUST grab attention in 0.5 seconds. Use pattern interrupt or trending sound reference.
-        2. **Video Flow:** "Hook → Agitate → Solution → CTA" in 15-30 seconds max.
-        3. **Visual Style:** Raw, authentic, "behind-the-scenes" feel. NO polished ad look.
-        4. **Copy Tone:** Super casual, Gen Z slang, emoji-heavy. Use TikTok lingo (e.g., "no cap", "slay", "understood the assignment").
-        5. **CTA:** "Link in bio" or "Duet this if you relate!"
-        6. **Text Overlay:** Use TikTok's native text styles (white with black outline, positioned top/bottom).
+        **Optimasi TikTok:**
+        1. **Hook:** HARUS menarik perhatian dalam 0,5 detik. Gunakan pemecah pola atau referensi suara yang sedang tren.
+        2. **Alur Video:** "Hook → Agitasi → Solusi → CTA" dalam maks 15-30 detik.
+        3. **Gaya Visual:** Mentah, otentik, nuansa "di balik layar". TIDAK ADA tampilan iklan yang dipoles.
+        4. **Nada Teks:** Sangat santai, bahasa gaul Gen Z, banyak emoji. Gunakan bahasa TikTok (misalnya, "no cap", "slay", "paham tugasnya").
+        5. **CTA:** "Link di bio" atau "Duet ini jika kamu relate!"
+        6. **Overlay Teks:** Gunakan gaya teks asli TikTok (putih dengan garis hitam, diposisikan atas/bawah).
       ` : ''}
       
       ${config.targetPlatform === 'Facebook' ? `
-        **Facebook Optimization:**
-        1. **Hook:** First 3 lines of caption are CRITICAL (before "See More"). Make it a complete thought.
-        2. **Visual Style:** More polished than TikTok, but not as curated as Instagram. Think "professional but relatable".
-        3. **Copy Length:** Facebook allows longer copy - use it. Tell a story, include FAQs.
-        4. **Audience:** Skews older (35+). Use clear, trust-building language. Less slang.
-        5. **Social Proof:** Heavy on testimonials, reviews, before-afters. Facebook users are more skeptical.
-        6. **CTA:** "Learn More" button works best. Lead to landing page, not direct product page.
+        **Optimasi Facebook:**
+        1. **Hook:** 3 baris pertama caption KRITIS (sebelum "Lihat Lainnya"). Buat menjadi pemikiran yang utuh.
+        2. **Gaya Visual:** Lebih dipoles daripada TikTok, tetapi tidak sekurator Instagram. Pikirkan "profesional tapi relatable".
+        3. **Panjang Teks:** Facebook memungkinkan teks lebih panjang - manfaatkan itu. Ceritakan sebuah kisah, sertakan FAQ.
+        4. **Audiens:** Cenderung lebih tua (35+). Gunakan bahasa yang jelas dan membangun kepercayaan. Kurangi bahasa gaul.
+        5. **Bukti Sosial:** Berat pada testimoni, ulasan, sebelum-sesudah. Pengguna Facebook lebih skeptis.
+        6. **CTA:** Tombol "Pelajari Selengkapnya" bekerja paling baik. Arahkan ke halaman arahan, bukan halaman produk langsung.
       ` : ''}
       
       ${config.targetPlatform === 'YouTube' ? `
-        **YouTube Optimization (Pre-Roll/In-Stream Ad):**
-        1. **Hook:** First 5 seconds must establish WIIFM ("What's In It For Me"). Viewer can skip after 5 sec.
-        2. **Structure:** "Problem → Agitation → Solution Demo → CTA" in 15-30 seconds.
-        3. **Visual:** Show the product in ACTION. Demo format works best.
-        4. **Audio:** Must work WITH sound (unlike Instagram Feed which is often muted). Use voiceover or on-screen talent speaking.
-        5. **CTA:** Overlay clickable end card with website URL.
+        **Optimasi YouTube (Iklan Pre-Roll/In-Stream):**
+        1. **Hook:** 5 detik pertama harus menetapkan WIIFM ("What's In It For Me"). Penonton bisa melewati setelah 5 detik.
+        2. **Struktur:** "Masalah → Agitasi → Demo Solusi → CTA" dalam 15-30 detik.
+        3. **Visual:** Tunjukkan produk sedang BERAKSI. Format demo bekerja paling baik.
+        4. **Audio:** Harus bekerja DENGAN suara (tidak seperti Instagram Feed yang sering dibisukan). Gunakan sulih suara atau talenta di layar yang berbicara.
+        5. **CTA:** Overlay kartu akhir yang dapat diklik dengan URL situs web.
       ` : ''}
       
-      **KEEP CONSTANT:** Same strategic angle, trigger, core message.
+      **TETAP KONSTAN:** Angle strategis, pemicu, pesan inti yang sama.
       
-      The CONTENT stays similar, but PRESENTATION must be native to ${config.targetPlatform}.
+      KONTEN tetap serupa, tetapi PRESENTASI harus asli untuk ${config.targetPlatform}.
     `
   };
 

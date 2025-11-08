@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { AdConcept, MindMapNode, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS } from '../types';
 import { LightbulbIcon, FireIcon, EditIcon, LayoutGridIcon, SparklesIcon } from './icons';
@@ -58,7 +59,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
 
     const handleEvolve = (type: EvolutionType, value: string) => {
         if (!value) {
-            alert('Silakan pilih opsi baru.');
+            alert('Please select a new option.');
             return;
         }
         onEvolve(concept, type, value);
@@ -75,7 +76,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
         <div className="bg-gray-900/50 p-4 rounded-lg">
             <h4 className="flex items-center gap-2 font-semibold text-lg mb-3">
                 {icon}
-                Ubah {title}
+                Change {title}
             </h4>
             <div className="flex items-center gap-2">
                 <select
@@ -83,7 +84,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                     onChange={(e) => onValueChange(e.target.value)}
                     className="flex-grow bg-gray-800 border border-gray-600 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-brand-primary"
                 >
-                    <option value="">Pilih {title} baru...</option>
+                    <option value="">Choose a new {title}...</option>
                     {options.map(opt => <option key={opt.id || opt.label} value={opt.label}>{opt.label}</option>)}
                 </select>
                 <button
@@ -92,7 +93,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                     className="px-4 py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-indigo-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                     <SparklesIcon className="w-4 h-4" />
-                    Evolusi
+                    Evolve
                 </button>
             </div>
         </div>
@@ -102,8 +103,8 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div className="bg-brand-surface rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <header className="p-4 border-b border-gray-700">
-                    <h2 className="text-xl font-bold">Evolusi Strategis</h2>
-                    <p className="text-sm text-brand-text-secondary">Adaptasi konsep ini dengan mengubah satu elemen kunci.</p>
+                    <h2 className="text-xl font-bold">Strategic Evolution</h2>
+                    <p className="text-sm text-brand-text-secondary">Adapt this concept by changing one key element.</p>
                 </header>
 
                 <main className="p-6 space-y-4 overflow-y-auto">
@@ -143,7 +144,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
 
                 <footer className="p-4 border-t border-gray-700 bg-brand-surface rounded-b-xl text-right">
                     <button onClick={onClose} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">
-                        Tutup
+                        Close
                     </button>
                 </footer>
             </div>

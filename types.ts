@@ -91,6 +91,10 @@ export interface AdConcept {
   adSetName: string;
   offer: OfferTypeObject;
   carouselSlides?: CarouselSlide[];
+  triggerImplementationProof: {
+    copyChecklistItemUsed: string;
+    visualChecklistItemUsed: string;
+  };
   // Persona metadata denormalized for easier access and export
   personaDescription: string;
   personaAge: string;
@@ -158,4 +162,13 @@ export interface RemixSuggestion {
   title: string;
   description: string;
   payload: TargetPersona; // Currently supports persona, can be expanded later
+}
+
+export interface VisualStyleDNA {
+    colorPalette: string;
+    lightingStyle: string;
+    compositionApproach: string;
+    photographyStyle: string;
+    modelStyling: string;
+    settingType: string;
 }
