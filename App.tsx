@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { InputForm } from './components/InputForm';
 import { DnaValidationStep } from './components/DnaValidationStep';
@@ -7,7 +8,7 @@ import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
 import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDna, NodeType, AdDnaComponent, RemixSuggestion } from './types';
-import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails, generateQuickPivot, generateRemixSuggestions, generateConceptFromRemix, generateConceptsFromPersona } from './services/geminiService';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails, generateQuickPivot, generateRemixSuggestions, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
 import { EvolveModal } from './components/EvolveModal';
@@ -550,6 +551,47 @@ function App() {
       const awareness = awarenessNode.label as AwarenessStage;
       const offer = (offerNode.content as { offer: OfferTypeObject }).offer;
       
+      // --- UGC PACK LOGIC ---
+      if (format === 'UGC') {
+          if (window.confirm("Generate a 4-Creator UGC Diversity Pack? This will create 4 concepts from different micro-personas, which is highly recommended for scaling UGC.")) {
+              setIsLoading(true);
+              setLoadingMessage(`Generating UGC Diversity Pack...`);
+
+              try {
+                  const ideas = await generateUgcPack(
+                      campaignBlueprint, angle, trigger, awareness, placement, persona, placementNode.id, allowVisualExploration, offer
+                  );
+                  
+                  const taggedIdeas = ideas.map(idea => ({ ...idea, campaignTag: 'UGC Diversity Pack' }));
+
+                  const newCreativeNodes: MindMapNode[] = taggedIdeas.map(concept => ({
+                      id: concept.id,
+                      parentId: nodeId,
+                      type: 'creative',
+                      label: concept.headline,
+                      content: { concept },
+                      position: { x: 0, y: 0 },
+                      width: 160,
+                      height: 240,
+                  }));
+
+                  setNodes(prev => [
+                      ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
+                      ...newCreativeNodes,
+                  ]);
+
+              } catch(e: any) {
+                  console.error(e);
+                  setError(`Failed to generate UGC Diversity Pack.`);
+              } finally {
+                  setIsLoading(false); 
+                  setLoadingMessage('');
+              }
+              return; // Exit the function after handling the UGC pack
+          }
+      }
+      // --- END UGC PACK LOGIC ---
+
       setIsLoading(true);
       setLoadingMessage(`Generating ${placement} ideas for "${format}" format...`);
 

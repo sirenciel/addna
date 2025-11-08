@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { CampaignBlueprint, TargetPersona } from '../types';
 import { InfoIcon, RemixIcon } from './icons';
@@ -141,21 +140,18 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                             <EditableField label="Target Country" name="targetCountry" value={blueprint.adDna.targetCountry} onChange={e => handleDnaChange(e, 'targetCountry')} />
                             
                             <div className="md:col-span-2 mt-2 p-3 bg-gray-900/50 rounded-lg">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-start space-x-2">
                                     <input
                                         type="checkbox"
                                         id="allowVisualExploration"
                                         checked={allowVisualExploration}
                                         onChange={(e) => onAllowVisualExplorationChange(e.target.checked)}
-                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary"
+                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary mt-1 flex-shrink-0"
                                     />
-                                    <label htmlFor="allowVisualExploration" className="text-sm font-medium text-brand-text-secondary">
-                                        Allow AI to explore new visual styles (different from reference).
+                                    <label htmlFor="allowVisualExploration" className="text-sm text-brand-text-secondary">
+                                        <span className="font-semibold text-brand-text-primary">Enable Visual Differentiation (Break Entity ID):</span> Generate visually distinct styles to reach new audiences. (Recommended to scale winners).
                                     </label>
                                 </div>
-                                <p className="text-xs text-gray-400 mt-2">
-                                    <strong>Penting:</strong> Centang ini untuk "mematahkan" deteksi kesamaan visual Meta (Entity ID). Visual yang berbeda secara drastis sangat penting untuk menjangkau audiens baru dan menghindari kelelahan kreatif.
-                                </p>
                             </div>
                         </div>
                         
@@ -192,21 +188,18 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                         </div>
 
                         <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 w-full max-w-3xl mb-8">
-                             <div className="flex items-center space-x-2">
+                            <div className="flex items-start space-x-2">
                                 <input
                                     type="checkbox"
                                     id="remixAllowVisualExploration"
                                     checked={allowVisualExploration}
                                     onChange={(e) => onAllowVisualExplorationChange(e.target.checked)}
-                                    className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary"
+                                    className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary mt-1 flex-shrink-0"
                                 />
-                                <label htmlFor="remixAllowVisualExploration" className="text-sm font-medium text-brand-text-secondary">
-                                    Allow AI to explore new visual styles (different from reference).
+                                <label htmlFor="remixAllowVisualExploration" className="text-sm text-brand-text-secondary text-left">
+                                    <span className="font-semibold text-brand-text-primary">Enable Visual Differentiation (Break Entity ID):</span> Generate visually distinct styles to reach new audiences. (Recommended to scale winners).
                                 </label>
                             </div>
-                             <p className="text-xs text-gray-400 mt-2 text-left">
-                                <strong>Penting:</strong> Centang ini untuk "mematahkan" deteksi kesamaan visual Meta (Entity ID). Visual yang berbeda secara drastis sangat penting untuk menjangkau audiens baru dan menghindari kelelahan kreatif.
-                            </p>
                         </div>
 
                          <div className="flex w-full max-w-md justify-between items-center pt-4 border-t border-gray-700 mt-2">

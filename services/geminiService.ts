@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDnaComponent, AdDna, RemixSuggestion, VisualStyleDNA, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS, ALL_AWARENESS_STAGES } from '../types';
 
@@ -705,6 +706,7 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         [SCROLL-STOPPER ELEMENT] One unexpected object/action: ...
         [EMOTION & EXPRESSION] Subject's core feeling: ... | Facial expression detail: ...
         [PERSONA AUTHENTICITY] Setting for ${persona.description} in ${blueprint.adDna.targetCountry}: ... | Subject styling authentic to ${persona.creatorType}: ...
+        [META AI TARGETING] How this visual targets the persona via pixels for Meta's algorithm to read (e.g., for high-income, describe 'minimalist, high-end home office'; for Gen Z, 'trendy dorm room with ring light'): ...
         [TRIGGER VISUALIZATION for "${trigger.name}"] How scene shows ${trigger.name} (Must use one of: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust.join('; ')}): ...
         [PRODUCT PLACEMENT] Where/how product appears: ...
         [STYLE DNA FUSION] Original DNA: "${blueprint.adDna.visualStyle}" | Resulting color palette: ... | Resulting mood: ...
@@ -981,7 +983,7 @@ export const generateQuickPivot = async (
          - 18-24: Profesional tapi relatable. Fokus karir & gaya hidup.
          - 25-34: Bahasa berorientasi keluarga. Tekankan penghematan waktu dan kualitas.
          - 35-44: Jelas, lugas, membangun kepercayaan. Hindari bahasa gaul.
-      3. **Adaptasi Visual:** Ubah usia model/subjek di prompt visual menjadi ${config.targetAge}. Sesuaikan latar agar cocok dengan gaya hidup mereka (misalnya, 18-24 = kamar kos/kafe, 35-44 = kantor rumah/dapur).
+      3. **Adaptasi Visual:** Ubah usia model/subjek di prompt visual menjadi ${config.targetAge}. Sesuaikan latar agar cocok dengan gaya hidup mereka. Pikirkan "penargetan piksel": pemandangan ini harus secara visual mengkodekan demografi target untuk dibaca oleh AI Meta (misalnya, 18-24 = kamar kos/kafe, 35-44 = kantor rumah/dapur).
       4. **Pergeseran Pain Point:** Pain point INTI mungkin berubah. Contoh:
          - 18-24: "Aku ingin terlihat bagus di Insta" → "Aku ingin merasa percaya diri di kampus"
          - 35-44: "Aku ingin hasil cepat" → "Aku butuh sesuatu yang cocok dengan jadwalku yang padat"
@@ -1007,7 +1009,7 @@ export const generateQuickPivot = async (
       2. **Adaptasi Teks:** 
          - Audiens pria: Langsung, berorientasi pada pencapaian, campuran logika + emosi
          - Audiens wanita: Empati-dahulu, komunitas/bukti sosial, campuran emosi + logika
-      3. **Adaptasi Visual:** Ubah subjek dalam prompt visual menjadi orang ${config.targetGender}. Sesuaikan gaya dan latar agar terasa otentik (bukan stereotip).
+      3. **Adaptasi Visual:** Ubah subjek dalam prompt visual menjadi orang ${config.targetGender}. Sesuaikan gaya dan latar agar terasa otentik (bukan stereotip). Pikirkan "penargetan piksel": pastikan latar dan gaya (misalnya, dekorasi kamar, pakaian) secara visual mengkodekan demografi gender target untuk AI Meta.
       4. **Pergeseran Bukti Sosial:** Jika menggunakan testimoni, ganti gender pemberi testimoni agar sesuai dengan target.
       
       **TETAP KONSTAN:** Angle strategis, pemicu, format, penempatan yang sama.
@@ -1029,6 +1031,7 @@ export const generateQuickPivot = async (
          - Influencer: Terkurasi, aspiratif, produksi tinggi
          - Pengguna Biasa: Otentik, relatable, kualitas "foto iPhone"
          - Ahli: Latar profesional, sinyal kredibilitas (misalnya, jas lab, grafik)
+         Pikirkan "penargetan piksel": gaya visual yang dipilih harus secara langsung memberi sinyal subkultur dan tingkat pendapatan target kepada AI Meta.
       3. **Pergeseran Nada Teks:**
          - Influencer: "Ini mengubah permainan kontenku!" (aspiratif)
          - Pengguna Biasa: "Sebagai ibu yang sibuk, ini sangat menghemat waktuku!" (relatable)
@@ -1061,7 +1064,7 @@ export const generateQuickPivot = async (
       3. **Penanda Budaya Visual:**
          - Latar harus DAPAT DIKENALI oleh pasar target (misalnya, flat HDB untuk Singapura, "warung" untuk Indonesia)
          - Model harus memiliki fitur & gaya otentik untuk wilayah tersebut
-         - Sertakan properti budaya yang halus (misalnya, sajadah untuk demo Muslim Malaysia/Indonesia)
+         - Sertakan properti budaya yang halus (misalnya, sajadah untuk demo Muslim Malaysia/Indonesia). Pikirkan "penargetan piksel": gunakan latar, properti, dan gaya yang secara visual mengkodekan pasar ${config.targetCountry} kepada AI Meta.
       
       4. **Lokalisasi Pembayaran & Harga:**
          - Indonesia: Selalu sebutkan "cicilan 0%"
@@ -1515,6 +1518,75 @@ export const generateConceptsFromPersona = async (
     return ideas.map((idea, index) => ({
         ...idea,
         entryPoint: entryPoints[index % 3] as 'Emotional' | 'Logical' | 'Social'
+    }));
+};
+
+
+export const generateUgcPack = async (
+    blueprint: CampaignBlueprint, 
+    angle: string, 
+    trigger: BuyingTriggerObject, 
+    awarenessStage: AwarenessStage, 
+    placement: PlacementFormat, 
+    persona: TargetPersona, 
+    strategicPathId: string, 
+    allowVisualExploration: boolean, 
+    offer: OfferTypeObject
+): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+    
+    const prompt = `
+        You are a world-class UGC (User-Generated Content) campaign strategist. Your task is to generate a "UGC Diversity Pack" consisting of 4 distinct ad concepts.
+
+        **CORE MISSION:**
+        The pack must feature 4 different "creator POVs" (micro-personas) that all fall under the umbrella of the main target persona. Each concept will use the SAME core strategy (angle, trigger) but will be executed uniquely for its micro-persona. This diversity is key to campaign success.
+
+        **THE SHARED BRIEF (Foundation for ALL 4 Concepts):**
+        - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
+        - **Strategic Offer**: ${offer.name} - ${offer.description} (CTA: ${blueprint.adDna.cta})
+        - **Main Target Persona**: "${persona.description}" (Age: "${persona.age}", Pains: ${persona.painPoints.join(', ')})
+        - **Core Strategy to Maintain:**
+            - Angle: "${angle}"
+            - 🔥 Psychological Trigger: "${trigger.name}"
+            - Awareness Stage: "${awarenessStage}"
+            - Placement: "${placement}"
+        - **Sales DNA**:
+            - Tone of Voice: "${blueprint.adDna.toneOfVoice}"
+            - Original Visual Style DNA: "${blueprint.adDna.visualStyle}"
+        - **Target Country for Localization: "${blueprint.adDna.targetCountry}"**
+
+        **YOUR TASK:**
+        1.  **Invent 4 Distinct Micro-Personas:** Brainstorm 4 specific, relatable sub-groups within the main persona. (e.g., If main persona is "Busy Professional", micro-personas could be "Freelancer working from a cafe", "Corporate executive in a high-rise office", "Working mom juggling kids and deadlines", "Young entrepreneur in a startup space").
+        2.  **Generate 4 Unique Concepts:** For EACH micro-persona, create a complete ad concept.
+            - **Persona Fields:** The 'personaDescription', 'personaAge', etc., must be updated for the specific micro-persona.
+            - **Copy:** Write a unique hook and headline in the authentic voice of that micro-persona.
+            - **Visuals:** Create a unique visual prompt that shows that micro-persona in their genuine environment, following the 'TikTok-shop' simple & authentic UGC style.
+            - **Consistency:** All 4 concepts MUST use the same 'angle', 'trigger', 'awarenessStage', and 'offer'.
+            - **Ad Set Name:** Create a unique ad set name for each, like [MicroPersona]_[Angle]_[Trigger]_UGC_v[1-4].
+
+        Respond ONLY with a valid JSON array of 4 ad concept objects that conform to the provided schema. Each object must have its 'format' field set to 'UGC'.
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ text: prompt }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: adConceptSchema,
+            }
+        }
+    });
+    
+    const rawJson = response.text;
+    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
+    const ideas = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
+    
+    // Assign entry points for consistency, although they are all UGC.
+    const entryPoints: ('Emotional' | 'Logical' | 'Social')[] = ['Emotional', 'Logical', 'Social'];
+    return ideas.map((idea, index) => ({
+        ...idea,
+        entryPoint: entryPoints[index % 3]
     }));
 };
 
