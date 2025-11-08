@@ -117,6 +117,7 @@ function App() {
     setError(null);
 
     try {
+        const campaignTag = `Smart Remix ${new Date().toLocaleString()}`;
         setLoadingMessage('Creating Campaign Blueprint...');
         const dnaNode: MindMapNode = {
             id: 'dna-root', type: 'dna', label: 'Campaign Blueprint', content: validatedBlueprint,
@@ -147,8 +148,10 @@ function App() {
 
         const conceptArrays = await Promise.all(conceptPromises);
         const allNewConcepts = conceptArrays.flat();
+        const taggedConcepts = allNewConcepts.map(c => ({ ...c, campaignTag }));
 
-        const creativeNodes: MindMapNode[] = allNewConcepts.map(concept => ({
+
+        const creativeNodes: MindMapNode[] = taggedConcepts.map(concept => ({
             id: concept.id,
             parentId: concept.strategicPathId, // This is the persona node ID
             type: 'creative',
@@ -555,7 +558,9 @@ function App() {
               campaignBlueprint, angle, trigger, awareness, format, placement, persona, placementNode.id, allowVisualExploration, offer
           );
           
-          const newCreativeNodes: MindMapNode[] = ideas.map(concept => ({
+          const taggedIdeas = ideas.map(idea => ({ ...idea, campaignTag: 'Manual Exploration' }));
+
+          const newCreativeNodes: MindMapNode[] = taggedIdeas.map(concept => ({
               id: concept.id,
               parentId: nodeId,
               type: 'creative',
@@ -728,7 +733,11 @@ function App() {
           }
           
           if (evolvedConcepts.length > 0) {
-              const newConcept = evolvedConcepts[0];
+              const newConceptUntagged = evolvedConcepts[0];
+              const newConcept = {
+                  ...newConceptUntagged,
+                  campaignTag: `Evolved from "${baseConcept.headline.substring(0, 15)}..."`
+              };
               const newCreativeNode: MindMapNode = {
                   id: newConcept.id,
                   parentId: baseConcept.strategicPathId,
@@ -771,7 +780,11 @@ function App() {
     try {
       const pivotedConcepts = await generateQuickPivot(baseConcept, campaignBlueprint, pivotType, config);
       if (pivotedConcepts.length > 0) {
-          const newConcept = pivotedConcepts[0];
+          const newConceptUntagged = pivotedConcepts[0];
+          const newConcept = {
+              ...newConceptUntagged,
+              campaignTag: `Pivoted from "${baseConcept.headline.substring(0, 15)}..."`
+          };
           const newCreativeNode: MindMapNode = {
               id: newConcept.id,
               parentId: newConcept.strategicPathId, // Use the pathId from the new concept
@@ -879,7 +892,11 @@ function App() {
       setLoadingMessage(`Creating new concept from ${remixingComponent} remix...`);
       
       try {
-          const newConcept = await generateConceptFromRemix(baseConcept, remixingComponent, suggestion.payload, campaignBlueprint);
+          const newConceptUntagged = await generateConceptFromRemix(baseConcept, remixingComponent, suggestion.payload, campaignBlueprint);
+          const newConcept = {
+              ...newConceptUntagged,
+              campaignTag: `Remixed from "${baseConcept.headline.substring(0, 15)}..."`
+          };
           const newCreativeNode: MindMapNode = {
               id: newConcept.id,
               parentId: newConcept.strategicPathId,
@@ -930,6 +947,23 @@ function App() {
         console.error(`Failed to generate image(s) for concept ${conceptId}`, e);
         setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, error: e.message || 'Failed to generate image', isGenerating: false} } } : n));
     }
+  };
+
+  const handleGenerateFilteredImages = async (conceptIds: string[]) => {
+    setIsLoading(true);
+    const total = conceptIds.length;
+    let i = 0;
+    for (const conceptId of conceptIds) {
+      i++;
+      setLoadingMessage(`Generating image ${i} of ${total}...`);
+      try {
+        await handleGenerateImage(conceptId);
+      } catch (e) {
+        console.error(`Failed to generate image for concept ${conceptId} during bulk operation.`, e);
+      }
+    }
+    setLoadingMessage('');
+    setIsLoading(false);
   };
 
 
@@ -1049,6 +1083,8 @@ function App() {
                 <ConceptGallery
                     {...commonGalleryProps}
                     nodes={nodes}
+                    isLoading={isLoading}
+                    onGenerateFilteredImages={handleGenerateFilteredImages}
                 />
             );
         default: return null;

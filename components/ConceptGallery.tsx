@@ -1,11 +1,10 @@
 
-
 import React, { useState, useMemo } from 'react';
 import { MindMapNode, AdConcept, CampaignBlueprint } from '../types';
-import { FilterControls } from './FilterControls';
+import { FilterControls, GalleryFilters } from './FilterControls';
 import { CreativeCard } from './CreativeCard';
 import { EditModal } from './EditModal';
-import { DownloadIcon, RefreshCwIcon } from './icons';
+import { DownloadIcon, RefreshCwIcon, SparklesIcon } from './icons';
 import { exportConceptsToZip } from '../services/exportService';
 
 interface ConceptGalleryProps {
@@ -13,7 +12,9 @@ interface ConceptGalleryProps {
     concepts: AdConcept[];
     editingConcept: AdConcept | null;
     campaignBlueprint: CampaignBlueprint | null;
+    isLoading: boolean;
     onGenerateImage: (conceptId: string) => void;
+    onGenerateFilteredImages: (conceptIds: string[]) => void;
     onEditConcept: (conceptId: string) => void;
     onInitiateEvolution: (conceptId: string) => void;
     onInitiateQuickPivot: (conceptId: string) => void;
@@ -26,29 +27,63 @@ interface ConceptGalleryProps {
 }
 
 export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
-    const { concepts, nodes, onReset } = props;
-    const [filters, setFilters] = useState<{ angle: string }>({ angle: 'all' });
+    const { concepts, nodes, onReset, isLoading, onGenerateFilteredImages } = props;
+    const [filters, setFilters] = useState<GalleryFilters>({
+        angle: 'all',
+        persona: 'all',
+        format: 'all',
+        trigger: 'all',
+        campaignTag: 'all',
+    });
     const [isExporting, setIsExporting] = useState<boolean>(false);
 
     const filteredConcepts = useMemo(() => {
-        if (filters.angle === 'all') {
-            return concepts;
-        }
-
-        const findParentAngleRecursively = (nodeId: string | undefined, targetAngleId: string): boolean => {
-            if (!nodeId) return false;
-            const node = nodes.find(n => n.id === nodeId);
-            if (!node) return false;
-            if (node.type === 'angle' && node.id === targetAngleId) return true;
-            return findParentAngleRecursively(node.parentId, targetAngleId);
-        };
-        
         return concepts.filter(concept => {
-            const placementNode = nodes.find(n => n.id === concept.strategicPathId);
-            return findParentAngleRecursively(placementNode?.parentId, filters.angle);
+            // Campaign Tag filter
+            if (filters.campaignTag !== 'all' && concept.campaignTag !== filters.campaignTag) {
+                return false;
+            }
+            // Persona filter
+            if (filters.persona !== 'all' && concept.personaDescription !== filters.persona) {
+                return false;
+            }
+            // Format filter
+            if (filters.format !== 'all' && concept.format !== filters.format) {
+                return false;
+            }
+            // Trigger filter
+            if (filters.trigger !== 'all' && concept.trigger.name !== filters.trigger) {
+                return false;
+            }
+            // Angle filter
+            if (filters.angle !== 'all') {
+                const findParentAngleRecursively = (nodeId: string | undefined, targetAngleId: string): boolean => {
+                    if (!nodeId) return false;
+                    const node = nodes.find(n => n.id === nodeId);
+                    if (!node) return false;
+                    if (node.type === 'angle' && node.id === targetAngleId) return true;
+                    return findParentAngleRecursively(node.parentId, targetAngleId);
+                };
+                const placementNode = nodes.find(n => n.id === concept.strategicPathId);
+                if (!findParentAngleRecursively(placementNode?.parentId, filters.angle)) {
+                    return false;
+                }
+            }
+            
+            return true; // Pass all filters
         });
-
     }, [concepts, filters, nodes]);
+
+    const conceptsNeedingImages = useMemo(() => {
+        return filteredConcepts.filter(c => !c.isGenerating && (!c.imageUrls || c.imageUrls.length === 0));
+    }, [filteredConcepts]);
+
+    const handleBulkGenerateClick = () => {
+        const idsToGenerate = conceptsNeedingImages.map(c => c.id);
+        if (idsToGenerate.length > 0) {
+            onGenerateFilteredImages(idsToGenerate);
+        }
+    };
     
     const handleExport = async () => {
         setIsExporting(true);
@@ -70,7 +105,7 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
             groups[pathId].push(concept);
         });
 
-        const entryPointOrder = ['Emotional', 'Logical', 'Social', 'Evolved', 'Pivoted'];
+        const entryPointOrder = ['Emotional', 'Logical', 'Social', 'Evolved', 'Pivoted', 'Remixed'];
         Object.values(groups).forEach(group => {
             group.sort((a, b) => {
                 const indexA = entryPointOrder.indexOf(a.entryPoint);
@@ -106,6 +141,16 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
                         <p className="text-sm text-brand-text-secondary">{filteredConcepts.length} of {concepts.length} concepts shown in {filteredConceptGroups.length} hypothesis groups</p>
                     </div>
                     <div className="flex items-center gap-4">
+                         {conceptsNeedingImages.length > 0 && (
+                            <button 
+                                onClick={handleBulkGenerateClick}
+                                disabled={isLoading}
+                                className="px-3 py-2 bg-brand-secondary rounded-md shadow-lg text-sm font-bold text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-wait flex items-center gap-2"
+                            >
+                                <SparklesIcon className="w-4 h-4" />
+                                Generate {conceptsNeedingImages.length} Images
+                            </button>
+                        )}
                         <button onClick={onReset} className="px-3 py-2 bg-gray-700 rounded-md shadow-lg text-sm font-semibold hover:bg-gray-600">Start Over</button>
                         <button onClick={handleExport} disabled={isExporting || filteredConcepts.length === 0} title="Download Filtered Concepts" className="bg-brand-primary p-2 rounded-md shadow-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
                             {isExporting ? <RefreshCwIcon className="w-5 h-5 animate-spin"/> : <DownloadIcon className="w-5 h-5" />}
@@ -116,7 +161,11 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
             
             <div className="flex-shrink-0 bg-brand-surface sticky top-0 z-10 py-3 border-b border-gray-800">
                 <div className="max-w-7xl mx-auto">
-                     <FilterControls nodes={nodes} onFilterChange={(newFilters) => setFilters(f => ({...f, ...newFilters}))} />
+                     <FilterControls 
+                        nodes={nodes} 
+                        concepts={concepts}
+                        onFilterChange={(newFilters) => setFilters(f => ({...f, ...newFilters}))} 
+                    />
                 </div>
             </div>
 

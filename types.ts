@@ -107,6 +107,7 @@ export interface AdConcept {
   error?: string;
   // For linking back to strategy
   strategicPathId: string;
+  campaignTag?: string;
 }
 
 export type NodeType = 'dna' | 'persona' | 'pain_desire' | 'objection' | 'offer' | 'angle' | 'trigger' | 'awareness' | 'format' | 'placement' | 'creative';
