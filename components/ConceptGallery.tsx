@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { MindMapNode, AdConcept, CampaignBlueprint } from '../types';
+import { MindMapNode, AdConcept, CampaignBlueprint, TargetPersona } from '../types';
 import { FilterControls, GalleryFilters } from './FilterControls';
 import { CreativeCard } from './CreativeCard';
 import { EditModal } from './EditModal';
@@ -57,15 +57,15 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
             }
             // Angle filter
             if (filters.angle !== 'all') {
-                const findParentAngleRecursively = (nodeId: string | undefined, targetAngleId: string): boolean => {
+                 const findParentAngleRecursively = (nodeId: string | undefined): boolean => {
                     if (!nodeId) return false;
                     const node = nodes.find(n => n.id === nodeId);
                     if (!node) return false;
-                    if (node.type === 'angle' && node.id === targetAngleId) return true;
-                    return findParentAngleRecursively(node.parentId, targetAngleId);
+                    if (node.type === 'angle' && node.id === filters.angle) return true;
+                    return findParentAngleRecursively(node.parentId);
                 };
-                const placementNode = nodes.find(n => n.id === concept.strategicPathId);
-                if (!findParentAngleRecursively(placementNode?.parentId, filters.angle)) {
+
+                if (!findParentAngleRecursively(concept.strategicPathId)) {
                     return false;
                 }
             }
@@ -96,39 +96,66 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
     const creativeNodes = useMemo(() => nodes.filter(n => n.type === 'creative'), [nodes]);
 
     const filteredConceptGroups = useMemo(() => {
-        const groups: Record<string, AdConcept[]> = {};
-        filteredConcepts.forEach(concept => {
-            const pathId = concept.strategicPathId;
-            if (!groups[pathId]) {
-                groups[pathId] = [];
+        // Group by Persona first, then by Hypothesis (strategic path)
+        const personaGroups: Record<string, { persona: TargetPersona | null, hypothesisGroups: Record<string, AdConcept[]> }> = {};
+        const nodesMap = new Map(nodes.map(n => [n.id, n]));
+
+        const findParentPersonaNode = (startNodeId: string): MindMapNode | undefined => {
+            let currentNode = nodesMap.get(startNodeId);
+            while (currentNode) {
+                if (currentNode.type === 'persona') return currentNode;
+                currentNode = currentNode.parentId ? nodesMap.get(currentNode.parentId) : undefined;
             }
-            groups[pathId].push(concept);
+            return undefined;
+        };
+
+        filteredConcepts.forEach(concept => {
+            const personaNode = findParentPersonaNode(concept.strategicPathId);
+            const personaDesc = personaNode ? (personaNode.content as { persona: TargetPersona }).persona.description : "Uncategorized";
+            
+            if (!personaGroups[personaDesc]) {
+                personaGroups[personaDesc] = { 
+                    persona: personaNode ? (personaNode.content as { persona: TargetPersona }).persona : null,
+                    hypothesisGroups: {}
+                };
+            }
+
+            const pathId = concept.strategicPathId;
+            if (!personaGroups[personaDesc].hypothesisGroups[pathId]) {
+                personaGroups[personaDesc].hypothesisGroups[pathId] = [];
+            }
+            personaGroups[personaDesc].hypothesisGroups[pathId].push(concept);
         });
 
+        // Sort concepts within each hypothesis group
         const entryPointOrder = ['Emotional', 'Logical', 'Social', 'Evolved', 'Pivoted', 'Remixed'];
-        Object.values(groups).forEach(group => {
-            group.sort((a, b) => {
-                const indexA = entryPointOrder.indexOf(a.entryPoint);
-                const indexB = entryPointOrder.indexOf(b.entryPoint);
-                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                if (indexA !== -1) return -1;
-                if (indexB !== -1) return 1;
-                return a.id.localeCompare(b.id);
+        Object.values(personaGroups).forEach(pGroup => {
+            Object.values(pGroup.hypothesisGroups).forEach(hGroup => {
+                hGroup.sort((a, b) => {
+                    const indexA = entryPointOrder.indexOf(a.entryPoint);
+                    const indexB = entryPointOrder.indexOf(b.entryPoint);
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    return a.id.localeCompare(b.id);
+                });
             });
         });
-        
-        return Object.entries(groups).map(([pathId, groupConcepts]) => {
-            const placementNode = nodes.find(n => n.id === pathId);
-            const formatNode = placementNode ? nodes.find(n => n.id === placementNode.parentId) : undefined;
-            const triggerNode = formatNode ? nodes.find(n => n.id === formatNode.parentId) : undefined;
+
+        return Object.entries(personaGroups).map(([personaDesc, data]) => {
+            const hypotheses = Object.entries(data.hypothesisGroups).map(([pathId, groupConcepts]) => {
+                 const placementNode = nodes.find(n => n.id === pathId);
+                 const formatNode = placementNode ? nodes.find(n => n.id === placementNode.parentId) : undefined;
+                 const triggerNode = formatNode ? nodes.find(n => n.id === formatNode.parentId) : undefined;
             
-            let title = "Creative Hypothesis";
-            if (triggerNode && formatNode && placementNode) {
-                title = `${triggerNode.label} → ${formatNode.label} → ${placementNode.label}`;
-            }
-            
-            return { pathId, concepts: groupConcepts, title };
+                let title = "Creative Hypothesis";
+                if (triggerNode && formatNode && placementNode) {
+                    title = `${triggerNode.label} → ${formatNode.label} → ${placementNode.label}`;
+                }
+                return { pathId, concepts: groupConcepts, title };
+            });
+
+            return { personaDesc, persona: data.persona, hypotheses };
         });
+
     }, [filteredConcepts, nodes]);
 
 
@@ -138,7 +165,7 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <div>
                         <h1 className="text-xl font-bold">Creative Concept Gallery</h1>
-                        <p className="text-sm text-brand-text-secondary">{filteredConcepts.length} of {concepts.length} concepts shown in {filteredConceptGroups.length} hypothesis groups</p>
+                        <p className="text-sm text-brand-text-secondary">{filteredConcepts.length} of {concepts.length} concepts shown in {filteredConceptGroups.length} persona groups</p>
                     </div>
                     <div className="flex items-center gap-4">
                          {conceptsNeedingImages.length > 0 && (
@@ -171,27 +198,37 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
 
             <main className="flex-grow overflow-y-auto p-4 md:p-6">
                 {filteredConceptGroups.length > 0 ? (
-                    <div className="max-w-7xl mx-auto space-y-10">
-                        {filteredConceptGroups.map(({ pathId, concepts: groupConcepts, title }) => (
-                            <div key={pathId} className="bg-brand-surface/50 rounded-lg p-4 border border-gray-800">
-                                <h2 className="text-lg font-bold text-brand-text-primary mb-4">{title}</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {groupConcepts.map(concept => {
-                                        const node = creativeNodes.find(n => n.id === concept.id);
-                                        if (!node) return null;
-                                        return (
-                                            <CreativeCard 
-                                                key={node.id} 
-                                                node={node}
-                                                onGenerateImage={props.onGenerateImage}
-                                                onEditConcept={props.onEditConcept}
-                                                onInitiateEvolution={props.onInitiateEvolution}
-                                                onInitiateQuickPivot={props.onInitiateQuickPivot}
-                                                onInitiateRemix={props.onInitiateRemix}
-                                                onOpenLightbox={props.onOpenLightbox}
-                                            />
-                                        );
-                                    })}
+                    <div className="max-w-7xl mx-auto space-y-12">
+                        {filteredConceptGroups.map(({ personaDesc, persona, hypotheses }) => (
+                             <div key={personaDesc} className="bg-brand-surface/50 rounded-lg p-4 border border-gray-800">
+                                <div className="mb-6">
+                                    <h2 className="text-2xl font-bold text-brand-text-primary">{personaDesc}</h2>
+                                    {persona && <p className="text-sm text-brand-text-secondary">{persona.age} | {persona.creatorType}</p>}
+                                </div>
+                                <div className="space-y-8">
+                                    {hypotheses.map(({ pathId, concepts: groupConcepts, title }) => (
+                                        <div key={pathId}>
+                                            <h3 className="text-lg font-semibold text-brand-text-secondary mb-4">{title}</h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                {groupConcepts.map(concept => {
+                                                    const node = creativeNodes.find(n => n.id === concept.id);
+                                                    if (!node) return null;
+                                                    return (
+                                                        <CreativeCard 
+                                                            key={node.id} 
+                                                            node={node}
+                                                            onGenerateImage={props.onGenerateImage}
+                                                            onEditConcept={props.onEditConcept}
+                                                            onInitiateEvolution={props.onInitiateEvolution}
+                                                            onInitiateQuickPivot={props.onInitiateQuickPivot}
+                                                            onInitiateRemix={props.onInitiateRemix}
+                                                            onOpenLightbox={props.onOpenLightbox}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}

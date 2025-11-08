@@ -1,8 +1,7 @@
 
-
 import React, { useState } from 'react';
 import { CampaignBlueprint, TargetPersona } from '../types';
-import { RemixIcon } from './icons';
+import { InfoIcon, RemixIcon } from './icons';
 
 interface BlueprintValidationStepProps {
   initialBlueprint: CampaignBlueprint;
@@ -30,7 +29,7 @@ const EditableTextarea: React.FC<{label: string, value: string, name: string, on
 
 export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ initialBlueprint, referenceImage, onContinue, onStartSmartRemix, onBack, allowVisualExploration, onAllowVisualExplorationChange }) => {
   const [blueprint, setBlueprint] = useState<CampaignBlueprint>(initialBlueprint);
-  const [activeTab, setActiveTab] = useState<'manual' | 'remix'>('manual');
+  const [activeTab, setActiveTab] = useState<'manual' | 'remix'>('remix');
   
   const handlePersonaChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: keyof TargetPersona) => {
       const { value } = e.target;
@@ -87,16 +86,16 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
         <div className="w-full max-w-6xl bg-brand-surface rounded-xl shadow-2xl">
             <div className="flex border-b border-gray-700">
                 <button 
+                    onClick={() => setActiveTab('remix')}
+                    className={`flex-1 py-3 font-semibold transition-colors ${activeTab === 'remix' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-brand-text-secondary hover:bg-gray-800'}`}
+                >
+                    🚀 Smart Remix (Recommended)
+                </button>
+                 <button 
                     onClick={() => setActiveTab('manual')}
                     className={`flex-1 py-3 font-semibold transition-colors ${activeTab === 'manual' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-brand-text-secondary hover:bg-gray-800'}`}
                 >
                     Manual Exploration
-                </button>
-                <button 
-                    onClick={() => setActiveTab('remix')}
-                    className={`flex-1 py-3 font-semibold transition-colors ${activeTab === 'remix' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-brand-text-secondary hover:bg-gray-800'}`}
-                >
-                    🚀 Smart Remix (Fast)
                 </button>
             </div>
 
@@ -141,17 +140,22 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                             <EditableField label="Call to Action (CTA)" name="cta" value={blueprint.adDna.cta} onChange={e => handleDnaChange(e, 'cta')} />
                             <EditableField label="Target Country" name="targetCountry" value={blueprint.adDna.targetCountry} onChange={e => handleDnaChange(e, 'targetCountry')} />
                             
-                            <div className="md:col-span-2 flex items-center space-x-2 mt-2 p-3 bg-gray-900/50 rounded-lg">
-                                <input
-                                    type="checkbox"
-                                    id="allowVisualExploration"
-                                    checked={allowVisualExploration}
-                                    onChange={(e) => onAllowVisualExplorationChange(e.target.checked)}
-                                    className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary"
-                                />
-                                <label htmlFor="allowVisualExploration" className="text-sm font-medium text-brand-text-secondary">
-                                    Allow AI to explore new visual styles (different from reference).
-                                </label>
+                            <div className="md:col-span-2 mt-2 p-3 bg-gray-900/50 rounded-lg">
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        id="allowVisualExploration"
+                                        checked={allowVisualExploration}
+                                        onChange={(e) => onAllowVisualExplorationChange(e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary"
+                                    />
+                                    <label htmlFor="allowVisualExploration" className="text-sm font-medium text-brand-text-secondary">
+                                        Allow AI to explore new visual styles (different from reference).
+                                    </label>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-2">
+                                    <strong>Penting:</strong> Centang ini untuk "mematahkan" deteksi kesamaan visual Meta (Entity ID). Visual yang berbeda secara drastis sangat penting untuk menjangkau audiens baru dan menghindari kelelahan kreatif.
+                                </p>
                             </div>
                         </div>
                         
@@ -174,9 +178,19 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                             <img src={`data:image/jpeg;base64,${referenceImage}`} alt="Reference Ad" className="w-full h-full object-cover" />
                         </div>
                         <h3 className="text-2xl font-bold">Smart Remix: Auto-Generate Concepts</h3>
-                        <p className="max-w-2xl text-brand-text-secondary mt-2 mb-6">
+                        <p className="max-w-3xl text-brand-text-secondary mt-2 mb-6">
                             This is the fast track. The AI will automatically generate several new persona variations based on your blueprint, then create a diverse set of ad concepts for each one.
                         </p>
+                        <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg w-full max-w-3xl mb-6 flex items-start gap-3">
+                            <InfoIcon className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
+                            <div>
+                                <h4 className="font-semibold text-blue-300">Why is This Recommended?</h4>
+                                <p className="text-xs text-blue-200 mt-1">
+                                    Meta's AI (Andromeda) now rewards **creative diversity** above all else. This workflow is the fastest way to generate fundamentally different ad concepts (varied personas, angles, and visuals) which is the #1 requirement to find new audiences and scale your campaigns successfully.
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 w-full max-w-3xl mb-8">
                              <div className="flex items-center space-x-2">
                                 <input
@@ -190,6 +204,9 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                                     Allow AI to explore new visual styles (different from reference).
                                 </label>
                             </div>
+                             <p className="text-xs text-gray-400 mt-2 text-left">
+                                <strong>Penting:</strong> Centang ini untuk "mematahkan" deteksi kesamaan visual Meta (Entity ID). Visual yang berbeda secara drastis sangat penting untuk menjangkau audiens baru dan menghindari kelelahan kreatif.
+                            </p>
                         </div>
 
                          <div className="flex w-full max-w-md justify-between items-center pt-4 border-t border-gray-700 mt-2">

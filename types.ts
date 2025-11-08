@@ -157,12 +157,15 @@ export interface AdDna {
     awareness: AwarenessStage;
     angle: string;
     offer: OfferTypeObject;
+    // Contextual, for remixing
+    objection?: ObjectionObject;
 }
 
 export interface RemixSuggestion {
   title: string;
   description: string;
-  payload: TargetPersona; // Currently supports persona, can be expanded later
+  // Payload can be different types of DNA components depending on what's being remixed.
+  payload: any;
 }
 
 export interface VisualStyleDNA {

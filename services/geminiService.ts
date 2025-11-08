@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDnaComponent, AdDna, RemixSuggestion, VisualStyleDNA } from '../types';
+import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDnaComponent, AdDna, RemixSuggestion, VisualStyleDNA, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS, ALL_AWARENESS_STAGES } from '../types';
 
 // Utility to convert file to base64
 const fileToGenerativePart = async (file: File) => {
@@ -600,7 +600,7 @@ const TRIGGER_IMPLEMENTATION_CHECKLIST: Record<string, { copyMust: string[], vis
 
 export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const formatInstructions: Record<CreativeFormat, string> = {
-        'UGC': "Simulasikan video atau foto asli buatan pengguna. Nada harus otentik, tidak terlalu dipoles. Prompt visual harus mendeskripsikan suasana yang realistis.",
+        'UGC': "Simulasikan video atau foto asli buatan pengguna. Nada harus otentik, tidak terlalu dipoles. Prompt visual harus mendeskripsikan suasana yang realistis. KHUSUS UNTUK UGC: Tren terbaru menekankan 'creator diversity'. Pastikan visualPrompt mencerminkan persona ini secara otentik (gaya 'TikTok Shop-style' yang sederhana) dan bukan UGC yang terlalu dipoles.",
         'Before & After': "Tunjukkan dengan jelas keadaan 'sebelum' yang menunjukkan masalah dan keadaan 'sesudah' yang menunjukkan solusi yang diberikan oleh produk. Transformasi harus jelas.",
         'Comparison': "Bandingkan produk secara langsung atau tidak langsung dengan alternatif (misalnya, 'cara lama'). Tonjolkan fitur atau manfaat unggulan produk.",
         'Demo': "Tunjukkan produk sedang beraksi. Prompt visual harus fokus pada produk yang digunakan dan fungsionalitas utamanya.",
@@ -694,7 +694,7 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
             - **Curiosity Gap:** Creates a powerful need to know the answer.
             - **Specificity:** Uses concrete numbers, details, timelines.
             - **Contrarianism:** Challenges a common belief.
-        2.  **HEADLINE:** You MUST use one of these formulas for the "${awarenessStage}" stage, adapting it to your chosen entry point (Emotional/Logical/Social). You will fill in the bracketed placeholders with specific, compelling text.
+        2.  **HEADLINE:** You MUST use one of these formulas for the "${awarenessStage}" stage, adapting it to your chosen entry point (Emotional/Logical/Social). You will fill in the bracketed placeholders with specific, compelling text. When creating the 'Logical Entry' concept, prioritize the "Number-Based Credibility" or "Problem -> Solution" headline formulas.
             ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f}`).join('\n')}
         3.  The copy must align with the trigger "${trigger.name}", the offer "${offer.name}", and be localized for ${blueprint.adDna.targetCountry}.
 
@@ -724,6 +724,7 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         3.  Does the subject's facial expression match the copy's emotion?
         4.  Example of BAD alignment: Headline "Stop wasting money" + Visual "Happy person smiling"
         5.  Example of GOOD alignment: Headline "Stop wasting money" + Visual "Frustrated person looking at bills with stressed expression"
+        6.  **META ENTITY ID RULE**: Are the visual prompts for the Emotional, Logical, and Social concepts fundamentally different? They MUST use different settings, compositions, camera angles, and emotional expressions to avoid creative fatigue and platform penalties.
         
         Ensure your 3 concepts are truly DIFFERENT (Emotional vs Logical vs Social) and that each one follows the COPY-FIRST workflow and passes the trigger checklist. If any concept fails this check, REGENERATE it before responding.
         
@@ -892,15 +893,18 @@ export const refineVisualPrompt = async (concept: AdConcept, blueprint: Campaign
 export const evolveConcept = async (
     baseConcept: AdConcept,
     blueprint: CampaignBlueprint,
-    evolutionType: 'angle' | 'trigger' | 'format' | 'placement',
-    newValue: string | BuyingTriggerObject
+    evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire',
+    newValue: any
 ): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     
-    const evolutionInstructions = {
+    const evolutionInstructions: Record<string, string> = {
         angle: `Adapt the concept to a new strategic angle: "${newValue}". The trigger ("${baseConcept.trigger.name}") and format ("${baseConcept.format}") should remain consistent, but the core message (headline, hook) and visual must be re-imagined to reflect this new angle.`,
         trigger: `Adapt the concept to use a new psychological trigger: "${(newValue as BuyingTriggerObject).name}" (Description: ${(newValue as BuyingTriggerObject).description}). The angle ("${baseConcept.angle}") and format ("${baseConcept.format}") should remain consistent, but the headline, hook, and visual must be rewritten to powerfully evoke the feeling of "${(newValue as BuyingTriggerObject).name}".`,
         format: `Adapt the concept to a new creative format: "${newValue}". The angle ("${baseConcept.angle}") and trigger ("${baseConcept.trigger.name}") are the same, but the entire execution (headline, hook, visual) must be re-imagined for the new format. If the new format is "Carousel", you MUST generate a "carouselSlides" array.`,
-        placement: `Adapt the concept for a new placement: "${newValue}". The core creative (angle, trigger, format) is the same, but the execution must be optimized. For "Instagram Story", this means a 9:16 aspect ratio and a punchier hook. For "Carousel", it means telling a story across multiple slides.`
+        placement: `Adapt the concept for a new placement: "${newValue}". The core creative (angle, trigger, format) is the same, but the execution must be optimized. For "Instagram Story", this means a 9:16 aspect ratio and a punchier hook. For "Carousel", it means telling a story across multiple slides.`,
+        awareness: `Adapt the concept for a new awareness stage: "${newValue}". The core message is the same but the entry point must change. Re-write the hook and headline to match the new stage.`,
+        offer: `Adapt the concept to a new offer: "${(newValue as OfferTypeObject).name}". The core message (angle, trigger) is the same, but the CTA and final part of the copy must be rewritten to reflect this new offer.`,
+        painDesire: `Adapt the concept to a new Pain/Desire: "${(newValue as PainDesireObject).name}". This is a significant shift. The core angle must be re-evaluated to connect with this new emotional driver. The headline, hook, and visual must be completely re-imagined.`
     };
 
     const prompt = `
@@ -930,7 +934,7 @@ export const evolveConcept = async (
         Now, generate an array containing ONE new JSON object for the evolved concept.
         Adhere strictly to the provided JSON schema.
         For 'adSetName', create a new name reflecting the new evolved parameters, like: [Persona]_[NewAngle/Trigger/etc]_[...]_v1.
-        For the 'offer' field, you MUST return the full offer object from the 'Strategic Offer to use' section above.
+        For the 'offer' field, if the evolution type is 'offer', use the new offer provided in the mandate. Otherwise, you MUST return the full offer object from the 'Strategic Offer to use' section above.
 
         Respond ONLY with a JSON array containing the single new concept object.
     `;
@@ -1214,43 +1218,142 @@ export const generateRemixSuggestions = async (
     blueprint: CampaignBlueprint
 ): Promise<RemixSuggestion[]> => {
 
-    const prompt = `
-        You are an expert creative strategist. Your task is to generate 3 smart, distinct alternatives for a specific component of a winning ad's DNA.
+    let prompt: string;
+    let payloadSchema: any;
+    let responseProcessor: (payload: any) => any = (p) => p;
 
-        **Winning Ad DNA:**
-        - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - Persona: ${dna.persona.description}
-        - Pain/Desire: ${dna.painDesire.name}
-        - Trigger: ${dna.trigger.name}
-        - Format: ${dna.format}
-        - Country: ${blueprint.adDna.targetCountry}
+    switch (component) {
+        case 'persona':
+            payloadSchema = targetPersonaSchema;
+            prompt = `
+                You are an expert creative strategist. Your task is to generate 3 smart, distinct alternatives for a 'Persona'.
+                **Winning Ad DNA:**
+                - Product: ${blueprint.productAnalysis.name}
+                - Original Persona: ${dna.persona.description}
+                - Country: ${blueprint.adDna.targetCountry}
+                **Your Mission:**
+                Generate 3 entirely new, plausible Target Persona variations. For each, create a "title" summarizing the persona, a "description" of the necessary strategic shifts, and a full "payload" object which is a valid JSON object for the new Target Persona.
+                The variations must be genuinely different.
+            `;
+            break;
 
-        **🔥 DNA Component to Remix: Persona**
+        case 'format':
+            payloadSchema = { type: Type.STRING };
+            prompt = `
+                You are an expert creative strategist. Your task is to generate 3 smart, distinct alternatives for a 'Creative Format'.
+                **Winning Ad DNA:**
+                - Persona: ${dna.persona.description}
+                - Original Format: ${dna.format}
+                - Angle: ${dna.angle}
+                **Your Mission:**
+                Generate 3 new 'Creative Format' variations that would work well for this angle and persona.
+                For each variation, create a "title", a "description" explaining why this format is a good fit, and a "payload" which is the format name string.
+                Do not suggest the original format: "${dna.format}".
+                Available formats: ${ALL_CREATIVE_FORMATS.join(', ')}.
+            `;
+            break;
 
-        **Your Mission:**
-        Generate 3 entirely new, plausible Target Persona variations. For each variation, you must:
-        1.  Create a "title" that summarizes the new persona (e.g., "Option 1: Male Gen Z (18-24)").
-        2.  Create a "description" that BRIEFLY explains the necessary strategic shifts in copy, visuals, and pain points to appeal to this new persona.
-        3.  Create a full "payload" object which is a valid JSON object for the new Target Persona, following the provided schema. This payload must be a complete, ready-to-use persona object.
-
-        **CRITICAL:** The variations must be genuinely different from the original persona and from each other. Think about different demographics, psychographics, and use cases.
+        case 'trigger':
+            payloadSchema = buyingTriggerObjectSchema;
+            prompt = `
+                You are an expert creative strategist. Your task is to generate 3 smart, distinct alternatives for a 'Buying Trigger'.
+                **Winning Ad DNA:**
+                - Persona: ${dna.persona.description}
+                - Angle: ${dna.angle}
+                - Original Trigger: ${dna.trigger.name}
+                **Your Mission:**
+                Generate 3 new 'Buying Triggers'. For each, create a "title", a "description" explaining why it's a good fit, and a "payload" which is a full BuyingTriggerObject with name, description, example, and analysis.
+            `;
+            break;
         
-        Respond ONLY with a valid JSON array of 3 suggestion objects.
-    `;
+        case 'placement':
+            payloadSchema = { type: Type.STRING };
+            prompt = `
+                You are an expert creative strategist. Your task is to generate alternative 'Placement' options.
+                **Winning Ad DNA:**
+                - Format: ${dna.format}
+                - Original Placement: ${dna.placement}
+                **Your Mission:**
+                Suggest alternative placements for the format "${dna.format}". For each, provide a "title", "description", and "payload" (the placement name string).
+                Do not suggest the original: "${dna.placement}".
+                Available placements: ${ALL_PLACEMENT_FORMATS.join(', ')}.
+            `;
+            break;
+            
+        case 'awareness':
+            payloadSchema = { type: Type.STRING };
+            prompt = `
+                You are an expert creative strategist. Your task is to generate alternative 'Awareness Stage' options.
+                **Winning Ad DNA:**
+                - Persona: ${dna.persona.description}
+                - Original Stage: ${dna.awareness}
+                **Your Mission:**
+                Suggest alternative awareness stages to target. For each, provide a "title", "description" explaining the strategic shift, and "payload" (the stage name string).
+                Do not suggest the original: "${dna.awareness}".
+                Available stages: ${ALL_AWARENESS_STAGES.join(', ')}.
+            `;
+            break;
+            
+        case 'angle':
+            payloadSchema = { type: Type.STRING };
+            responseProcessor = (payload) => payload[0]; // The helper function returns an array of strings. We need one. Let's ask for 3 arrays and flatten.
+            prompt = `
+                You are an expert creative strategist. Your task is to generate 3 new strategic 'Angles'.
+                **Winning Ad DNA:**
+                - Persona: ${dna.persona.description}
+                - Pain/Desire: ${dna.painDesire.name}
+                - Objection to Overcome: ${dna.objection?.name || 'General skepticism'}
+                - Offer: ${dna.offer.name}
+                - Original Angle: ${dna.angle}
+                **Your Mission:**
+                Generate 3 new strategic angles. For each, create a "title", "description" of the angle's focus, and a "payload" which is the angle string itself.
+                The angles must be distinct from the original.
+            `;
+             // This case is more complex as it depends on other functions. We can simplify by just generating angle strings.
+            const angles = await generateHighLevelAngles(blueprint, dna.persona, dna.awareness, dna.objection!, dna.painDesire, dna.offer, [dna.angle]);
+            return angles.slice(0, 3).map(angle => ({
+                title: angle.substring(0, 50) + "...",
+                description: `A new strategic angle focusing on: ${angle}`,
+                payload: angle
+            }));
+
+
+        case 'offer':
+            payloadSchema = offerTypeObjectSchema;
+            if(!dna.objection) throw new Error("Objection context is required to remix offers.");
+            const offers = await generateOfferTypes(blueprint, dna.persona, dna.objection);
+            return offers.map(offer => ({
+                title: offer.name,
+                description: offer.description,
+                payload: offer,
+            }));
+
+        case 'painDesire':
+             payloadSchema = painDesireObjectSchema;
+             const painDesires = await generatePainDesires(blueprint, dna.persona);
+             return painDesires.filter(pd => pd.name !== dna.painDesire.name).slice(0, 3).map(pd => ({
+                title: `${pd.type}: ${pd.name}`,
+                description: pd.description,
+                payload: pd,
+             }));
+
+        default:
+            throw new Error(`Remixing for component type "${component}" is not yet implemented.`);
+    }
 
     const remixSuggestionSchema = {
         type: Type.OBJECT,
         properties: {
             title: { type: Type.STRING },
             description: { type: Type.STRING },
-            payload: targetPersonaSchema
+            payload: payloadSchema,
         },
         required: ['title', 'description', 'payload']
     };
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
-        contents: [{ text: prompt }],
+        contents: [{ text: `${prompt} Respond ONLY with a valid JSON array of 3 suggestion objects.` }],
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -1269,62 +1372,77 @@ export const generateRemixSuggestions = async (
 export const generateConceptFromRemix = async (
     baseConcept: AdConcept,
     remixComponent: AdDnaComponent,
-    newPayload: TargetPersona, // Currently only persona
+    newPayload: any,
     blueprint: CampaignBlueprint
 ): Promise<Omit<AdConcept, 'imageUrls'>> => {
 
-    const newPersona = newPayload;
+    let newConcept: Omit<AdConcept, 'imageUrls'>;
 
-    const prompt = `
-        You are a world-class creative director. Your task is to adapt a proven winning ad concept for a COMPLETELY NEW target persona. You must retain the core strategic successful elements but completely re-imagine the execution to be authentic and resonant for the new audience.
+    if (remixComponent === 'persona') {
+        const newPersona = newPayload as TargetPersona;
+        const prompt = `
+            You are a world-class creative director. Your task is to adapt a proven winning ad concept for a COMPLETELY NEW target persona. You must retain the core strategic successful elements but completely re-imagine the execution to be authentic and resonant for the new audience.
 
-        **Core Winning Strategy (DO NOT CHANGE):**
-        - Angle: "${baseConcept.angle}"
-        - Trigger: "${baseConcept.trigger.name}"
-        - Format: "${baseConcept.format}"
-        - Placement: "${baseConcept.placement}"
-        - Awareness Stage: "${baseConcept.awarenessStage}"
-        - Offer: "${baseConcept.offer.name} - ${baseConcept.offer.description}"
-        - Sales DNA Tone: "${blueprint.adDna.toneOfVoice}"
-        - Original Visual Style DNA: "${blueprint.adDna.visualStyle}"
+            **Core Winning Strategy (DO NOT CHANGE):**
+            - Angle: "${baseConcept.angle}"
+            - Trigger: "${baseConcept.trigger.name}"
+            - Format: "${baseConcept.format}"
+            - Placement: "${baseConcept.placement}"
+            - Awareness Stage: "${baseConcept.awarenessStage}"
+            - Offer: "${baseConcept.offer.name} - ${baseConcept.offer.description}"
+            - Sales DNA Tone: "${blueprint.adDna.toneOfVoice}"
+            - Original Visual Style DNA: "${blueprint.adDna.visualStyle}"
 
-        **Base Concept (for context only):**
-        - Original Persona: "${baseConcept.personaDescription}"
-        - Original Headline: "${baseConcept.headline}"
+            **Base Concept (for context only):**
+            - Original Persona: "${baseConcept.personaDescription}"
+            - Original Headline: "${baseConcept.headline}"
 
-        **🔥 NEW TARGET PERSONA (YOUR ADAPTATION MANDATE):**
-        - **Description:** ${newPersona.description}
-        - **Age:** ${newPersona.age}
-        - **Creator Type/Style:** ${newPersona.creatorType}
-        - **Pain Points:** ${newPersona.painPoints.join(', ')}
-        - **Desired Outcomes:** ${newPersona.desiredOutcomes.join(', ')}
-        - **Target Country:** ${blueprint.adDna.targetCountry}
+            **🔥 NEW TARGET PERSONA (YOUR ADAPTATION MANDATE):**
+            - **Description:** ${newPersona.description}
+            - **Age:** ${newPersona.age}
+            - **Creator Type/Style:** ${newPersona.creatorType}
+            - **Pain Points:** ${newPersona.painPoints.join(', ')}
+            - **Desired Outcomes:** ${newPersona.desiredOutcomes.join(', ')}
+            - **Target Country:** ${blueprint.adDna.targetCountry}
 
-        **Your Task:**
-        Generate ONE new ad concept JSON object.
-        1.  **Rewrite Copy:** Create a new 'hook' and 'headline' that speaks directly to the new persona's pains and desires, in their language and tone.
-        2.  **Re-imagine Visuals:** Create a new 'visualPrompt' and 'visualVehicle' that are authentic to the new persona's world (setting, style, model).
-        3.  **Update Persona Fields:** The 'personaDescription', 'personaAge', and 'personaCreatorType' fields in the JSON must reflect the NEW persona.
-        4.  **Create New Ad Set Name:** Generate a new 'adSetName' that reflects the new persona.
-        5.  Keep the 'strategicPathId' the same as the base concept.
-        6.  For the 'offer' field, you MUST return the full offer object from the 'Core Winning Strategy' context above.
+            **Your Task:**
+            Generate ONE new ad concept JSON object.
+            1.  **Rewrite Copy:** Create a new 'hook' and 'headline' that speaks directly to the new persona's pains and desires, in their language and tone.
+            2.  **Re-imagine Visuals:** Create a new 'visualPrompt' and 'visualVehicle' that are authentic to the new persona's world (setting, style, model).
+            3.  **Update Persona Fields:** The 'personaDescription', 'personaAge', and 'personaCreatorType' fields in the JSON must reflect the NEW persona.
+            4.  **Create New Ad Set Name:** Generate a new 'adSetName' that reflects the new persona.
+            5.  Keep the 'strategicPathId' the same as the base concept.
+            6.  For the 'offer' field, you MUST return the full offer object from the 'Core Winning Strategy' context above.
 
-        Respond ONLY with a single valid JSON object that conforms to the ad concept schema.
-    `;
+            Respond ONLY with a single valid JSON object that conforms to the ad concept schema.
+        `;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: [{ text: prompt }],
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: adConceptSchema,
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: [{ text: prompt }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: adConceptSchema,
+            }
+        });
+
+        const rawJson = response.text;
+        const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
+        // FIX: Property 'entryPoint' is missing in the parsed object but required by `newConcept`.
+        // The property is added here and will be correctly set to 'Remixed' in the return statement.
+        const parsedConcept = JSON.parse(cleanedJson) as Omit<AdConcept, 'imageUrls' | 'entryPoint'>;
+        newConcept = { ...parsedConcept, entryPoint: 'Remixed' };
+
+    } else {
+        // For all other components, the logic is identical to 'evolveConcept'.
+        const evolutionType = remixComponent as 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire';
+        const evolvedConcepts = await evolveConcept(baseConcept, blueprint, evolutionType, newPayload);
+        if (evolvedConcepts.length === 0) {
+            throw new Error(`Remix for ${remixComponent} did not yield a new concept.`);
         }
-    });
-
-    const rawJson = response.text;
-    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    const newConcept = JSON.parse(cleanedJson) as Omit<AdConcept, 'imageUrls' | 'entryPoint'>;
-
+        newConcept = evolvedConcepts[0];
+    }
+    
     return {
         ...newConcept,
         entryPoint: 'Remixed',

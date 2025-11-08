@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { AdConcept, AdDna, AdDnaComponent, RemixSuggestion } from '../types';
 import { RefreshCwIcon } from './icons';
@@ -60,11 +59,13 @@ export const RemixDashboard: React.FC<RemixDashboardProps> = ({
                 <div className="bg-brand-surface border border-gray-700 rounded-xl p-6 space-y-3">
                     <h2 className="text-xl font-bold mb-4">Winning Ad DNA</h2>
                     <DnaRow label="👤 Persona" value={remixDna.persona.description} component="persona" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
-                    <DnaRow label="😰 Pain / Desire" value={remixDna.painDesire.name} component="painDesire" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} disabled={true} />
-                    <DnaRow label="🎯 Trigger" value={remixDna.trigger.name} component="trigger" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} disabled={true} />
-                    <DnaRow label="🎨 Format" value={remixDna.format} component="format" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} disabled={true} />
-                    <DnaRow label="📱 Placement" value={remixDna.placement} component="placement" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} disabled={true} />
-                    <DnaRow label="🔥 Awareness" value={remixDna.awareness} component="awareness" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} disabled={true} />
+                    <DnaRow label="😰 Pain / Desire" value={remixDna.painDesire.name} component="painDesire" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
+                    <DnaRow label="🎯 Trigger" value={remixDna.trigger.name} component="trigger" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
+                    <DnaRow label="🎨 Format" value={remixDna.format} component="format" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
+                    <DnaRow label="📱 Placement" value={remixDna.placement} component="placement" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
+                    <DnaRow label="🔥 Awareness" value={remixDna.awareness} component="awareness" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
+                    <DnaRow label="💡 Angle" value={remixDna.angle} component="angle" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
+                    <DnaRow label="🎁 Offer" value={remixDna.offer.name} component="offer" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
                 </div>
 
                 {/* Kolom Kanan: Opsi Remix */}
