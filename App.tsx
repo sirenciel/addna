@@ -873,7 +873,7 @@ const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint
 
   const handleExecuteEvolution = async (
       baseConcept: AdConcept,
-      evolutionType: 'angle' | 'trigger' | 'format' | 'placement',
+      evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'visualVehicle',
       newValue: string
   ) => {
       if (!campaignBlueprint) return;

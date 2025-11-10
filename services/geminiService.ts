@@ -976,8 +976,7 @@ export const refineVisualPrompt = async (concept: AdConcept, blueprint: Campaign
 export const evolveConcept = async (
     baseConcept: AdConcept,
     blueprint: CampaignBlueprint,
-    // FIX: Added 'persona' to the evolutionType union type.
-    evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona',
+    evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona' | 'visualVehicle',
     newValue: any
 ): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     
@@ -989,7 +988,8 @@ export const evolveConcept = async (
         awareness: `Adaptasi konsep untuk tahap kesadaran baru: "${newValue}". Pesan inti sama tetapi titik masuk harus berubah. Tulis ulang hook dan headline agar sesuai dengan tahap baru.`,
         offer: `Adaptasi konsep ke penawaran baru: "${(newValue as OfferTypeObject).name}". Pesan inti (sudut pandang, pemicu) sama, tetapi CTA dan bagian akhir dari teks harus ditulis ulang untuk mencerminkan penawaran baru ini.`,
         painDesire: `Adaptasi konsep ke Poin Masalah/Keinginan baru: "${(newValue as PainDesireObject).name}". Ini adalah pergeseran yang signifikan. Sudut pandang inti harus dievaluasi ulang untuk terhubung dengan pendorong emosional baru ini. Headline, hook, dan visual harus dibayangkan ulang sepenuhnya.`,
-        persona: `Adaptasi seluruh konsep untuk persona target baru: "${(newValue as TargetPersona).description}". Ini memerlukan penulisan ulang headline, hook, dan prompt visual agar sangat relevan dengan poin masalah dan keinginan spesifik persona baru ini. Sudut pandang inti ("${baseConcept.angle}") mungkin perlu sedikit dibingkai ulang.`
+        persona: `Adaptasi seluruh konsep untuk persona target baru: "${(newValue as TargetPersona).description}". Ini memerlukan penulisan ulang headline, hook, dan prompt visual agar sangat relevan dengan poin masalah dan keinginan spesifik persona baru ini. Sudut pandang inti ("${baseConcept.angle}") mungkin perlu sedikit dibingkai ulang.`,
+        visualVehicle: `Adaptasi konsep ke 'visual vehicle' baru: "${newValue}". Ini adalah perubahan visual murni. Pertahankan copy inti (hook, headline) sama persis, tetapi bayangkan kembali visualPrompt sepenuhnya untuk mencerminkan gaya visual "${newValue}" yang baru. Ini adalah cara yang kuat untuk memecah Entity ID.`
     };
 
     const prompt = `
@@ -1405,7 +1405,7 @@ export const generateRemixSuggestions = async (component: AdDnaComponent, baseCo
 
 // FIX: Added generateConceptFromRemix function
 export const generateConceptFromRemix = async (baseConcept: AdConcept, component: AdDnaComponent, payload: any, blueprint: CampaignBlueprint): Promise<Omit<AdConcept, 'imageUrls'>> => {
-    const evolutionType = component as ('angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona');
+    const evolutionType = component as ('angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona' | 'visualVehicle');
     const evolvedConcepts = await evolveConcept(baseConcept, blueprint, evolutionType, payload);
     const newConcept = {
         ...evolvedConcepts[0],

@@ -1,10 +1,8 @@
-
-
 import React, { useState, useMemo } from 'react';
-import { AdConcept, MindMapNode, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS } from '../types';
+import { AdConcept, MindMapNode, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS, ALL_VISUAL_VEHICLES } from '../types';
 import { LightbulbIcon, FireIcon, EditIcon, LayoutGridIcon, SparklesIcon } from './icons';
 
-type EvolutionType = 'angle' | 'trigger' | 'format' | 'placement';
+type EvolutionType = 'angle' | 'trigger' | 'format' | 'placement' | 'visualVehicle';
 
 interface EvolveModalProps {
     concept: AdConcept;
@@ -23,8 +21,9 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
     const [selectedTrigger, setSelectedTrigger] = useState('');
     const [selectedFormat, setSelectedFormat] = useState('');
     const [selectedPlacement, setSelectedPlacement] = useState('');
+    const [selectedVehicle, setSelectedVehicle] = useState('');
 
-    const { angleOptions, triggerOptions, formatOptions, placementOptions } = useMemo(() => {
+    const { angleOptions, triggerOptions, formatOptions, placementOptions, vehicleOptions } = useMemo(() => {
         const nodesMap: Map<string, MindMapNode> = new Map(nodes.map(node => [node.id, node]));
 
         const findParent = (startNodeId: string | undefined, targetType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness'): MindMapNode | undefined => {
@@ -48,18 +47,20 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
         const formats = ALL_CREATIVE_FORMATS.filter(f => f !== concept.format);
         const placements = ALL_PLACEMENT_FORMATS.filter(p => p !== concept.placement);
         const triggers = ALL_BUYING_TRIGGERS.filter(t => t !== concept.trigger.name);
+        const vehicles = ALL_VISUAL_VEHICLES.filter(v => v !== concept.visualVehicle);
 
         return {
             angleOptions: angles,
             triggerOptions: triggers,
             formatOptions: formats,
-            placementOptions: placements
+            placementOptions: placements,
+            vehicleOptions: vehicles,
         };
     }, [nodes, concept]);
 
     const handleEvolve = (type: EvolutionType, value: string) => {
         if (!value) {
-            alert('Please select a new option.');
+            alert('Silakan pilih opsi baru.');
             return;
         }
         onEvolve(concept, type, value);
@@ -76,7 +77,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
         <div className="bg-gray-900/50 p-4 rounded-lg">
             <h4 className="flex items-center gap-2 font-semibold text-lg mb-3">
                 {icon}
-                Change {title}
+                Ubah {title}
             </h4>
             <div className="flex items-center gap-2">
                 <select
@@ -84,7 +85,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                     onChange={(e) => onValueChange(e.target.value)}
                     className="flex-grow bg-gray-800 border border-gray-600 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-brand-primary"
                 >
-                    <option value="">Choose a new {title}...</option>
+                    <option value="">Pilih {title} baru...</option>
                     {options.map(opt => <option key={opt.id || opt.label} value={opt.label}>{opt.label}</option>)}
                 </select>
                 <button
@@ -93,7 +94,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                     className="px-4 py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-indigo-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                     <SparklesIcon className="w-4 h-4" />
-                    Evolve
+                    Evolusi
                 </button>
             </div>
         </div>
@@ -103,22 +104,30 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div className="bg-brand-surface rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <header className="p-4 border-b border-gray-700">
-                    <h2 className="text-xl font-bold">Strategic Evolution</h2>
-                    <p className="text-sm text-brand-text-secondary">Adapt this concept by changing one key element.</p>
+                    <h2 className="text-xl font-bold">Evolusi Strategis</h2>
+                    <p className="text-sm text-brand-text-secondary">Adaptasi konsep ini dengan mengubah satu elemen kunci.</p>
                 </header>
 
                 <main className="p-6 space-y-4 overflow-y-auto">
                     <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-                        <p className="text-sm font-bold text-yellow-300">💡 Recommendation:</p>
+                        <p className="text-sm font-bold text-yellow-300">💡 Rekomendasi:</p>
                         <p className="text-xs mt-1 text-yellow-200">
                             {concept.performanceSignals?.scalingPotential === 'high' 
-                                ? "This concept has high scaling potential. To reach NEW audiences, change the Visual (different setting/persona) by creating a 'Quick Pivot' while keeping the angle/trigger. To find a new winning message, change the Angle or Trigger here."
-                                : "This concept's potential is undetermined. Consider evolving the Angle or Trigger first to test a different message strategy before scaling visuals."}
+                                ? "Konsep ini memiliki potensi penskalaan tinggi. Untuk menjangkau audiens BARU, ubah Visual (latar/persona yang berbeda) dengan membuat 'Pivot Cepat' sambil mempertahankan sudut pandang/pemicu. Untuk menemukan pesan pemenang baru, ubah Sudut Pandang atau Pemicu di sini."
+                                : "Potensi konsep ini belum ditentukan. Pertimbangkan untuk mengembangkan Sudut Pandang atau Pemicu terlebih dahulu untuk menguji strategi pesan yang berbeda sebelum menskalakan visual."}
                         </p>
                     </div>
-
+                   
                    <EvolutionSection
-                        title="Angle"
+                        title="Visual Vehicle"
+                        type="visualVehicle"
+                        icon={<SparklesIcon className="w-5 h-5 text-cyan-400" />}
+                        options={vehicleOptions.map(v => ({ label: v }))}
+                        selectedValue={selectedVehicle}
+                        onValueChange={setSelectedVehicle}
+                   />
+                   <EvolutionSection
+                        title="Sudut Pandang"
                         type="angle"
                         icon={<LightbulbIcon className="w-5 h-5 text-yellow-400" />}
                         options={angleOptions.map(n => ({ id: n.id, label: n.label }))}
@@ -126,7 +135,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                         onValueChange={setSelectedAngle}
                    />
                    <EvolutionSection
-                        title="Buying Trigger"
+                        title="Pemicu Pembelian"
                         type="trigger"
                         icon={<FireIcon className="w-5 h-5 text-orange-400" />}
                         options={triggerOptions.map(t => ({ label: t }))}
@@ -134,7 +143,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                         onValueChange={setSelectedTrigger}
                    />
                    <EvolutionSection
-                        title="Creative Format"
+                        title="Format Kreatif"
                         type="format"
                         icon={<EditIcon className="w-5 h-5 text-green-400" />}
                         options={formatOptions.map(f => ({ label: f }))}
@@ -142,7 +151,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                         onValueChange={setSelectedFormat}
                    />
                    <EvolutionSection
-                        title="Placement"
+                        title="Penempatan"
                         type="placement"
                         icon={<LayoutGridIcon className="w-5 h-5 text-sky-400" />}
                         options={placementOptions.map(p => ({ label: p }))}
@@ -153,7 +162,7 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
 
                 <footer className="p-4 border-t border-gray-700 bg-brand-surface rounded-b-xl text-right">
                     <button onClick={onClose} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">
-                        Close
+                        Tutup
                     </button>
                 </footer>
             </div>

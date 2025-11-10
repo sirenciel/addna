@@ -67,6 +67,8 @@ export const ALL_CREATIVE_FORMATS: CreativeFormat[] = [
 export type PlacementFormat = 'Carousel' | 'Instagram Story' | 'Instagram Feed';
 export const ALL_PLACEMENT_FORMATS: PlacementFormat[] = ['Carousel', 'Instagram Story', 'Instagram Feed'];
 
+export type VisualVehicle = 'Gaya Utas Twitter' | 'Gambar Kutipan Testimoni' | 'Infografis' | 'Gaya Iklan Artikel' | 'Meme' | 'Screenshot Utas Reddit';
+export const ALL_VISUAL_VEHICLES: VisualVehicle[] = ['Gaya Utas Twitter', 'Gambar Kutipan Testimoni', 'Infografis', 'Gaya Iklan Artikel', 'Meme', 'Screenshot Utas Reddit'];
 
 export interface CarouselSlide {
   slideNumber: number;
@@ -156,7 +158,7 @@ export type PivotConfig = {
     targetPlatform?: 'TikTok' | 'Facebook' | 'YouTube';
 };
 
-export type AdDnaComponent = 'persona' | 'painDesire' | 'trigger' | 'format' | 'placement' | 'awareness' | 'angle' | 'offer';
+export type AdDnaComponent = 'persona' | 'painDesire' | 'trigger' | 'format' | 'placement' | 'awareness' | 'angle' | 'offer' | 'visualVehicle';
 
 export interface AdDna {
     persona: TargetPersona;
