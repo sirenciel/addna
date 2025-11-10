@@ -28,16 +28,16 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 // --- Strategic Constants ---
 
 const COMPOSITION_FOR_ADS: Record<PlacementFormat, string> = {
-    'Instagram Story': 'Biarkan 25% bagian atas kosong untuk headline. Subjek utama di sepertiga tengah-bawah. Jangan pernah menutupi wajah subjek dengan teks.',
-    'Instagram Feed': 'Ikuti Aturan Sepertiga atau alur baca pola-Z. Sediakan ruang kosong untuk teks overlay. Jangan pernah menutupi wajah subjek.',
-    'Carousel': 'Slide 1: Subjek di tengah dengan latar belakang jelas. Slide 2-5: Komposisi bervariasi dengan zona teks yang konsisten. Jangan pernah menutupi wajah subjek utama.'
+    'Instagram Story': 'Leave top 25% empty for headline. Main subject in the middle-bottom third. Never cover subject face with text.',
+    'Instagram Feed': 'Follow Rule of Thirds or Z-pattern reading flow. Provide negative space for text overlays. Never cover subject face.',
+    'Carousel': 'Slide 1: Center subject with clear background. Slides 2-5: Vary composition with consistent text zones. Never cover main subject face.'
 };
 
 const CAROUSEL_ARCS: Record<string, string> = {
-    'PAS': 'PAS (Problem-Agitate-Solution). Ideal untuk respons langsung. Slide 1 (Hook): Sebutkan MASALAH dengan cara yang mengejutkan atau relatable. Slide 2 (Agitate): Deskripsikan RASA SAKIT dan frustrasi dari masalah tersebut. Mengapa begitu buruk? Slide 3 (Solution): Perkenalkan produk Anda sebagai SOLUSI. Momen "aha!". Slide 4 (Proof): Tunjukkan bukti bahwa itu berhasil (testimoni, data, sebelum/sesudah). Slide 5 (CTA): Beri tahu mereka apa yang harus dilakukan selanjutnya.',
-    'Transformation': 'Transformasi: Narasi Sebelum & Sesudah. Terbaik untuk format Sebelum & Sesudah, Testimoni. Slide 1 (Hook): Tunjukkan kondisi SETELAH yang luar biasa. Slide 2 (Sebelum): Ungkap kondisi SEBELUM yang menyakitkan. Slide 3 (Perjuangan): Rincikan perjalanan dan upaya yang gagal. Slide 4 (Penemuan): Bagaimana mereka menemukan solusi Anda. Slide 5 (CTA): Ajak orang lain untuk memulai transformasi mereka.',
-    'Educational': 'Edukasi: Ajarkan sesuatu yang berharga. Terbaik untuk format "Edukasi/Tips" atau "Demo". Struktur: (Hook yang Menarik -> Patahkan Mitos 1 -> Patahkan Mitos 2 -> Ungkap Kebenaran/Metode -> Tautan CTA/Produk)',
-    'Testimonial Story': 'Kisah Testimoni: Cerita yang berpusat pada pelanggan. Gunakan untuk format "Testimoni" atau "UGC". Struktur: (Hook dengan kutipan kuat -> Perkenalkan pelanggan & kisah mereka -> Hasil spesifik yang mereka dapatkan -> Bagaimana produk memungkinkannya -> CTA)'
+    'PAS': 'PAS (Problem-Agitate-Solution). Ideal for direct response. Slide 1 (Hook): State the PROBLEM in a shocking or relatable way. Slide 2 (Agitate): Describe the PAIN and frustration of the problem. Why is it so bad? Slide 3 (Solution): Introduce your product as the SOLUTION. The "aha!" moment. Slide 4 (Proof): Show evidence it works (testimonial, data, before/after). Slide 5 (CTA): Tell them exactly what to do next.',
+    'Transformation': 'Transformation: Before & After narrative. Best for Before & After, Testimonial formats. Slide 1 (Hook): Show the glorious AFTER state. Slide 2 (Before): Reveal the painful BEFORE state. Slide 3 (The Struggle): Detail the journey and failed attempts. Slide 4 (The Discovery): How they found your solution. Slide 5 (CTA): Invite others to start their transformation.',
+    'Educational': 'Education: Teach something valuable. Best for "Education/Tips" or "Demo" formats. Structure: (Engaging Hook -> Bust Myth 1 -> Bust Myth 2 -> Reveal Truth/Method -> CTA/Product Link)',
+    'Testimonial Story': 'Testimonial Story: Customer-centric story. Use for "Testimonial" or "UGC" formats. Structure: (Hook with a strong quote -> Introduce the customer & their story -> Specific results they got -> How the product enabled it -> CTA)'
 };
 
 // --- Strategic Helpers ---
@@ -603,209 +603,143 @@ export const getBuyingTriggerDetails = async (triggerName: string, blueprint: Ca
     return JSON.parse(cleanedJson);
 };
 
-const HEADLINE_FORMULAS: Record<AwarenessStage, string[]> = {
-    'Tidak Sadar': [
-        'Pola Aneh/Kontrarian: "Stop [Saran Umum]. (Ini cara yang benar)."',
-        'Pertanyaan Fokus-Masalah: "Apakah Anda juga [Masalah yang sangat spesifik dan relatable]?"',
-    ],
-    'Sadar Masalah': [
-        'Masalah → Solusi: "[Masalah Menyakitkan]? → Ini solusinya."',
-        'Hilangkan Rasa Sakit: "Ucapkan Selamat Tinggal pada [Rasa Sakit/Masalah]."',
-    ],
-    'Sadar Solusi': [
-        'Hasil + Jangka Waktu: "Dapatkan [Hasil Spesifik] dalam [Jangka Waktu] (Tanpa [Pengorbanan])"',
-        'Transformasi Sebelum/Sesudah: "Dari [Kondisi Buruk] menjadi [Kondisi Baik] dalam [Jangka Waktu]."',
-        'Perintah Langsung + Manfaat: "[Kata Kerja Aksi] untuk [Manfaat Utama]."',
-    ],
-    'Sadar Produk': [
-        'Kredibilitas Berbasis Angka: "[Jumlah] [Tipe Orang] telah beralih ke [Produk Anda]."',
-        'Penawaran Langsung: "Dapatkan [Penawaran Spesifik Anda] - Hanya [Elemen Urgensi/Kelangkaan]."',
-    ]
-};
-
 const TRIGGER_IMPLEMENTATION_CHECKLIST: Record<string, { copyMust: string[], visualMust: string[] }> = {
-    'Bukti Sosial': {
-        copyMust: ["Sebutkan angka spesifik (misal, 'Bergabung dengan 10.000+ pelanggan bahagia')", "Kutip testimoni nyata ('Ini mengubah segalanya bagi saya.' - Jane D.)", "Gunakan kata-kata aksi kolektif seperti 'terbukti', 'semua orang menggunakan'"],
-        visualMust: ["Tampilkan beberapa orang yang menggunakan produk dengan senang", "Tampilkan overlay kutipan/rating testimoni pada gambar", "Tampilkan kolase konten buatan pengguna (UGC) atau 'lautan wajah'"]
+    'Social Proof': {
+        copyMust: ["Specific numbers: \"Join 10,000+ happy customers.\"", "Real testimonial quotes: \"'This changed everything for me.' - Jane D.\"", "Collective action words: \"terbukti\", \"semua orang pakai\""],
+        visualMust: ["Multiple people using the product happily.", "A visual overlay of a 5-star rating or testimonial quote.", "A \"sea of faces\" or a collage of user-generated content."]
     },
-    'Otoritas': {
-        copyMust: ["Sebutkan ahli atau otoritas yang diakui (misal, 'Direkomendasikan oleh Dr. Anya Sharma')", "Sebutkan sertifikasi atau studi ('Terbukti secara klinis untuk...')", "Gunakan bahasa otoritas: 'Para ahli mengatakan', 'Studi menunjukkan'"],
-        visualMust: ["Tampilkan seorang ahli di lingkungannya (jas lab, klinik, kantor)", "Tampilkan lencana sertifikasi resmi atau logo 'Seperti yang Dilihat Di'", "Tampilkan visualisasi data atau grafik dari sebuah studi"]
+    'Authority': {
+        copyMust: ["Cite an expert or recognized authority: \"Recommended by Dr. Anya Sharma.\"", "Mention certifications or studies: \"Clinically proven to...\"", "Use authority language: \"Ahli bilang...\", \"Studi menunjukkan...\""],
+        visualMust: ["An expert in their environment (lab coat, clinic, office).", "Official certification badges or \"As Seen In\" logos.", "Data visualizations or graphs from a study."]
     },
-    'Kelangkaan': {
-        copyMust: ["Sebutkan kuantitas terbatas secara eksplisit ('Hanya 100 unit tersisa')", "Sebutkan eksklusivitas ('Desain edisi terbatas')", "Ciptakan ketakutan akan kehilangan ('Setelah habis, tidak akan ada lagi')"],
-        visualMust: ["Tampilkan bar stok yang hampir kosong", "Tampilkan stempel 'Hampir Habis' atau 'Edisi Terbatas'", "Tampilkan seseorang bergegas untuk mengambil item terakhir"]
+    'Scarcity': {
+        copyMust: ["State limited quantity explicitly: \"Hanya 100 unit tersisa.\"", "Mention exclusivity: \"Limited edition design.\"", "Create fear of missing out: \"Once it's gone, it's gone forever.\""],
+        visualMust: ["A stock level bar that is almost empty.", "An \"Almost Sold Out\" or \"Limited Edition\" stamp.", "A person rushing to grab the last item off a shelf."]
     },
-    'Urgensi': {
-        copyMust: ["Sertakan tenggat waktu yang eksplisit ('Diskon 50% berakhir malam ini')", "Sebutkan konsekuensi dari penundaan ('Harga naik besok')", "Gunakan bahasa yang peka waktu: 'Sekarang', 'Segera'"],
-        visualMust: ["Tampilkan timer hitung mundur atau grafik", "Tampilkan kalender dengan tanggal hari ini dilingkari merah", "Tampilkan seseorang yang tampak stres sambil melirik jam"]
+    'Urgency': {
+        copyMust: ["Include an explicit deadline: \"Diskon 50% berakhir malam ini.\"", "State the consequence of delay: \"Harga naik besok.\"", "Use time-sensitive language: \"Sekarang\", \"Buruan\""],
+        visualMust: ["A countdown timer animation or graphic.", "A calendar with today's date circled in red.", "A person looking stressed while glancing at a clock."]
     },
-    'Timbal Balik': {
-        copyMust: ["Tawarkan sesuatu yang berharga secara gratis ('Dapatkan panduan gratis Anda')", "Bingkai sebagai memberi sebelum meminta ('Kami ingin Anda mencobanya terlebih dahulu')", "Gunakan bahasa kemurahan hati: 'Hadiah untuk Anda', 'Dari kami untuk Anda'"],
-        visualMust: ["Tampilkan item gratis/bonus secara menonjol", "Tampilkan seseorang yang senang menerima hadiah gratis", "Tampilkan lencana 'GRATIS' atau visual kado"]
+    'Reciprocity': {
+        copyMust: ["Offer something of value for free ('Get your free guide')", "Frame it as giving before asking ('We want you to try it first')", "Use generous language: 'A gift for you', 'On us'"],
+        visualMust: ["Show the free item/bonus prominently", "Show someone happy receiving the free gift", "Show a 'FREE' badge or gift visual"]
     },
-    'Rasa Suka': {
-        copyMust: ["Gunakan nada yang ramah dan percakapan", "Bagikan cerita pribadi atau relatable ('Saya dulu juga seperti itu')", "Gunakan bahasa inklusif: 'Kita semua tahu perasaan itu'"],
-        visualMust: ["Tampilkan influencer atau orang yang relatable dengan persona target", "Tampilkan senyum tulus dan kontak mata yang hangat", "Gunakan latar yang kasual dan otentik, bukan studio yang kaku"]
+    'Liking': {
+        copyMust: ["Use a friendly, conversational tone", "Share a personal, relatable story ('I used to be just like you')", "Use inclusive language: 'We all know the feeling'"],
+        visualMust: ["Show a relatable influencer or person from the target persona", "Show genuine smiles and warm eye contact", "Use a casual, authentic setting, not a stiff studio"]
     },
-    'Takut Ketinggalan (FOMO)': {
-        copyMust: ["Tonjolkan pengalaman orang lain ('Lihat apa yang semua orang bicarakan')", "Tekankan tren atau gerakan ('Jangan menjadi satu-satunya yang ketinggalan')", "Gunakan bahasa FOMO: 'Jangan sampai ketinggalan', 'Semua orang melakukannya'"],
-        visualMust: ["Tampilkan kerumunan orang yang menikmati produk", "Tampilkan skenario 'semua orang memilikinya kecuali Anda'", "Tampilkan seseorang yang 'tertinggal' vs. kelompok yang bahagia dengan produk"]
+    'Fear of Missing Out (FOMO)': {
+        copyMust: ["Highlight what others are experiencing ('See what everyone is talking about')", "Emphasize a trend or movement ('Don't be the only one missing out')", "Use FOMO language: 'Don't get left behind', 'Everyone is doing it'"],
+        visualMust: ["Show a crowd of people enjoying the product", "Show a 'everyone has it but you' scenario", "Show someone 'left out' vs. the happy group with the product"]
     },
-    'Eksklusivitas': {
-        copyMust: ["Tekankan akses terbatas ('Hanya untuk anggota', 'Khusus undangan')", "Sebutkan status VIP atau premium", "Gunakan bahasa eksklusif: 'Tidak tersedia untuk umum', 'Koleksi pribadi'"],
-        visualMust: ["Tampilkan kartu VIP atau keanggotaan", "Tampilkan tanda 'hanya untuk anggota'", "Tampilkan kemasan mewah atau premium"]
+    'Exclusivity': {
+        copyMust: ["Emphasize limited access ('Members only', 'Invite-only')", "Mention VIP or premium status", "Use exclusive language: 'Not available to the public', 'The private collection'"],
+        visualMust: ["Show a VIP or membership card", "Show a 'members only' sign", "Show luxury or premium packaging"]
     },
-    'Kepuasan Instan': {
-        copyMust: ["Janjikan hasil cepat ('Lihat hasilnya dalam 3 hari', 'Langsung terasa bedanya')", "Tekankan kecepatan dan kemudahan ('Cepat', 'Instan', 'Tanpa repot')", "Gunakan bahasa yang mendesak: 'Dapatkan sekarang juga', 'Langsung'"],
-        visualMust: ["Tampilkan transformasi cepat (visual fast-forward)", "Tampilkan jam atau timer yang menunjukkan durasi singkat", "Tampilkan seseorang yang terkejut dengan cepatnya hasil"]
+    'Instant Gratification': {
+        copyMust: ["Promise fast results ('See results in 3 days', 'Feel the difference instantly')", "Emphasize speed and ease ('Quick', 'Instant', 'No hassle')", "Use urgent language: 'Get it right now', 'Instantly'"],
+        visualMust: ["Show a rapid transformation (fast-forward visual)", "Show a clock or timer indicating a short duration", "Show someone surprised by the speed of the results"]
     }
 };
 
 export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject, preferredCarouselArc?: string): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
-    const recommendedFormats = getRecommendedFormats(awarenessStage, trigger, persona);
-    const formatStrategy = `
-        **STRATEGI FORMAT (Gunakan Panduan Ini):**
-        Berdasarkan tahap kesadaran "${awarenessStage}" dan pemicu "${trigger.name}", format yang DIREKOMENDASIKAN adalah: ${recommendedFormats.join(', ')}.
-        
-        Anda diberi format "${format}". Jika format ini TIDAK ada dalam daftar yang direkomendasikan, Anda harus mengadaptasi eksekusi Anda agar berfungsi dengan sangat baik untuk kombinasi tahap/pemicu ini.
-        
-        **Tolok Ukur Kinerja Meta Saat Ini (Q4 2024):**
-        - Statis: Menang jika memiliki visual BOLD + headline numerik + teks yang menyenangkan.
-        - HP (Pendiri/Ahli): Menang dengan otoritas + penanganan keberatan + "Kita vs Mereka".
-        - UGC: Menang melalui KERAGAMAN kreator (4-5 sudut pandang berbeda, bukan 1 kreator).
-    `;
-
     let carouselArcGuidance = '';
     if (placement === 'Carousel') {
         carouselArcGuidance = preferredCarouselArc
-            ? `ANDA HARUS menggunakan alur "${preferredCarouselArc}": ${CAROUSEL_ARCS[preferredCarouselArc]}`
-            : `Pilih alur yang PALING TEPAT dari: ${Object.keys(CAROUSEL_ARCS).join(', ')}`;
+            ? `You MUST use the "${preferredCarouselArc}" arc: ${CAROUSEL_ARCS[preferredCarouselArc]}`
+            : `Choose the MOST FITTING arc from: ${Object.keys(CAROUSEL_ARCS).join(', ')}`;
     }
-
-    const formatInstructions: Record<CreativeFormat, string> = {
-        'UGC': "Simulasikan video atau foto asli buatan pengguna. Nada harus otentik, tidak terlalu dipoles. Prompt visual harus mendeskripsikan suasana yang realistis. KHUSUS UNTUK UGC: Tren terbaru menekankan 'keragaman kreator'. Pastikan visualPrompt mencerminkan persona ini secara otentik (gaya 'TikTok Shop-style' yang sederhana) dan bukan UGC yang terlalu dipoles.",
-        'Sebelum & Sesudah': "Tunjukkan dengan jelas keadaan 'sebelum' yang menunjukkan masalah dan keadaan 'sesudah' yang menunjukkan solusi yang diberikan oleh produk. Transformasi harus jelas.",
-        'Perbandingan': "Bandingkan produk secara langsung atau tidak langsung dengan alternatif (misalnya, 'cara lama'). Tonjolkan fitur atau manfaat unggulan produk.",
-        'Demo': "Tunjukkan produk sedang beraksi. Prompt visual harus fokus pada produk yang digunakan dan fungsionalitas utamanya.",
-        'Testimoni': "Tampilkan pelanggan yang puas. Hook dan headline harus dibaca seperti kutipan. Prompt visual harus menggambarkan seseorang yang mewakili persona target, terlihat bahagia dan percaya diri.",
-        'Masalah/Solusi': "Mulai dengan menyajikan masalah umum yang dihadapi persona target dengan jelas. Agitasi masalah dengan mendeskripsikan frustrasi yang ditimbulkannya. Terakhir, sajikan produk sebagai solusi sempurna. Visual harus menggambarkan keadaan 'masalah' atau 'solusi' dengan jelas.",
-        'Edukasi/Tips': "Berikan nilai asli dengan mengajarkan audiens sesuatu yang berguna terkait dengan domain produk. Bingkai iklan sebagai tips bermanfaat atau 'cara cepat'. Produk harus diintegrasikan secara alami sebagai alat untuk mencapai hasil dari tips tersebut.",
-        'Bercerita': "Ceritakan kisah pendek yang relatable di mana seorang karakter (mewakili persona) mengatasi tantangan menggunakan produk. Narasi harus memiliki awal, tengah, dan akhir yang jelas. Fokusnya harus pada perjalanan emosional dan transformasi.",
-        'Iklan Artikel': "Simulasikan cuplikan artikel berita atau posting blog otoritatif. Visual harus terlihat seperti tangkapan layar publikasi online berkualitas tinggi, dengan headline dan gambar yang menarik yang terasa seperti konten editorial.",
-        'Layar Terpisah': "Buat visual yang secara harfiah terbagi dua. Satu sisi menunjukkan 'masalah' atau 'cara lama', dan sisi lain menunjukkan 'solusi' dengan produk Anda. Kontrasnya harus tajam dan langsung dapat dipahami.",
-        'Advertorial': "Rancang iklan yang meniru gaya konten editorial dari majalah atau blog tepercaya. Harus menarik secara visual, informatif, dan tidak terlalu 'menjual' pada pandangan pertama. Teks harus bersifat edukatif atau didorong oleh cerita.",
-        'Listicle': "Bingkai iklan sebagai daftar, seperti '5 Alasan Mengapa...' atau '3 Kesalahan Teratas...'. Untuk carousel, setiap slide adalah satu poin dalam daftar. Untuk gambar statis, visual harus mewakili poin #1, dengan headline yang menggoda daftar tersebut.",
-        'Multi-Produk': "Tampilkan beberapa produk sekaligus, baik sebagai bundel, koleksi, atau berbagai pilihan. Prompt visual harus dengan jelas mengatur produk-produk dengan cara yang menarik, menyoroti nilai dari grup tersebut.",
-        'Kita vs Mereka': "Ciptakan kontras yang kuat antara merek/produk Anda (Kami) dan persaingan atau cara lama yang inferior (Mereka). Visual dan teks harus dengan jelas menetapkan dua sisi yang berlawanan dan memposisikan produk Anda sebagai pemenang yang jelas.",
-        'Meme/Iklan Jelek': "Gunakan format meme yang sedang populer atau buat desain 'jelek' yang disengaja dan berkualitas rendah yang terlihat seperti postingan asli dan organik. Tujuannya adalah untuk menghentikan guliran melalui humor, keterkaitan, dan dengan menghindari tampilan iklan yang dipoles.",
-        'Penawaran Langsung': "Jadikan penawaran sebagai pahlawan mutlak dari iklan. Visual harus berani dan berpusat pada diskon, bonus, atau penawaran khusus (misalnya, 'DISKON 50%' dalam teks besar). Teks harus langsung dan jelas menjelaskan penawaran serta urgensi/kelangkaannya."
-    };
-
-    const placementInstructions: Record<PlacementFormat, string> = {
-        'Carousel': `**MANDAT PEMBUATAN CAROUSEL**: 
-1.  **ATURAN KONSISTENSI VISUAL CAROUSEL**:
-    - **SEMUA** slide harus memiliki: Palet warna yang sama, Gaya pencahayaan yang sama (misalnya, semua golden hour ATAU semua studio), Model/subjek yang sama (orang yang sama di semua slide).
-    - **VARIASIKAN** hanya elemen-elemen ini per slide: Aksi/pose subjek, Properti/objek dalam adegan, Zona overlay teks (tetapi pertahankan penempatan yang konsisten).
-2.  ${carouselArcGuidance}
-3.  Setelah memilih alur, hasilkan array 'carouselSlides' dengan tepat 5 slide yang mengikuti struktur narasinya.
-4.  **KRITIS**: Anda harus mengikuti alur kerja COPY-FIRST. Pertama, tulis copy (headline, deskripsi) untuk semua 5 slide. KEMUDIAN, untuk setiap copy slide, buat 'visualPrompt' yang merupakan interpretasi visual langsung dari pesan slide spesifik tersebut dan mengikuti aturan komposisi untuk Carousel.
-5.  Slide terakhir HARUS selalu berupa Ajakan Bertindak (CTA) yang menggabungkan penawaran: "${offer.name}".
-6.  Semua teks HARUS dalam bahasa ${blueprint.adDna.targetCountry} dan sesuai dengan nada ${blueprint.adDna.toneOfVoice}.`,
-        'Instagram Feed': "Desain untuk rasio aspek 1:1 atau 4:5. Visual harus berkualitas tinggi dan menghentikan guliran. Hook harus berupa pertanyaan yang menarik atau pernyataan berani untuk mendorong interaksi di caption.",
-        'Instagram Story': "Desain untuk rasio aspek vertikal 9:16. Visual harus terasa asli dan otentik dengan platform. Hook harus cepat dan tajam. Prompt visual dapat menyarankan overlay teks atau elemen interaktif."
-    };
     
     const triggerKey = Object.keys(TRIGGER_IMPLEMENTATION_CHECKLIST).find(k => k.toLowerCase() === trigger.name.toLowerCase()) || trigger.name;
     const triggerChecklist = TRIGGER_IMPLEMENTATION_CHECKLIST[triggerKey] || { copyMust: [], visualMust: [] };
 
-    const prompt = `
-        Anda adalah seorang copywriter direct response dan direktur kreatif kelas dunia. Tugas Anda adalah menghasilkan sebuah array berisi 3 konsep iklan yang **berbeda secara strategis** berdasarkan satu brief. Anda harus mengikuti semua prinsip dan alur kerja yang disediakan.
-
+    const brief = `
         ---
-        **PRINSIP INTI YANG TIDAK BISA DITAWAR (DALAM KONTEKS INDONESIA):**
-        1.  **Asumsikan Zero Brand Awareness:** Tulis untuk audiens dingin. Kejelasan > Kecerdasan.
-        2.  **Fokus pada Masalah atau Hasil:** Fokus pada apa yang dipedulikan pengguna, bukan fitur.
-        3.  **Spesifisitas = Kredibilitas:** Gunakan angka dan detail konkret.
-
-        **ALUR KERJA WAJIB: COPY-FIRST**
-        Proses Anda untuk SETIAP konsep harus: Pertama, tulis kata-kata yang menjual (hook, headline). Kedua, buat visual yang membuat kata-kata itu 10x lebih kuat.
-
-        **🔥 MISI INTI ANDA: VARIASI TES A/B (Kerangka Tiga Pintu Masuk)**
-        Sangat PENTING bahwa ketiga konsep tersebut BUKAN hanya versi yang diubah kata-katanya satu sama lain. Anda HARUS menghasilkan tiga hipotesis kreatif yang benar-benar berbeda:
-        - **Konsep 1 - "Pintu Masuk Emosional"**: Berawal dari perasaan, identitas, atau aspirasi. Menjawab "Bagaimana ini akan membuat saya merasa?"
-        - **Konsep 2 - "Pintu Masuk Logis"**: Berawal dari logika, bukti, data, atau mekanisme unik. Menjawab "Bagaimana cara kerjanya?"
-        - **Konsep 3 - "Pintu Masuk Sosial"**: Berawal dari komunitas, suku, atau bukti sosial. Menjawab "Siapa lagi yang menggunakan ini?"
-        
-        ${formatStrategy}
-
-        **🔥 MANDAT DIFERENSIASI VISUAL (KRITIS UNTUK ENTITY ID META):**
-        Setiap dari 3 konsep HARUS memiliki ciri visual yang BERBEDA SECARA FUNDAMENTAL:
-        - **Konsep 1 (Pintu Masuk Emosional) Gaya Visual:** Latar: Ruang pribadi, intim (kamar tidur, mobil). Pencahayaan: Lembut, hangat, golden hour. Kamera: Close-up pada ekspresi. Aksi: Kontemplatif, rentan.
-        - **Konsep 2 (Pintu Masuk Logis) Gaya Visual:** Latar: Lingkungan "demo" yang bersih (meja, lab). Pencahayaan: Terang, merata, klinis. Kamera: Medium shot menunjukkan produk + konteks. Aksi: Demonstratif, instruksional.
-        - **Konsep 3 (Pintu Masuk Sosial) Gaya Visual:** Latar: Ruang sosial, publik (kafe, gym). Pencahayaan: Alami, realistis. Kamera: Wide shot menunjukkan konteks grup. Aksi: Interaktif, dinamika grup.
-
-        **PEMERIKSAAN ATURAN ENTITY ID META:** Sebelum menyelesaikan 3 prompt visual Anda, tanyakan: "Jika saya menunjukkan 3 gambar ini berdampingan TANPA teks, akankah manusia segera melihat bahwa mereka berasal dari 3 kampanye iklan yang berbeda?" Jika TIDAK, BUAT ULANG.
+        ### CREATIVE BRIEF
+        - **Product**: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
+        - **Strategic Offer**: ${offer.name} - ${offer.description} (CTA: ${blueprint.adDna.cta})
+        - **Sales DNA**:
+            - Persuasion Formula: "${blueprint.adDna.persuasionFormula}"
+            - Tone of Voice: "${blueprint.adDna.toneOfVoice}"
+        - **Original Visual Style DNA**: "${blueprint.adDna.visualStyle}"
+        - **Target Country for Localization**: "${blueprint.adDna.targetCountry}"
+        - **Target Persona**: "${persona.description}" (Age: "${persona.age}", Type: "${persona.creatorType}", Pain Points: ${persona.painPoints.join(', ')})
+        - **Creative Mandate**:
+            - Angle: "${angle}"
+            - 🔥 Psychological Trigger: "${trigger.name}" (Description: ${trigger.description}). In your JSON response, you must return the full trigger object for "${trigger.name}".
+            - Awareness Stage: "${awarenessStage}"
+            - Format: "${format}"
+            - Placement: "${placement}"
+        - **Carousel Arc Guidance (if applicable)**: ${carouselArcGuidance}
         ---
-        **BRIEF (Dasar Anda):**
-        - Produk: ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
-        - **Penawaran Strategis**: ${offer.name} - ${offer.description} (CTA: ${blueprint.adDna.cta})
-        - **DNA Penjualan**:
-            - Formula Persuasi: "${blueprint.adDna.persuasionFormula}"
-            - Nada Suara: "${blueprint.adDna.toneOfVoice}"
-        - **DNA Gaya Visual Asli: "${blueprint.adDna.visualStyle}"**
-        - **Negara Target untuk Lokalisasi: "${blueprint.adDna.targetCountry}"**
-        - **Persona Target**: "${persona.description}" (Usia: "${persona.age}", Tipe: "${persona.creatorType}", Poin Masalah: ${persona.painPoints.join(', ')})
-        - **Mandat Kreatif**:
-            - Sudut Pandang: "${angle}"
-            - 🔥 Pemicu Psikologis: "${trigger.name}" (Deskripsi: ${trigger.description}). Dalam respons JSON Anda, Anda harus mengembalikan objek pemicu lengkap untuk "${trigger.name}".
-            - Tahap Kesadaran: "${awarenessStage}"
-            - Format: "${format}" (Panduan: ${formatInstructions[format]})
-            - Penempatan: "${placement}" (Panduan: ${placementInstructions[placement]})
-
-        **🔥 DAFTAR PERIKSA IMPLEMENTASI PEMICU untuk "${trigger.name}":**
-        COPY Anda harus menyertakan setidaknya SATU dari ini: ${triggerChecklist.copyMust.join(', ')}.
-        PROMPT VISUAL Anda harus menyertakan setidaknya SATU dari ini: ${triggerChecklist.visualMust.join(', ')}.
-        ⚠️ Jika konsep Anda tidak lolos pemeriksaan ini, itu GAGAL.
-        
-        ---
-        **PROSES PEMBUATAN UNTUK SETIAP DARI 3 KONSEP (Emosional, Logis, Sosial):**
-
-        **LANGKAH 1: Tulis Kata-kata (Mode Copywriter)**
-        1.  **HOOK:** Hasilkan hook kelas dunia yang menghentikan guliran.
-        2.  **HEADLINE:** Anda HARUS menggunakan salah satu formula ini untuk tahap "${awarenessStage}", menyesuaikannya dengan pintu masuk yang Anda pilih.
-            ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f}`).join('\n')}
-        3.  Teks harus selaras dengan pemicu "${trigger.name}", penawaran "${offer.name}", dan dilokalkan untuk ${blueprint.adDna.targetCountry}.
-
-        **LANGKAH 2: Visualisasikan Pesan (Mode Art Director)**
-        - Buat **visualPrompt** yang terperinci menggunakan **TEMPLATE PROMPT VISUAL** INI TEPAT:
-
-        **TEMPLATE PROMPT VISUAL (Isi setiap bagian secara eksplisit):**
-        [ELEMEN PENGHENTI GULIRAN] Satu objek/aksi tak terduga: ...
-        [EMOSI & EKSPRESI] Perasaan inti subjek: ... | Detail ekspresi wajah: ...
-        [OTENTISITAS PERSONA] Latar untuk ${persona.description} di ${blueprint.adDna.targetCountry}: ... | Gaya subjek yang otentik dengan ${persona.creatorType}: ...
-        [PENARGETAN AI META] Bagaimana visual ini menargetkan persona melalui piksel untuk dibaca oleh algoritma Meta (misalnya, untuk berpenghasilan tinggi, jelaskan 'kantor rumah minimalis, mewah'; untuk Gen Z, 'kamar kos trendi dengan ring light'): ...
-        [VISUALISASI PEMICU untuk "${trigger.name}"] Bagaimana adegan menunjukkan ${trigger.name} (Harus menggunakan salah satu dari: ${triggerChecklist.visualMust.join('; ')}): ...
-        [PENEMPATAN PRODUK] Di mana/bagaimana produk muncul: ...
-        [FUSI DNA GAYA] DNA Asli: "${blueprint.adDna.visualStyle}" | Palet warna yang dihasilkan: ... | Suasana hati yang dihasilkan: ...
-        [SPESIFIKASI TEKNIS] Komposisi untuk '${placement}': "${COMPOSITION_FOR_ADS[placement]}" | Rasio aspek: ${placement === 'Instagram Story' ? '9:16 vertikal' : placement === 'Instagram Feed' ? '1:1 atau 4:5' : 'dioptimalkan untuk iklan digital'}. | Sudut kamera: ... | Pencahayaan: ...
-
-        **LANGKAH 3: Isi Bukti Implementasi Pemicu**
-        - Untuk setiap konsep, isi objek 'triggerImplementationProof' di JSON.
-        
-        ---
-        
-        **PEMERIKSAAN KUALITAS INTERNAL SEBELUM MERESPONS:**
-        Untuk setiap konsep yang Anda buat, tanyakan pada diri sendiri:
-        1.  Apakah prompt visual MEMPERKUAT inti emosional dari hook/headline?
-        2.  Jika saya menunjukkan gambar ini TANPA teks, apakah masih akan membangkitkan perasaan yang benar?
-        3.  **ATURAN ENTITY ID META**: Apakah prompt visual untuk konsep Emosional, Logis, dan Sosial berbeda secara fundamental? Mereka HARUS menggunakan latar, komposisi, sudut kamera, dan ekspresi emosional yang berbeda untuk menghindari kejenuhan kreatif dan penalti platform.
-        
-        ---
-
-        Sekarang, hasilkan array berisi 3 objek JSON menggunakan proses di atas. Patuhi skema JSON yang disediakan dengan ketat. Untuk 'adSetName', ikuti format ini: [PersonaSingkat]_[KataKunciSudutPandang]_[Pemicu]_[Kesadaran]_[Format]_[Penempatan]_v[1, 2, atau 3]. Untuk bidang 'offer', Anda HARUS mengembalikan objek penawaran lengkap yang cocok dengan Penawaran Strategis.
-        Hanya berikan respons berupa array JSON.
     `;
+
+    const prompt = `
+You are an expert direct response copywriter specializing in paid advertising. Your task is to write static ad headlines and generate corresponding visual concepts that stop cold traffic, communicate value instantly, and drive conversions. Every output must be optimized for users who have NEVER heard of the brand before.
+
+## Core Principles (Non-Negotiable Rules)
+- **Assume Zero Brand Awareness:** Write for someone scrolling fast who knows nothing about you. The headline must be self-explanatory in 2 seconds.
+- **Cold Audience First = Scalability:** Headlines that only convert warm audiences CANNOT scale. Cold-optimized headlines work for both cold AND warm traffic.
+- **Clarity Always Beats Cleverness:** Clear > Clever, every single time. No puns, wordplay, or inside jokes.
+- **Lead with Problem or Outcome (Never Features):** Start with what the user cares about: their pain or desired result.
+- **Specificity = Credibility:** Vague claims = ignored. Numbers, timeframes, concrete details = trust.
+
+## ENTITY ID BREAKING RULES (MANDATORY FOR SCALING)
+Meta's Andromeda system groups ads with similar first 3 seconds under the same Entity ID. If Entity IDs match = ❌ No new learning, No incremental reach. For EACH new concept variation, you MUST change at least 3 of these: Setting/Location, Subject's Age/Appearance, Camera Angle, Lighting Style, Action/Movement, Color Dominance.
+
+## The Copy-First Workflow (Non-Negotiable)
+1.  **Step 1: Write the Words (Copywriter Mode):** Focus ONLY on the text. Write a scroll-stopping Hook, a Headline using the library below, brief Body Copy, and a clear CTA.
+2.  **Step 2: Visualize the Message (Art Director Mode):** With copy finalized, ask: "What single image makes this copy 10x more powerful?" Use the Visual Prompt Architecture to construct a prompt that is a direct, strategic interpretation of the words.
+
+## Headline Formula Library
+Use these proven structures. Choose a formula that best suits the hook and audience awareness.
+- **Formula 1: Problem + Solution:** "[Painful Problem]? → [Your Solution]"
+- **Formula 2: Outcome + Timeframe + Proof Element:** "[Specific Result] in [Time] ([Optional: Without X])"
+- **Formula 3: Number-Based Credibility:** "[Number] [Type of People/Things] That [Achieved Result]"
+- **Formula 4: Problem-Focused Question:** "[Relatable Pain Point]?"
+- **Formula 5: Negation (Remove the Pain):** "No More [Pain]" / "Stop [Bad Thing]"
+- **Formula 6: Before/After Transformation:** "From [Bad State] to [Good State] in [Timeframe]"
+- **Formula 7: Direct Command (Action + Benefit):** "[Power Verb] [Specific Benefit]"
+- **Formula 8: Contrarian/Pattern Interrupt:** "Stop [Common Advice] (Here's Why)"
+
+## Psychological Trigger Implementation Checklist for "${trigger.name}"
+Your concept MUST pass BOTH a copy and a visual test for the trigger.
+- **Copy Must Include (check at least 1):** ${triggerChecklist.copyMust.join('; ')}
+- **Visual Must Show (check at least 1):** ${triggerChecklist.visualMust.join('; ')}
+
+## Visual Prompt Architecture (9-Block Framework)
+When creating visual prompts, use this exact structure for maximum clarity and impact.
+- **Block 1: Pattern Interrupt (The Scroll-Stopper):** Describe ONE unexpected visual element.
+- **Block 2: Emotional Anchor (The Human Element):** Core Feeling & detailed Facial Expression.
+- **Block 3: Commercial Goal (The Ad's Job):** Start with a phrase like "A high-converting ad image..."
+- **Block 4: Scene Foundation (The Context):** Ultra-specific Setting and Time/Lighting.
+- **Block 5: Subject (The Persona):** Define the main character of the ad.
+- **Block 6: Trigger Visualization (The Psychology):** How does the scene physically SHOW the psychological trigger?
+- **Block 7: Product Integration (The Hero):** Place the product as the clear solution.
+- **Block 8: Style DNA Fusion (The Aesthetic):** Define the artistic direction.
+- **Block 9: Technical Specs (The Execution):** Quality, Composition ("${COMPOSITION_FOR_ADS[placement]}"), Aspect Ratio.
+
+## Carousel-Specific Strategy (5-Slide Story Arcs)
+If creating a carousel, follow the provided guidance and structure it as a 5-slide story. Maintain a consistent visual theme and text placement. The final slide must be a clear CTA.
+
+## Mandatory Variation Strategy for A/B Testing: The Three Entry Points Framework
+You MUST generate three truly different ad concepts for testing, one for each entry point:
+- **Variant A - Emotional Entry:** Leads with feeling, identity, or aspiration. (Best for Top of Funnel)
+- **Variant B - Logical Entry:** Leads with logic, proof, data, or a unique mechanism. (Best for Middle of Funnel)
+- **Variant C - Social Entry:** Leads with community, tribe, or social proof. (Best for Bottom of Funnel)
+
+Each variant MUST have a fundamentally different visual fingerprint to break the Entity ID.
+
+${brief}
+
+Now, based on all the rules and the brief, generate an array of 3 unique ad concept JSON objects.
+- Each object must follow the provided schema.
+- Each must represent one of the three entry points (Emotional, Logical, Social).
+- Each must have a unique visual prompt to ensure different Entity IDs.
+- For 'adSetName', follow this format: [PersonaBrief]_[AngleKeyword]_[Trigger]_[Awareness]_[Format]_[Placement]_v[1, 2, or 3].
+- For the 'offer' field, you MUST return the full offer object from the Strategic Offer in the brief.
+- Provide JSON output only.
+`;
     
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',

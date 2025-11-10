@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CampaignBlueprint, MindMapNode, AdConcept, AwarenessStage, CreativeFormat, PlacementFormat, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject } from '../types';
-import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon, ShieldAlertIcon, HeartIcon, HeartCrackIcon, TagIcon } from './icons';
+import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon, ShieldAlertIcon, HeartIcon, HeartCrackIcon, TagIcon, ZapIcon } from './icons';
 import { CreativeCard } from './CreativeCard';
 
 // Layout Constants
@@ -88,16 +88,21 @@ const DnaNode: React.FC<{ node: MindMapNode }> = ({ node }) => {
     );
 };
 
-const PersonaNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => {
+const PersonaNode: React.FC<{ 
+    node: MindMapNode, 
+    onToggle: (id: string) => void,
+    onGenerateConcepts: (id: string) => void,
+    hasPainDesireChildren: boolean
+}> = ({ node, onToggle, onGenerateConcepts, hasPainDesireChildren }) => {
     const { persona } = node.content as { persona: TargetPersona };
     return (
         <div
-            onClick={() => onToggle(node.id)}
-            className={`relative p-3 w-full h-full rounded-lg shadow-lg flex flex-col justify-between text-center transition-all duration-300 cursor-pointer
+            className={`relative p-3 w-full h-full rounded-lg shadow-lg flex flex-col justify-between text-center transition-all duration-300
             ${node.isExpanded
                 ? 'bg-brand-surface border-2 border-gray-700'
-                : 'bg-purple-600 hover:bg-purple-500 border-2 border-purple-600 transform hover:scale-105'}`
+                : 'bg-purple-600 hover:bg-purple-500 border-2 border-purple-600 transform hover:scale-105 cursor-pointer'}`
             }
+            onClick={!node.isExpanded ? () => onToggle(node.id) : undefined}
         >
             <UsersIcon className="w-5 h-5 absolute top-2 right-2 text-purple-200" />
             <div>
@@ -107,8 +112,24 @@ const PersonaNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void 
                     <span className={`text-xs px-2 py-0.5 rounded-full ${node.isExpanded ? 'bg-gray-800 text-gray-300' : 'bg-purple-700 text-purple-100'}`}>{persona.creatorType}</span>
                 </div>
             </div>
-            {!node.isExpanded && (
-                 <p className="text-xs text-purple-200 mt-2">Click to analyze Pain/Desire</p>
+            {node.isExpanded ? (
+                <div className="mt-auto pt-2 space-y-2">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onGenerateConcepts(node.id); }}
+                        className="w-full text-xs bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 p-2 rounded-md flex items-center justify-center gap-1 font-bold"
+                        title="Quickly generate a diverse set of ad concepts for this persona."
+                    >
+                        <ZapIcon className="w-3 h-3" /> Quick-Generate Concepts
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onToggle(node.id); }}
+                        className="w-full text-xs bg-gray-700 hover:bg-gray-600 p-2 rounded-md"
+                    >
+                        {hasPainDesireChildren ? (node.isExpanded ? 'Hide Manual Exploration' : 'Show Manual Exploration') : 'Explore Pain/Desire Manually'}
+                    </button>
+                </div>
+            ) : (
+                 <p className="text-xs text-purple-200 mt-2">Click to explore</p>
             )}
         </div>
     );
@@ -291,6 +312,7 @@ const PlacementNode: React.FC<{ node: MindMapNode, onClick: (id: string) => void
 
 const NodeComponent: React.FC<{
     node: MindMapNode;
+    nodes: MindMapNode[];
     onTogglePersona: (id: string) => void;
     onTogglePainDesire: (id: string) => void;
     onToggleObjection: (id: string) => void;
@@ -307,13 +329,16 @@ const NodeComponent: React.FC<{
     onDeleteNode: (id: string) => void;
     onNodeHover: (id: string | null, event: React.MouseEvent | null) => void;
     onEducationHover: (type: 'angle' | 'trigger' | null, event: React.MouseEvent | null) => void;
+    onGenerateConceptsForPersona: (id: string) => void;
 }> = (props) => {
-    const { node, onTogglePersona, onTogglePainDesire, onToggleObjection, onToggleOffer, onToggleAngle, onToggleTrigger, onToggleAwareness, onToggleFormat, onPlacementClick, onDeleteNode, onNodeHover, onEducationHover } = props;
+    const { node, nodes, onTogglePersona, onTogglePainDesire, onToggleObjection, onToggleOffer, onToggleAngle, onToggleTrigger, onToggleAwareness, onToggleFormat, onPlacementClick, onDeleteNode, onNodeHover, onEducationHover } = props;
     
+    const hasPainDesireChildren = useMemo(() => nodes.some(n => n.parentId === node.id && n.type === 'pain_desire'), [nodes, node.id]);
+
     return (
         <div className="node-container group relative" onMouseEnter={(e) => onNodeHover(node.id, e)} onMouseLeave={() => onNodeHover(null, null)}>
             {node.type === 'dna' && <DnaNode node={node} />}
-            {node.type === 'persona' && <PersonaNode node={node} onToggle={onTogglePersona} />}
+            {node.type === 'persona' && <PersonaNode node={node} onToggle={onTogglePersona} onGenerateConcepts={props.onGenerateConceptsForPersona} hasPainDesireChildren={hasPainDesireChildren}/>}
             {node.type === 'pain_desire' && <PainDesireNode node={node} onToggle={onTogglePainDesire} />}
             {node.type === 'objection' && <ObjectionNode node={node} onToggle={onToggleObjection} />}
             {node.type === 'offer' && <OfferNode node={node} onToggle={onToggleOffer} />}
@@ -375,14 +400,25 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
         };
         const spacing = Y_SPACING_MAP[node.type] || 20;
 
-        if (node.type === 'placement') {
-            const groupSize = 3;
-            const numInTallestGroup = Math.min(children.length, groupSize);
-            if (numInTallestGroup === 0) return node.height || 0;
+        if (node.type === 'placement' || (node.type === 'persona' && children.some(c => c.type === 'creative'))) {
+            const creatives = children.filter(c => c.type === 'creative');
+            const otherChildren = children.filter(c => c.type !== 'creative');
             
-            const creativeHeight = children[0].height || 240;
-            const groupHeight = (numInTallestGroup * creativeHeight) + ((numInTallestGroup - 1) * spacing);
-            return Math.max(node.height || 0, groupHeight);
+            let totalHeight = 0;
+            if(otherChildren.length > 0) {
+                 totalHeight += otherChildren.reduce((acc, child) => {
+                    return acc + getSubtreeHeight(child.id) + spacing;
+                }, -spacing);
+            }
+
+            if (creatives.length > 0) {
+                const groupSize = 3;
+                const numRows = Math.ceil(creatives.length / groupSize);
+                const creativeHeight = creatives[0].height || 240;
+                const creativesHeight = (numRows * creativeHeight) + ((numRows - 1) * spacing);
+                totalHeight += (totalHeight > 0 ? spacing * 2 : 0) + creativesHeight;
+            }
+            return Math.max(node.height || 0, totalHeight);
         }
 
         const totalChildrenHeight = children.reduce((acc, child) => {
@@ -430,34 +466,14 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
         };
         const ySpacing = Y_SPACING_MAP[parentNode.type] || 20;
 
-        if (parentNode.type === 'placement') {
-            const creatives = children;
-            const groupSize = 3;
-            const groupHorizontalSpacing = 40;
-            const groupWidth = (creatives[0]?.width || 160) + groupHorizontalSpacing;
-            const creativeHeight = creatives[0]?.height || 240;
-
-            const subtreeHeight = getSubtreeHeight(parentId);
-            const startY = parentY + parentHeight / 2 - subtreeHeight / 2;
-
-            creatives.forEach((child, index) => {
-                const groupIndex = Math.floor(index / groupSize);
-                const indexInGroup = index % groupSize;
-                
-                const childX = parentX + xSpacing + (groupIndex * groupWidth);
-                const childY = startY + (indexInGroup * (creativeHeight + ySpacing));
-
-                child.position = { x: childX, y: childY };
-                laidOutNodes.set(child.id, { ...child });
-            });
-            return;
-        }
-
-
-        const totalSubtreeHeight = children.reduce((acc, child) => acc + getSubtreeHeight(child.id) + ySpacing, -ySpacing);
+        const creatives = children.filter(c => c.type === 'creative');
+        const otherChildren = children.filter(c => c.type !== 'creative');
+        
+        const totalSubtreeHeight = getSubtreeHeight(parentId);
         let currentChildY = parentY + parentHeight / 2 - totalSubtreeHeight / 2;
-
-        children.forEach(child => {
+        
+        // Layout non-creative children first
+        otherChildren.forEach(child => {
             const subtreeHeight = getSubtreeHeight(child.id);
             child.position = {
                 x: parentX + xSpacing,
@@ -470,6 +486,31 @@ const calculateLayout = (nodes: MindMapNode[]): MindMapNode[] => {
             }
             currentChildY += subtreeHeight + ySpacing;
         });
+
+        if (creatives.length > 0) {
+            if(otherChildren.length > 0) {
+                 currentChildY += ySpacing * 2;
+            }
+            const groupSize = 3;
+            const groupHorizontalSpacing = 40;
+            const groupWidth = (creatives[0]?.width || 160) + groupHorizontalSpacing;
+            const creativeHeight = creatives[0]?.height || 240;
+            
+            const numRows = Math.ceil(creatives.length / groupSize);
+            const creativesBlockHeight = (numRows * creativeHeight) + ((numRows - 1) * ySpacing);
+            const startY = currentChildY;
+
+            creatives.forEach((child, index) => {
+                const rowIndex = index % groupSize;
+                const colIndex = Math.floor(index / groupSize);
+
+                const childX = parentX + xSpacing + (colIndex * groupWidth);
+                const childY = startY + (rowIndex * (creativeHeight + ySpacing));
+
+                child.position = { x: childX, y: childY };
+                laidOutNodes.set(child.id, { ...child });
+            });
+        }
     };
     
     layoutChildren(dnaNode.id, dnaNode.position.x, dnaNode.position.y, dnaNode.height || 0);
@@ -507,6 +548,7 @@ interface MindMapViewProps {
     onReset: () => void;
     onGenerateMorePersonas: () => void;
     onAddCustomPersona: () => void;
+    onGenerateConceptsForPersona: (nodeId: string) => void;
 }
 
 export const MindMapView: React.FC<MindMapViewProps> = (props) => {
@@ -812,7 +854,7 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                         <foreignObject key={node.id} x={node.position.x} y={node.position.y} width={node.width} height={node.height} style={{pointerEvents: "auto"}}>
                             <NodeComponent 
                                 {...props} 
-                                node={node} 
+                                node={node}
                                 onPlacementClick={handlePlacementClick}
                                 onNodeHover={handleNodeHover}
                                 onEducationHover={handleEducationHover}

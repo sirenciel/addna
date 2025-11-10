@@ -112,7 +112,7 @@ function App() {
         position: { x: 0, y: 0 },
         isExpanded: false,
         width: 250,
-        height: 140,
+        height: 180,
     };
 
     setNodes([dnaNode, initialPersonaNode]);
@@ -146,7 +146,7 @@ function App() {
             content: { persona },
             position: { x: 0, y: 0 },
             isExpanded: false,
-            width: 250, height: 140,
+            width: 250, height: 180,
         }));
         
         setNodes([dnaNode, ...personaNodes]);
@@ -211,7 +211,7 @@ const handleStartUgcDiversityPack = async (validatedBlueprint: CampaignBlueprint
             content: { persona },
             position: { x: 0, y: 0 },
             isExpanded: false,
-            width: 250, height: 140,
+            width: 250, height: 180,
         }));
         
         setNodes([dnaNode, ...personaNodes]);
@@ -276,7 +276,7 @@ const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint
             content: { persona },
             position: { x: 0, y: 0 },
             isExpanded: false,
-            width: 250, height: 140,
+            width: 250, height: 180,
         }));
         
         setNodes([dnaNode, ...personaNodes]);
@@ -340,7 +340,7 @@ const handleStartHpAuthorityPack = async (validatedBlueprint: CampaignBlueprint)
             content: { persona: initialPersona },
             position: { x: 0, y: 0 },
             isExpanded: true, 
-            width: 250, height: 140,
+            width: 250, height: 180,
         };
         
         setNodes([dnaNode, personaNode]);
@@ -375,7 +375,7 @@ const handleStartHpAuthorityPack = async (validatedBlueprint: CampaignBlueprint)
       const personaNode = nodes.find(n => n.id === nodeId);
       if (!personaNode || !campaignBlueprint) return;
   
-      const childrenExist = nodes.some(n => n.parentId === nodeId);
+      const childrenExist = nodes.some(n => n.parentId === nodeId && n.type === 'pain_desire');
   
       if (childrenExist) {
           setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
@@ -879,7 +879,7 @@ const handleStartHpAuthorityPack = async (validatedBlueprint: CampaignBlueprint)
             content: { persona },
             position: { x: 0, y: 0 },
             isExpanded: false,
-            width: 250, height: 140,
+            width: 250, height: 180,
         }));
         setNodes(prev => [...prev, ...newPersonaNodes]);
     } catch (e: any) {
@@ -910,10 +910,63 @@ const handleStartHpAuthorityPack = async (validatedBlueprint: CampaignBlueprint)
         content: { persona: newPersona },
         position: { x: 0, y: 0 },
         isExpanded: false,
-        width: 250, height: 140,
+        width: 250, height: 180,
     };
     setNodes(prev => [...prev, newPersonaNode]);
   };
+
+  const handleGenerateConceptsForPersona = async (nodeId: string) => {
+    if (!campaignBlueprint) return;
+    const personaNode = nodes.find(n => n.id === nodeId);
+    if (!personaNode || personaNode.type !== 'persona') {
+        setError("Persona node not found.");
+        return;
+    }
+
+    const existingCreatives = nodes.some(n => n.parentId === nodeId && n.type === 'creative');
+    if (existingCreatives) {
+        if (!window.confirm("Konsep sudah ada untuk persona ini. Tetap hasilkan lagi?")) {
+            return;
+        }
+    }
+
+    setIsLoading(true);
+    setLoadingMessage(`Menghasilkan konsep untuk persona "${personaNode.label}"...`);
+    
+    try {
+        const persona = (personaNode.content as { persona: TargetPersona }).persona;
+        const newConcepts = await generateConceptsFromPersona(campaignBlueprint, persona, nodeId);
+
+        const taggedConcepts = newConcepts.map(c => ({ 
+            ...c, 
+            campaignTag: `Quick-Gen ${persona.description.substring(0, 15)}...`
+        }));
+
+        const creativeNodes: MindMapNode[] = taggedConcepts.map(concept => ({
+            id: concept.id,
+            parentId: nodeId, // Link directly to persona
+            type: 'creative',
+            label: concept.headline,
+            content: { concept },
+            position: { x: 0, y: 0 },
+            width: 160,
+            height: 240,
+        }));
+        
+        setNodes(prev => [
+            ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
+             ...creativeNodes
+        ]);
+        setViewMode('gallery');
+
+    } catch (e: any) {
+        console.error("Quick-Gen for persona failed:", e);
+        setError(e.message || "Gagal menjalankan Quick-Gen untuk persona.");
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+};
 
   // --- Smart Remix Handlers ---
 
@@ -1157,6 +1210,7 @@ const handleStartHpAuthorityPack = async (validatedBlueprint: CampaignBlueprint)
                         onReset={handleReset}
                         onGenerateMorePersonas={handleGenerateMorePersonas}
                         onAddCustomPersona={handleAddCustomPersona}
+                        onGenerateConceptsForPersona={handleGenerateConceptsForPersona}
                     />
                 ) : (
                     <ConceptGallery 
