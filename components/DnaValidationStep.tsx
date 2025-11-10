@@ -29,31 +29,28 @@ const WorkflowCard: React.FC<{
     icon: string;
     title: string;
     description: string;
+    why: string;
     onClick: () => void;
     recommended?: boolean;
-    disabled?: boolean;
-}> = ({ icon, title, description, onClick, recommended = false, disabled = false }) => (
+}> = ({ icon, title, description, why, onClick, recommended = false }) => (
     <div
-        onClick={!disabled ? onClick : undefined}
-        className={`relative p-6 border rounded-xl h-full flex flex-col justify-between transition-all duration-200 ${
-            disabled
-                ? 'bg-gray-800/50 border-gray-700 cursor-not-allowed text-gray-500'
-                : 'bg-brand-surface hover:border-brand-primary hover:scale-105 hover:shadow-2xl hover:shadow-brand-primary/20 cursor-pointer border-gray-700'
-        }`}
+        onClick={onClick}
+        className={`relative p-5 border rounded-xl h-full flex flex-col justify-between transition-all duration-200 bg-brand-surface hover:border-brand-primary hover:scale-105 hover:shadow-2xl hover:shadow-brand-primary/20 cursor-pointer ${recommended ? 'border-brand-primary' : 'border-gray-700'}`}
     >
-        {recommended && !disabled && (
-            <div className="absolute -top-3 right-4 bg-brand-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+        {recommended && (
+            <div className="absolute -top-3 right-4 bg-brand-secondary text-white text-xs font-bold px-3 py-1 rounded-full">
                 DIREKOMENDASIKAN
             </div>
         )}
         <div>
-            <div className="text-4xl mb-4">{icon}</div>
-            <h3 className={`font-bold text-xl ${disabled ? '' : 'text-brand-text-primary'}`}>{title}</h3>
-            <p className={`text-sm mt-2 ${disabled ? 'text-gray-600' : 'text-brand-text-secondary'}`}>{description}</p>
+            <div className="text-3xl mb-3">{icon}</div>
+            <h3 className={`font-bold text-lg text-brand-text-primary`}>{title}</h3>
+            <p className={`text-sm mt-2 text-brand-text-secondary`}>{description}</p>
         </div>
-        {disabled && (
-            <p className="text-xs font-semibold uppercase mt-4 text-center">SEGERA HADIR</p>
-        )}
+        <div className="mt-4 pt-3 border-t border-gray-700">
+            <p className="text-xs font-semibold text-brand-primary">MENGAPA INI EFEKTIF:</p>
+            <p className="text-xs mt-1 text-gray-400">{why}</p>
+        </div>
     </div>
 );
 
@@ -149,75 +146,58 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
             <p className="text-brand-text-secondary mt-2 text-lg">Bagaimana Anda ingin menghasilkan konsep iklan baru?</p>
         </div>
 
-        <div className="w-full max-w-5xl">
+        <div className="w-full max-w-6xl">
+            {/* Recommended Workflow */}
             <div
               onClick={() => onWorkflowSelected(blueprint, 'one-click-campaign')}
               className="w-full p-6 mb-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/30 cursor-pointer"
             >
-              <h3 className="text-2xl font-bold mb-2 text-white flex items-center gap-2">
-                <RemixIcon className="w-6 h-6" /> Kampanye Keragaman Sekali Klik
-              </h3>
-              <p className="text-sm text-purple-200">Hasilkan 27 konsep yang berbeda secara fundamental dalam ~2 menit untuk menemukan pemenang tersembunyi dengan cepat.</p>
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs text-purple-200 border-t border-purple-400/30 pt-3">
-                <div>
-                    <p className="font-bold text-white">3 Persona</p>
-                    <p>mis. 18-24, 25-34, 35-44</p>
-                </div>
-                <div>
-                    <p className="font-bold text-white">3 Format</p>
-                    <p>mis. UGC, S&S, Penawaran</p>
-                </div>
-                <div>
-                    <p className="font-bold text-white">3 Pemicu</p>
-                    <p>mis. Bukti Sosial, Otoritas</p>
-                </div>
-                 <div>
-                    <p className="font-bold text-white">Pecah Entity ID</p>
-                    <p>Jangkauan & pembelajaran maks</p>
-                </div>
+              <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-2xl font-bold mb-1 text-white flex items-center gap-2">
+                        <RemixIcon className="w-6 h-6" /> Kampanye Keragaman Sekali Klik
+                    </h3>
+                    <p className="text-sm text-purple-200">Hasilkan 9 konsep yang berbeda secara fundamental dalam ~2 menit untuk menemukan pemenang tersembunyi dengan cepat.</p>
+                  </div>
+                  <div className="bg-white text-purple-700 font-bold text-xs px-3 py-1 rounded-full flex-shrink-0">
+                      DIREKOMENDASIKAN
+                  </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-purple-400/50">
+                  <p className="text-xs font-semibold text-white">MENGAPA INI EFEKTIF:</p>
+                  <p className="text-xs mt-1 text-purple-200">Strategi Meta modern memprioritaskan pemberian keragaman kreatif (visual & persona) kepada algoritma untuk menemukan kantong audiens yang menguntungkan. Alur kerja ini mengotomatiskan praktik terbaik tersebut.</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                 <WorkflowCard
-                    icon="🎬"
-                    title="Paket Keragaman Kreator UGC"
-                    description="Hasilkan 12+ konsep dari 4 persona kreator yang beragam untuk memaksimalkan jangkauan dan menghindari kejenuhan kreatif."
-                    onClick={() => onWorkflowSelected(blueprint, 'ugc-diversity-pack')}
-                    recommended={true}
+
+            {/* Other Workflows */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <WorkflowCard
+                    icon="🎓"
+                    title="Penelusuran Mendalam Manual"
+                    description="Jelajahi setiap langkah strategis dari persona hingga penempatan untuk kontrol kreatif penuh."
+                    why="Gunakan ini untuk memahami psikologi audiens Anda secara mendalam atau ketika Anda memiliki hipotesis yang sangat spesifik untuk diuji. Peringatan: Pastikan untuk menciptakan keragaman visual secara manual."
+                    onClick={() => onWorkflowSelected(blueprint, 'deep-dive')}
                 />
-                 <WorkflowCard
-                    icon="🚀"
-                    title="Skala Cepat"
-                    description="Hasilkan 3-5 variasi persona dan 9-15 konsep iklan awal secara otomatis dan instan."
+                <WorkflowCard
+                    icon="⚡"
+                    title="Skala Cepat (Remix Cerdas)"
+                    description="Hasilkan variasi cepat pada 3 persona yang berbeda untuk mengidentifikasi audiens baru dengan cepat."
+                    why="Menguji motivator persona yang berbeda adalah cara tercepat untuk membuka audiens baru. Ini sangat ideal untuk menskalakan kampanye yang sudah berhasil."
                     onClick={() => onWorkflowSelected(blueprint, 'quick-scale')}
                 />
                 <WorkflowCard
-                    icon="🧭"
-                    title="Penelusuran Strategis Mendalam"
-                    description="Jelajahi secara manual jalur strategis satu persona dari poin masalah hingga format kreatif."
-                    onClick={() => onWorkflowSelected(blueprint, 'deep-dive')}
+                    icon="🤳"
+                    title="Paket Keragaman UGC"
+                    description="Buat 4 konsep UGC yang otentik, masing-masing dari sudut pandang kreator yang berbeda."
+                    why="Data Meta menunjukkan kampanye UGC dengan 4-5 sudut pandang kreator yang beragam mengungguli kampanye kreator tunggal. Ini adalah cara tercepat untuk mendapatkan bukti sosial yang otentik."
+                    onClick={() => onWorkflowSelected(blueprint, 'ugc-diversity-pack')}
                 />
             </div>
-            <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 w-full mb-6">
-                <div className="flex items-start space-x-2">
-                    <input
-                        type="checkbox"
-                        id="allowVisualExploration"
-                        checked={allowVisualExploration}
-                        onChange={(e) => onAllowVisualExplorationChange(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-primary focus:ring-brand-primary mt-1 flex-shrink-0"
-                    />
-                    <label htmlFor="allowVisualExploration" className="text-sm text-brand-text-secondary text-left">
-                        <span className="font-semibold text-brand-text-primary">Aktifkan Diferensiasi Visual (Pecah Entity ID):</span> Hasilkan gaya visual yang berbeda untuk menjangkau audiens baru. Direkomendasikan untuk meningkatkan skala iklan yang berhasil.
-                    </label>
-                </div>
-            </div>
-            <div className="text-center">
-              <button type="button" onClick={onBack} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">
-                  Kembali ke Unggah
-              </button>
-            </div>
+        </div>
+
+        <div className="mt-8 flex items-center justify-center gap-6">
+             <button onClick={onBack} className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold">Kembali</button>
         </div>
     </div>
   );
-};
+}

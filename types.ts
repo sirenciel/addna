@@ -158,7 +158,7 @@ export type PivotConfig = {
     targetPlatform?: 'TikTok' | 'Facebook' | 'YouTube';
 };
 
-export type AdDnaComponent = 'persona' | 'painDesire' | 'trigger' | 'format' | 'placement' | 'awareness' | 'angle' | 'offer' | 'visualVehicle';
+export type AdDnaComponent = 'persona' | 'painDesire' | 'trigger' | 'format' | 'placement' | 'awareness' | 'angle' | 'offer' | 'visualVehicle' | 'objection';
 
 export interface AdDna {
     persona: TargetPersona;
@@ -169,8 +169,7 @@ export interface AdDna {
     awareness: AwarenessStage;
     angle: string;
     offer: OfferTypeObject;
-    // Contextual, for remixing
-    objection?: ObjectionObject;
+    objection: ObjectionObject;
 }
 
 export interface RemixSuggestion {

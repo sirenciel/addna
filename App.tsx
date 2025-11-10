@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { InputForm } from './components/InputForm';
 import { DnaValidationStep } from './components/DnaValidationStep';
@@ -5,13 +6,10 @@ import { MindMapView } from './components/MindMapView';
 import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
-import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDna, NodeType, AdDnaComponent, RemixSuggestion } from './types';
-// FIX: Changed import from generateUgcConceptsForPersona to generateConceptsFromPersona as it does not exist.
-import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails, generateQuickPivot, generateRemixSuggestions, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack, generateMatrixConcepts } from './services/geminiService';
+import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject, AdDna, NodeType, AdDnaComponent, RemixSuggestion } from './types';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack, generateMatrixConcepts, generateRemixSuggestions } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
-import { EvolveModal } from './components/EvolveModal';
-import { QuickPivotModal } from './components/QuickPivotModal';
 import { RemixDashboard } from './components/RemixDashboard';
 
 
@@ -50,8 +48,6 @@ function App() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingConceptId, setEditingConceptId] = useState<string | null>(null);
-  const [evolutionTarget, setEvolutionTarget] = useState<AdConcept | null>(null);
-  const [pivotTarget, setPivotTarget] = useState<AdConcept | null>(null);
   const [remixTarget, setRemixTarget] = useState<AdConcept | null>(null);
   const [remixDna, setRemixDna] = useState<AdDna | null>(null);
   const [remixingComponent, setRemixingComponent] = useState<AdDnaComponent | null>(null);
@@ -202,7 +198,6 @@ const handleStartUgcDiversityPack = async (validatedBlueprint: CampaignBlueprint
         };
         
         setLoadingMessage('Menghasilkan 4 variasi persona beragam untuk paket UGC...');
-        // FIX: Removed extra argument from generatePersonaVariations call.
         const newPersonas = await generatePersonaVariations(validatedBlueprint, [validatedBlueprint.targetPersona]);
         const allPersonas = [validatedBlueprint.targetPersona, ...newPersonas];
 
@@ -221,8 +216,7 @@ const handleStartUgcDiversityPack = async (validatedBlueprint: CampaignBlueprint
 
         setLoadingMessage(`Menghasilkan konsep UGC untuk ${allPersonas.length} persona...`);
         const conceptPromises = allPersonas.map((persona, index) => 
-            // FIX: Changed generateUgcConceptsForPersona to generateConceptsFromPersona as it does not exist.
-            generateConceptsFromPersona(validatedBlueprint, persona, personaNodes[index].id)
+            generateUgcPack(validatedBlueprint, persona, personaNodes[index].id)
         );
 
         const conceptArrays = await Promise.all(conceptPromises);
@@ -286,11 +280,10 @@ const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint
         setNodes([dnaNode, ...personaNodes]);
         
         const formats: CreativeFormat[] = ['UGC', 'Sebelum & Sesudah', 'Penawaran Langsung'];
-        const triggerNames = ['Bukti Sosial', 'Otoritas', 'Kelangkaan'];
 
-        setLoadingMessage(`Menghasilkan 27 konsep untuk ${allPersonas.length} persona...`);
+        setLoadingMessage(`Menghasilkan 9 konsep untuk ${allPersonas.length} persona...`);
         const conceptPromises = allPersonas.map((persona, index) => 
-            generateMatrixConcepts(validatedBlueprint, persona, formats, triggerNames, personaNodes[index].id)
+            generateMatrixConcepts(validatedBlueprint, persona, formats, personaNodes[index].id)
         );
 
         const conceptArrays = await Promise.all(conceptPromises);
@@ -705,7 +698,7 @@ const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint
           setLoadingMessage(`Menghasilkan Paket Keragaman UGC...`);
           try {
               const ideas = await generateUgcPack(
-                  campaignBlueprint, angle, trigger, awareness, placement, persona, placementNode.id, allowVisualExploration, offer
+                  campaignBlueprint, persona, placementNode.id
               );
               
               const taggedIdeas = ideas.map(idea => ({ ...idea, campaignTag: 'Paket Keragaman UGC' }));
@@ -864,137 +857,6 @@ const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint
     setNodes(prev => [...prev, newPersonaNode]);
   };
 
-  const handleInitiateEvolution = (conceptId: string) => {
-    const conceptNode = nodes.find(n => n.id === conceptId);
-    if (!conceptNode || conceptNode.type !== 'creative') return;
-    const concept = (conceptNode.content as { concept: AdConcept }).concept;
-    setEvolutionTarget(concept);
-  };
-
-  const handleExecuteEvolution = async (
-      baseConcept: AdConcept,
-      evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'visualVehicle',
-      newValue: string
-  ) => {
-      if (!campaignBlueprint) return;
-      setEvolutionTarget(null);
-      setIsLoading(true);
-      setLoadingMessage(`Mengevolusikan konsep ke ${evolutionType} "${newValue}"...`);
-      setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: true } } } : n));
-
-      try {
-          let evolvedConcepts: Omit<AdConcept, 'imageUrls'>[] = [];
-
-          if (evolutionType === 'trigger') {
-              setLoadingMessage(`Mendapatkan detail untuk pemicu "${newValue}"...`);
-
-              const findParent = (startNodeId: string, type: 'angle' | 'persona'): MindMapNode | undefined => {
-                  let currentNode = nodes.find(n => n.id === startNodeId);
-                  while (currentNode) {
-                      if (currentNode.type === type) return currentNode;
-                      currentNode = currentNode.parentId ? nodes.find(n => n.id === currentNode.parentId) : undefined;
-                  }
-                  return undefined;
-              };
-
-              const placementNode = nodes.find(n => n.id === baseConcept.strategicPathId);
-              const angleNode = findParent(placementNode?.id || '', 'angle');
-              const personaNode = findParent(angleNode?.id || '', 'persona');
-
-              if (!angleNode || !personaNode) {
-                  throw new Error("Konteks (sudut pandang/persona) tidak ditemukan untuk evolusi pemicu.");
-              }
-
-              const persona = (personaNode.content as { persona: TargetPersona }).persona;
-              const angle = angleNode.label;
-              
-              const triggerObject = await getBuyingTriggerDetails(newValue, campaignBlueprint, persona, angle);
-              
-              setLoadingMessage(`Mengevolusikan konsep dengan pemicu "${newValue}"...`);
-              
-              evolvedConcepts = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, triggerObject);
-
-          } else {
-              evolvedConcepts = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, newValue);
-          }
-          
-          if (evolvedConcepts.length > 0) {
-              const newConceptUntagged = evolvedConcepts[0];
-              const newConcept = {
-                  ...newConceptUntagged,
-                  campaignTag: `Evolusi dari "${baseConcept.headline.substring(0, 15)}..."`
-              };
-              const newCreativeNode: MindMapNode = {
-                  id: newConcept.id,
-                  parentId: baseConcept.strategicPathId,
-                  type: 'creative',
-                  label: newConcept.headline,
-                  content: { concept: newConcept },
-                  position: { x: 0, y: 0 },
-                  width: 160,
-                  height: 240,
-              };
-              setNodes(prev => [...prev, newCreativeNode]);
-          } else {
-              throw new Error("Evolusi tidak menghasilkan konsep baru.");
-          }
-      } catch (e: any) {
-          console.error(e);
-          setError(`Gagal mengevolusikan konsep.`);
-      } finally {
-          setIsLoading(false);
-          setLoadingMessage('');
-          setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: false } } } : n));
-      }
-  };
-
-  const handleInitiateQuickPivot = (conceptId: string) => {
-    const conceptNode = nodes.find(n => n.id === conceptId);
-    if (!conceptNode || conceptNode.type !== 'creative') return;
-    const concept = (conceptNode.content as { concept: AdConcept }).concept;
-    setPivotTarget(concept);
-  };
-
-  const handleExecuteQuickPivot = async (pivotType: PivotType, config: PivotConfig) => {
-    if (!pivotTarget || !campaignBlueprint) return;
-    const baseConcept = pivotTarget;
-    setPivotTarget(null);
-    setIsLoading(true);
-    setLoadingMessage(`Melakukan Pivot Cepat: ${pivotType}...`);
-    setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isPivoting: true } } } : n));
-    
-    try {
-      const pivotedConcepts = await generateQuickPivot(baseConcept, campaignBlueprint, pivotType, config);
-      if (pivotedConcepts.length > 0) {
-          const newConceptUntagged = pivotedConcepts[0];
-          const newConcept = {
-              ...newConceptUntagged,
-              campaignTag: `Pivot dari "${baseConcept.headline.substring(0, 15)}..."`
-          };
-          const newCreativeNode: MindMapNode = {
-              id: newConcept.id,
-              parentId: newConcept.strategicPathId, // Use the pathId from the new concept
-              type: 'creative',
-              label: newConcept.headline,
-              content: { concept: newConcept },
-              position: { x: 0, y: 0 },
-              width: 160,
-              height: 240,
-          };
-          setNodes(prev => [...prev, newCreativeNode]);
-      } else {
-          throw new Error("Pivot Cepat tidak menghasilkan konsep baru.");
-      }
-    } catch(e: any) {
-        console.error("Gagal melakukan Pivot Cepat:", e);
-        setError(e.message || "Gagal melakukan Pivot Cepat.");
-    } finally {
-        setIsLoading(false);
-        setLoadingMessage('');
-        setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isPivoting: false } } } : n));
-    }
-  };
-
   // --- Smart Remix Handlers ---
 
   const assembleAdDna = (concept: AdConcept, allNodes: MindMapNode[]): AdDna | null => {
@@ -1040,313 +902,285 @@ const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint
   };
 
   const handleInitiateRemix = (conceptId: string) => {
-    const conceptNode = nodes.find(n => n.id === conceptId);
-    if (!conceptNode || conceptNode.type !== 'creative') return;
-    const concept = (conceptNode.content as { concept: AdConcept }).concept;
-    
-    const dna = assembleAdDna(concept, nodes);
-    if (dna) {
-      setRemixTarget(concept);
-      setRemixDna(dna);
-      setCurrentStep('remix');
-    } else {
-      setError("Gagal memuat DNA iklan. Jalur strategis tidak lengkap.");
-    }
+      const conceptNode = nodes.find(n => n.id === conceptId);
+      if (!conceptNode || conceptNode.type !== 'creative') return;
+      const concept = (conceptNode.content as { concept: AdConcept }).concept;
+
+      const dna = assembleAdDna(concept, nodes);
+      if (dna) {
+          setRemixTarget(concept);
+          setRemixDna(dna);
+          setCurrentStep('remix');
+      } else {
+          setError("Gagal mengurai DNA iklan untuk memulai Remix.");
+      }
   };
   
   const handleRequestRemixSuggestions = async (component: AdDnaComponent) => {
-    if (!remixDna || !remixTarget || !campaignBlueprint) return;
+    if (!remixTarget || !remixDna || !campaignBlueprint) return;
     setRemixingComponent(component);
     setRemixSuggestions(null);
-    setIsLoading(true);
-    setLoadingMessage(`Mencari variasi untuk ${component}...`);
     try {
-      const suggestions = await generateRemixSuggestions(component, remixTarget, remixDna, campaignBlueprint);
-      setRemixSuggestions(suggestions);
-    } catch (e: any) {
-        console.error(e);
+        const suggestions = await generateRemixSuggestions(component, remixTarget, remixDna, campaignBlueprint);
+        setRemixSuggestions(suggestions);
+    } catch(e: any) {
         setError(e.message || `Gagal menghasilkan saran untuk ${component}.`);
     } finally {
-        setIsLoading(false);
-        setLoadingMessage('');
+        setRemixingComponent(null);
     }
   };
-
+  
   const handleExecuteRemix = async (suggestion: RemixSuggestion) => {
-      if (!remixTarget || !remixingComponent || !campaignBlueprint) return;
-      const baseConcept = remixTarget;
+      if (!remixTarget || !campaignBlueprint || !remixingComponent) return;
+
       setIsLoading(true);
-      setLoadingMessage(`Membuat konsep baru dari remix ${remixingComponent}...`);
-      
+      setLoadingMessage(`Membuat konsep baru berdasarkan "${suggestion.title}"...`);
+      setCurrentStep('mindmap'); 
+      setViewMode('gallery'); 
+
       try {
-          const newConceptUntagged = await generateConceptFromRemix(baseConcept, remixingComponent, suggestion.payload, campaignBlueprint);
-          const newConcept = {
-              ...newConceptUntagged,
-              campaignTag: `Remix dari "${baseConcept.headline.substring(0, 15)}..."`
-          };
+          const newConcept = await generateConceptFromRemix(remixTarget, remixingComponent, suggestion.payload, campaignBlueprint);
+          
           const newCreativeNode: MindMapNode = {
-              id: newConcept.id,
-              parentId: newConcept.strategicPathId,
-              type: 'creative',
-              label: newConcept.headline,
-              content: { concept: newConcept },
-              position: { x: 0, y: 0 },
-              width: 160,
-              height: 240,
-          };
-          setNodes(prev => [...prev, newCreativeNode]);
-          setCurrentStep('mindmap');
-          setViewMode('gallery'); // Switch to gallery to show the new result
+            id: newConcept.id,
+            parentId: newConcept.strategicPathId,
+            type: 'creative',
+            label: newConcept.headline,
+            content: { concept: { ...newConcept, campaignTag: `Remix dari ${remixTarget.adSetName}` } },
+            position: { x: 0, y: 0 },
+            width: 160,
+            height: 240,
+        };
+        
+        setNodes(prev => [...prev, newCreativeNode]);
+
       } catch (e: any) {
-          console.error(e);
-          setError(e.message || "Gagal membuat konsep dari remix.");
+          console.error("Gagal menjalankan remix:", e);
+          setError(e.message || "Gagal membuat konsep yang diremix.");
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
+          // Reset remix state
           setRemixTarget(null);
           setRemixDna(null);
-          setRemixingComponent(null);
           setRemixSuggestions(null);
+          setRemixingComponent(null);
       }
   };
-
+  
+  // --- Image Generation & Content Management ---
 
   const handleGenerateImage = async (conceptId: string) => {
-    const conceptNode = nodes.find(n => n.id === conceptId);
-    if (!conceptNode || conceptNode.type !== 'creative') return;
-    const concept = (conceptNode.content as { concept: AdConcept }).concept;
-    
-    setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, isGenerating: true, error: undefined, imageUrls: [] } } } : n));
-
+    setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isGenerating: true, error: undefined } } } : n));
     try {
-        let urls: string[] = [];
-        const generate = (prompt: string) => generateAdImage(prompt, referenceImage || undefined, allowVisualExploration);
-
-        if (concept.placement === 'Carousel' && concept.carouselSlides && concept.carouselSlides.length > 0) {
-            const imagePromises = concept.carouselSlides.map(slide => generate(slide.visualPrompt));
-            urls = await Promise.all(imagePromises);
-        } else {
-            const singleUrl = await generate(concept.visualPrompt);
-            urls = [singleUrl];
+        const conceptNode = nodes.find(n => n.id === conceptId);
+        if (!conceptNode || conceptNode.type !== 'creative') throw new Error("Concept not found");
+        const concept = (conceptNode.content as { concept: AdConcept }).concept;
+        
+        const imageUrl = await generateAdImage(concept.visualPrompt, referenceImage ?? undefined, allowVisualExploration);
+        
+        let newImageUrls = [imageUrl];
+        if (concept.placement === 'Carousel' && concept.carouselSlides) {
+            const slidePromises = concept.carouselSlides.slice(1).map(slide => 
+                generateAdImage(slide.visualPrompt, referenceImage ?? undefined, allowVisualExploration)
+            );
+            const slideImages = await Promise.all(slidePromises);
+            newImageUrls = [imageUrl, ...slideImages];
         }
-        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, imageUrls: urls, isGenerating: false} } } : n));
-    } catch(e: any) {
-        console.error(`Gagal menghasilkan gambar untuk konsep ${conceptId}`, e);
-        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, error: e.message || 'Gagal menghasilkan gambar', isGenerating: false} } } : n));
+
+        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: { ...concept, isGenerating: false, imageUrls: newImageUrls } } } : n));
+    } catch (e: any) {
+        console.error("Image generation failed for", conceptId, e);
+        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isGenerating: false, error: e.message || "Request was blocked or failed." } } } : n));
     }
   };
 
   const handleGenerateFilteredImages = async (conceptIds: string[]) => {
-    setIsLoading(true);
-    const total = conceptIds.length;
-    let i = 0;
-    for (const conceptId of conceptIds) {
-      i++;
-      setLoadingMessage(`Menghasilkan gambar ${i} dari ${total}...`);
-      try {
-        await handleGenerateImage(conceptId);
-      } catch (e) {
-        console.error(`Gagal menghasilkan gambar untuk konsep ${conceptId} selama operasi massal.`, e);
-      }
-    }
-    setLoadingMessage('');
-    setIsLoading(false);
-  };
-
-
-  const handleReset = () => {
-    setCurrentStep('input');
-    setCampaignBlueprint(null);
-    setNodes([]);
-    setReferenceImage(null);
-    setError(null);
-    (window as any).appState = {};
-  };
-
-  const handleEditConcept = (conceptId: string) => {
-    setEditingConceptId(conceptId);
+      setNodes(prev => prev.map(n => conceptIds.includes(n.id) ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isGenerating: true, error: undefined } } } : n));
+      
+      const generationPromises = conceptIds.map(id => handleGenerateImage(id));
+      await Promise.allSettled(generationPromises);
   };
   
+  const handleEditConcept = (conceptId: string) => setEditingConceptId(conceptId);
+  const handleCloseModal = () => setEditingConceptId(null);
+  
   const handleSaveConcept = (conceptId: string, updatedContent: AdConcept) => {
-    setNodes(prev => prev.map(n => 
-      n.id === conceptId ? { ...n, content: { concept: updatedContent }, label: updatedContent.headline } : n
-    ));
-    setEditingConceptId(null);
+      setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, label: updatedContent.headline, content: { concept: updatedContent } } : n));
+      setEditingConceptId(null);
   };
 
   const handleBatchTagConcepts = (conceptIds: string[], statusTag: AdConcept['statusTag']) => {
       setNodes(prev => prev.map(n => {
-          if (conceptIds.includes(n.id) && n.type === 'creative') {
+          if (conceptIds.includes(n.id)) {
               const concept = (n.content as { concept: AdConcept }).concept;
               return { ...n, content: { concept: { ...concept, statusTag } } };
           }
           return n;
       }));
   };
+  
+  const allConcepts = useMemo(() => {
+    return nodes
+        .filter(node => node.type === 'creative')
+        .map(node => (node.content as { concept: AdConcept }).concept);
+  }, [nodes]);
 
-  const handleOpenLightbox = (concept: AdConcept, startIndex: number) => {
-    setLightboxData({ concept, startIndex });
+  const editingConcept = useMemo(() => {
+    if (!editingConceptId) return null;
+    const node = nodes.find(n => n.id === editingConceptId);
+    return node ? (node.content as { concept: AdConcept }).concept : null;
+  }, [editingConceptId, nodes]);
+
+  const handleReset = () => {
+    if (window.confirm("Anda yakin ingin memulai ulang? Semua progres akan hilang.")) {
+        setCurrentStep('input');
+        setCampaignBlueprint(null);
+        setNodes([]);
+        setError(null);
+        setReferenceImage(null);
+    }
   };
 
-  const handleCloseLightbox = () => {
-    setLightboxData(null);
-  };
-  
-  const allConcepts = useMemo(() => nodes
-    .filter(n => n.type === 'creative')
-    .map(n => (n.content as { concept: AdConcept }).concept), [nodes]);
-
-  const editingConcept = allConcepts.find(c => c.id === editingConceptId) || null;
-  
-  const renderContent = () => {
-    switch(currentStep) {
-        case 'input':
-            return (
-                <div className="p-4 md:p-8">
-                    <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-brand-primary/20 via-brand-background to-brand-background -z-10"></div>
-                    <header className="text-center mb-12">
-                        <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Generator Konsep Iklan</h1>
-                        <p className="text-brand-text-secondary mt-2 text-lg">Ubah satu iklan menjadi puluhan variasi berkinerja tinggi.</p>
-                    </header>
-                    {error && <div className="max-w-4xl mx-auto bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-8" role="alert">{error}</div>}
-                    <InputForm onGenerate={handleGenerate} />
-                </div>
-            );
-        case 'validateBlueprint':
-            return campaignBlueprint && referenceImage && (
-                <DnaValidationStep 
+  const renderStep = () => {
+    switch (currentStep) {
+      case 'input':
+        return <div className="min-h-screen flex items-center justify-center"><InputForm onGenerate={handleGenerate} /></div>;
+      
+      case 'validateBlueprint':
+        if (campaignBlueprint && referenceImage) {
+          return <DnaValidationStep 
                     initialBlueprint={campaignBlueprint} 
-                    referenceImage={referenceImage}
+                    referenceImage={referenceImage} 
                     onWorkflowSelected={handleWorkflowSelected}
                     onBack={handleReset}
                     allowVisualExploration={allowVisualExploration}
                     onAllowVisualExplorationChange={setAllowVisualExploration}
-                />
-            );
-        case 'remix':
-            return remixTarget && remixDna && (
-                <RemixDashboard
-                    remixTarget={remixTarget}
-                    remixDna={remixDna}
-                    suggestions={remixSuggestions}
-                    remixingComponent={remixingComponent}
-                    onRequestSuggestions={handleRequestRemixSuggestions}
-                    onExecuteRemix={handleExecuteRemix}
-                    onBack={() => setCurrentStep('mindmap')}
-                />
-            );
-        case 'mindmap':
-             const commonGalleryProps = {
-                concepts: allConcepts,
-                campaignBlueprint: campaignBlueprint,
-                editingConcept: editingConcept,
-                onGenerateImage: handleGenerateImage,
-                onEditConcept: handleEditConcept,
-                onInitiateEvolution: handleInitiateEvolution,
-                onInitiateQuickPivot: handleInitiateQuickPivot,
-                onInitiateRemix: handleInitiateRemix,
-                onSaveConcept: handleSaveConcept,
-                onCloseModal: () => setEditingConceptId(null),
-                onOpenLightbox: handleOpenLightbox,
-                onReset: handleReset,
-                onSwitchView: () => setViewMode(viewMode === 'mindmap' ? 'gallery' : 'mindmap'),
-            };
+                 />;
+        }
+        return <LoadingIndicator message="Memuat blueprint..." />;
 
-            return viewMode === 'mindmap' ? (
-                <MindMapView
-                    nodes={nodes}
-                    onTogglePersona={handleTogglePersona}
-                    onTogglePainDesire={handleTogglePainDesire}
-                    onToggleObjection={handleToggleObjection}
-                    onToggleOffer={handleToggleOffer}
-                    onToggleAngle={handleToggleAngle}
-                    onToggleTrigger={handleToggleTrigger}
-                    onToggleAwareness={handleToggleAwareness}
-                    onToggleFormat={handleToggleFormat}
-                    onTogglePlacement={handleTogglePlacement}
-                    onGenerateImage={handleGenerateImage}
-                    onEditConcept={handleEditConcept}
-                    onInitiateEvolution={handleInitiateEvolution}
-                    onInitiateQuickPivot={handleInitiateQuickPivot}
-                    onInitiateRemix={handleInitiateRemix}
-                    onOpenLightbox={handleOpenLightbox}
-                    onDeleteNode={handleDeleteNode}
-                    onReset={handleReset}
-                    onGenerateMorePersonas={handleGenerateMorePersonas}
-                    onAddCustomPersona={handleAddCustomPersona}
-                />
-            ) : (
-                <ConceptGallery
-                    {...commonGalleryProps}
-                    nodes={nodes}
-                    isLoading={isLoading}
-                    onGenerateFilteredImages={handleGenerateFilteredImages}
-                    onBatchTagConcepts={handleBatchTagConcepts}
-                />
-            );
-        default: return null;
+      case 'mindmap':
+        return (
+            <div className="relative w-full h-screen">
+                <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-brand-surface p-1 rounded-lg shadow-lg">
+                    <button
+                        onClick={() => setViewMode('mindmap')}
+                        disabled={viewMode === 'mindmap'}
+                        className={`p-2 rounded-md ${viewMode === 'mindmap' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
+                    >
+                        <NetworkIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => setViewMode('gallery')}
+                        disabled={viewMode === 'gallery'}
+                        className={`p-2 rounded-md ${viewMode === 'gallery' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
+                    >
+                        <LayoutGridIcon className="w-5 h-5" />
+                    </button>
+                </div>
+                {viewMode === 'mindmap' ? (
+                    <MindMapView 
+                        nodes={nodes}
+                        onTogglePersona={handleTogglePersona}
+                        onTogglePainDesire={handleTogglePainDesire}
+                        onToggleObjection={handleToggleObjection}
+                        onToggleOffer={handleToggleOffer}
+                        onToggleAwareness={handleToggleAwareness}
+                        onToggleAngle={handleToggleAngle}
+                        onToggleTrigger={handleToggleTrigger}
+                        onToggleFormat={handleToggleFormat}
+                        onTogglePlacement={handleTogglePlacement}
+                        onGenerateImage={handleGenerateImage}
+                        onEditConcept={handleEditConcept}
+                        onInitiateRemix={handleInitiateRemix}
+                        onOpenLightbox={(concept, startIndex) => setLightboxData({ concept, startIndex })}
+                        onDeleteNode={handleDeleteNode}
+                        onReset={handleReset}
+                        onGenerateMorePersonas={handleGenerateMorePersonas}
+                        onAddCustomPersona={handleAddCustomPersona}
+                    />
+                ) : (
+                    <ConceptGallery 
+                        nodes={nodes}
+                        concepts={allConcepts}
+                        editingConcept={editingConcept}
+                        campaignBlueprint={campaignBlueprint}
+                        isLoading={isLoading}
+                        onGenerateImage={handleGenerateImage}
+                        onGenerateFilteredImages={handleGenerateFilteredImages}
+                        onEditConcept={handleEditConcept}
+                        onInitiateRemix={handleInitiateRemix}
+                        onSaveConcept={handleSaveConcept}
+                        onBatchTagConcepts={handleBatchTagConcepts}
+                        onCloseModal={handleCloseModal}
+                        onReset={handleReset}
+                        onSwitchView={() => setViewMode('mindmap')}
+                        onOpenLightbox={(concept, startIndex) => setLightboxData({ concept, startIndex })}
+                    />
+                )}
+            </div>
+        );
+      
+      case 'remix':
+          if (remixTarget && remixDna) {
+              return <RemixDashboard 
+                  remixTarget={remixTarget}
+                  remixDna={remixDna}
+                  suggestions={remixSuggestions}
+                  remixingComponent={remixingComponent}
+                  onRequestSuggestions={handleRequestRemixSuggestions}
+                  onExecuteRemix={handleExecuteRemix}
+                  onBack={() => {
+                      setCurrentStep('mindmap');
+                      setViewMode('gallery');
+                      setRemixTarget(null);
+                      setRemixDna(null);
+                      setRemixSuggestions(null);
+                      setRemixingComponent(null);
+                  }}
+              />
+          }
+           return <LoadingIndicator message="Memuat dasbor remix..." />;
+
+
+      default:
+        return <div>Invalid step</div>;
     }
-  }
+  };
 
   return (
-    <main className="min-h-screen h-screen bg-brand-background text-brand-text-primary font-sans overflow-hidden">
-      {renderContent()}
-      {isLoading && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50">
-          <LoadingIndicator message={loadingMessage} />
-        </div>
-      )}
-      {currentStep === 'mindmap' && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-brand-surface p-1 rounded-lg shadow-2xl flex items-center border border-gray-700">
-           <button
-             onClick={() => setViewMode('mindmap')}
-             title="Tampilan Peta Pikiran"
-             className={`p-2 rounded-md transition-colors ${viewMode === 'mindmap' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
-           >
-             <NetworkIcon className="w-5 h-5" />
-           </button>
-           <button
-             onClick={() => setViewMode('gallery')}
-             title="Tampilan Galeri"
-             className={`p-2 rounded-md transition-colors ${viewMode === 'gallery' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
-           >
-             <LayoutGridIcon className="w-5 h-5" />
-           </button>
-        </div>
-      )}
-       {lightboxData && (
-        <Lightbox
-          concept={lightboxData.concept}
-          startIndex={lightboxData.startIndex}
-          onClose={handleCloseLightbox}
-        />
-      )}
-      {editingConcept && campaignBlueprint && (
-          <EditModal
-              concept={editingConcept}
-              campaignBlueprint={campaignBlueprint}
-              onSave={handleSaveConcept}
-              onClose={() => setEditingConceptId(null)}
-              onGenerateImage={handleGenerateImage}
-          />
-      )}
-      {evolutionTarget && (
-        <EvolveModal
-          concept={evolutionTarget}
-          nodes={nodes}
-          onClose={() => setEvolutionTarget(null)}
-          onEvolve={handleExecuteEvolution}
-        />
-      )}
-      {pivotTarget && campaignBlueprint && (
-        <QuickPivotModal
-          baseConcept={pivotTarget}
-          blueprint={campaignBlueprint}
-          onGenerate={handleExecuteQuickPivot}
-          onClose={() => setPivotTarget(null)}
-        />
-      )}
-    </main>
+    <div className="w-full h-full bg-brand-background text-brand-text-primary relative">
+        {isLoading && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+                <LoadingIndicator message={loadingMessage || 'Memproses...'} />
+            </div>
+        )}
+         {error && (
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-red-600/90 text-white p-4 rounded-lg shadow-lg max-w-md">
+                <p className="font-bold">Error</p>
+                <p className="text-sm">{error}</p>
+                <button onClick={() => setError(null)} className="absolute top-1 right-2 text-xl">&times;</button>
+            </div>
+        )}
+        {editingConcept && campaignBlueprint && (
+            <EditModal 
+                concept={editingConcept} 
+                campaignBlueprint={campaignBlueprint}
+                onSave={handleSaveConcept} 
+                onClose={handleCloseModal}
+                onGenerateImage={handleGenerateImage}
+            />
+        )}
+         {lightboxData && (
+            <Lightbox 
+                concept={lightboxData.concept} 
+                startIndex={lightboxData.startIndex} 
+                onClose={() => setLightboxData(null)} 
+            />
+        )}
+        {renderStep()}
+    </div>
   );
 }
 

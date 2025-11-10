@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CampaignBlueprint, MindMapNode, AdConcept, AwarenessStage, CreativeFormat, PlacementFormat, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject } from '../types';
 import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon, ShieldAlertIcon, HeartIcon, HeartCrackIcon, TagIcon } from './icons';
@@ -304,8 +302,6 @@ const NodeComponent: React.FC<{
     onPlacementClick: (id: string) => void;
     onGenerateImage: (id: string) => void;
     onEditConcept: (id: string) => void;
-    onInitiateEvolution: (id: string) => void;
-    onInitiateQuickPivot: (id: string) => void;
     onInitiateRemix: (id: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (id: string) => void;
@@ -326,7 +322,7 @@ const NodeComponent: React.FC<{
             {node.type === 'trigger' && <TriggerNode node={node} onToggle={onToggleTrigger} onEducationHover={onEducationHover} />}
             {node.type === 'format' && <FormatNode node={node} onToggle={onToggleFormat} />}
             {node.type === 'placement' && <PlacementNode node={node} onClick={onPlacementClick} />}
-            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onInitiateQuickPivot={props.onInitiateQuickPivot} onInitiateRemix={props.onInitiateRemix} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" isSelected={false} onSelect={()=>{}} />}
+            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateRemix={props.onInitiateRemix} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" isSelected={false} onSelect={()=>{}} />}
             
             {node.type !== 'dna' && (
                 <button
@@ -505,8 +501,6 @@ interface MindMapViewProps {
     onTogglePlacement: (nodeId: string, options?: { isUgcPack?: boolean, preferredCarouselArc?: string }) => void;
     onGenerateImage: (conceptId: string) => void;
     onEditConcept: (conceptId: string) => void;
-    onInitiateEvolution: (conceptId: string) => void;
-    onInitiateQuickPivot: (conceptId: string) => void;
     onInitiateRemix: (conceptId: string) => void;
     onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
     onDeleteNode: (nodeId: string) => void;

@@ -6,8 +6,6 @@ interface CreativeCardProps {
   node: MindMapNode;
   onGenerateImage: (id: string) => void;
   onEditConcept: (id: string) => void;
-  onInitiateEvolution: (id: string) => void;
-  onInitiateQuickPivot: (id: string) => void;
   onInitiateRemix: (id: string) => void;
   onOpenLightbox: (concept: AdConcept, startIndex: number) => void;
   isSelected: boolean;
@@ -15,7 +13,7 @@ interface CreativeCardProps {
   className?: string;
 }
 
-export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImage, onEditConcept, onInitiateEvolution, onInitiateQuickPivot, onInitiateRemix, onOpenLightbox, isSelected, onSelect, className = '' }) => {
+export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImage, onEditConcept, onInitiateRemix, onOpenLightbox, isSelected, onSelect, className = '' }) => {
     const [copyButtonText, setCopyButtonText] = useState('Salin Teks');
     const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -160,24 +158,6 @@ export const CreativeCard: React.FC<CreativeCardProps> = ({ node, onGenerateImag
                 <div className="grid grid-cols-2 gap-1 mt-2">
                     <button onClick={() => onEditConcept(node.id)} title="Edit Detail & Prompt" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><EditIcon className="w-3 h-3"/> Detail</button>
                     <button onClick={handleCopy} title="Salin Teks" className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1"><ClipboardCopyIcon className="w-3 h-3"/> {copyButtonText}</button>
-                    <button 
-                        onClick={() => onInitiateEvolution(node.id)} 
-                        disabled={concept.isEvolving}
-                        title="Buat variasi dari konsep ini" 
-                        className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 disabled:opacity-50"
-                    >
-                        {concept.isEvolving ? <RefreshCwIcon className="w-3 h-3 animate-spin" /> : <SparklesIcon className="w-3 h-3"/>}
-                        Evolusi
-                    </button>
-                    <button 
-                        onClick={() => onInitiateQuickPivot(node.id)}
-                        disabled={concept.isPivoting}
-                        className="text-xs bg-gray-700 hover:bg-gray-600 p-1.5 rounded-md flex items-center justify-center gap-1 font-bold disabled:opacity-50"
-                        title="Buat variasi cepat untuk audiens yang berbeda"
-                      >
-                        {concept.isPivoting ? <RefreshCwIcon className="w-3 h-3 animate-spin" /> : <ZapIcon className="w-3 h-3"/>}
-                         Pivot
-                    </button>
                     <button 
                         onClick={() => onInitiateRemix(node.id)}
                         className="col-span-2 text-xs bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 p-1.5 rounded-md flex items-center justify-center gap-1 font-bold"

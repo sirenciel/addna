@@ -15,8 +15,6 @@ interface ConceptGalleryProps {
     onGenerateImage: (conceptId: string) => void;
     onGenerateFilteredImages: (conceptIds: string[]) => void;
     onEditConcept: (conceptId: string) => void;
-    onInitiateEvolution: (conceptId: string) => void;
-    onInitiateQuickPivot: (conceptId: string) => void;
     onInitiateRemix: (conceptId: string) => void;
     onSaveConcept: (conceptId: string, updatedContent: AdConcept) => void;
     onBatchTagConcepts: (conceptIds: string[], statusTag: AdConcept['statusTag']) => void;
@@ -293,8 +291,6 @@ export const ConceptGallery: React.FC<ConceptGalleryProps> = (props) => {
                                                             node={node}
                                                             onGenerateImage={props.onGenerateImage}
                                                             onEditConcept={props.onEditConcept}
-                                                            onInitiateEvolution={props.onInitiateEvolution}
-                                                            onInitiateQuickPivot={props.onInitiateQuickPivot}
                                                             onInitiateRemix={props.onInitiateRemix}
                                                             onOpenLightbox={props.onOpenLightbox}
                                                             isSelected={selectedConcepts.has(node.id)}

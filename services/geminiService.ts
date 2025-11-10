@@ -976,7 +976,7 @@ export const refineVisualPrompt = async (concept: AdConcept, blueprint: Campaign
 export const evolveConcept = async (
     baseConcept: AdConcept,
     blueprint: CampaignBlueprint,
-    evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona' | 'visualVehicle',
+    evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona' | 'visualVehicle' | 'objection',
     newValue: any
 ): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     
@@ -989,7 +989,8 @@ export const evolveConcept = async (
         offer: `Adaptasi konsep ke penawaran baru: "${(newValue as OfferTypeObject).name}". Pesan inti (sudut pandang, pemicu) sama, tetapi CTA dan bagian akhir dari teks harus ditulis ulang untuk mencerminkan penawaran baru ini.`,
         painDesire: `Adaptasi konsep ke Poin Masalah/Keinginan baru: "${(newValue as PainDesireObject).name}". Ini adalah pergeseran yang signifikan. Sudut pandang inti harus dievaluasi ulang untuk terhubung dengan pendorong emosional baru ini. Headline, hook, dan visual harus dibayangkan ulang sepenuhnya.`,
         persona: `Adaptasi seluruh konsep untuk persona target baru: "${(newValue as TargetPersona).description}". Ini memerlukan penulisan ulang headline, hook, dan prompt visual agar sangat relevan dengan poin masalah dan keinginan spesifik persona baru ini. Sudut pandang inti ("${baseConcept.angle}") mungkin perlu sedikit dibingkai ulang.`,
-        visualVehicle: `Adaptasi konsep ke 'visual vehicle' baru: "${newValue}". Ini adalah perubahan visual murni. Pertahankan copy inti (hook, headline) sama persis, tetapi bayangkan kembali visualPrompt sepenuhnya untuk mencerminkan gaya visual "${newValue}" yang baru. Ini adalah cara yang kuat untuk memecah Entity ID.`
+        visualVehicle: `Adaptasi konsep ke 'visual vehicle' baru: "${newValue}". Ini adalah perubahan visual murni. Pertahankan copy inti (hook, headline) sama persis, tetapi bayangkan kembali visualPrompt sepenuhnya untuk mencerminkan gaya visual "${newValue}" yang baru. Ini adalah cara yang kuat untuk memecah Entity ID.`,
+        objection: `Adaptasi konsep untuk mengatasi keberatan baru: "${(newValue as ObjectionObject).name}". Sudut pandang dan pesan inti harus dibingkai ulang untuk secara langsung melawan keberatan ini.`
     };
 
     const prompt = `
@@ -1046,203 +1047,6 @@ export const evolveConcept = async (
     }));
 };
 
-export const generateQuickPivot = async (
-  baseConcept: AdConcept,
-  blueprint: CampaignBlueprint,
-  pivotType: PivotType,
-  config: PivotConfig
-): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
-
-  const pivotInstructions: Record<PivotType, string> = {
-    'age-shift': `
-      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk kelompok umur yang berbeda.
-      - **Usia Asli:** ${baseConcept.personaAge}
-      - **Target Usia:** ${config.targetAge}
-      
-      **TUGAS ANDA:**
-      1. **Profil Ulang Persona:** Tulis ulang deskripsi persona untuk secara otentik mewakili demografi ${config.targetAge}. Perbarui pain points dan keinginan agar sesuai dengan tahap kehidupan mereka.
-      2. **Adaptasi Bahasa:** Sesuaikan nada dan kosakata:
-         - 13-17: Gunakan bahasa gaul Gen Z, referensi meme, ironi. Sangat santai.
-         - 18-24: Profesional tapi relatable. Fokus karir & gaya hidup.
-         - 25-34: Bahasa berorientasi keluarga. Tekankan penghematan waktu dan kualitas.
-         - 35-44: Jelas, lugas, membangun kepercayaan. Hindari bahasa gaul.
-      3. **Adaptasi Visual:** Ubah usia model/subjek di prompt visual menjadi ${config.targetAge}. Sesuaikan latar agar cocok dengan gaya hidup mereka. Pikirkan "penargetan piksel": pemandangan ini harus secara visual mengkodekan demografi target untuk dibaca oleh AI Meta (misalnya, 18-24 = kamar kos/kafe, 35-44 = kantor rumah/dapur).
-      4. **Pergeseran Pain Point:** Pain point INTI mungkin berubah. Contoh:
-         - 18-24: "Aku ingin terlihat bagus di Insta" → "Aku ingin merasa percaya diri di kampus"
-         - 35-44: "Aku ingin hasil cepat" → "Aku butuh sesuatu yang cocok dengan jadwalku yang padat"
-      
-      **TETAP KONSTAN:** 
-      - Angle Strategis: "${baseConcept.angle}"
-      - Pemicu Psikologis: "${baseConcept.trigger.name}"
-      - Format Kreatif: "${baseConcept.format}"
-      - Penempatan: "${baseConcept.placement}"
-      
-      STRATEGI tetap sama, tetapi EKSEKUSI harus secara otentik berbicara kepada ${config.targetAge}.
-    `,
-    'gender-flip': `
-      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk gender yang berlawanan.
-      - **Persona Asli:** ${baseConcept.personaDescription}
-      - **Target Gender:** ${config.targetGender}
-      
-      **TUGAS ANDA:**
-      1. **Re-gender Persona:** Tulis ulang deskripsi untuk orang ${config.targetGender}. Jadilah otentik - jangan hanya menukar kata ganti. Pertimbangkan:
-         - Pain points yang berbeda (misalnya, Pria: "kecemasan akan rambut rontok", Wanita: "kekhawatiran perawatan kulit penuaan")
-         - Hasil yang diinginkan yang berbeda (misalnya, Pria: "percaya diri dalam berkencan", Wanita: "citra profesional")
-      2. **Adaptasi Teks:** 
-         - Audiens pria: Langsung, berorientasi pada pencapaian, campuran logika + emosi
-         - Audiens wanita: Empati-dahulu, komunitas/bukti sosial, campuran emosi + logika
-      3. **Adaptasi Visual:** Ubah subjek dalam prompt visual menjadi orang ${config.targetGender}. Sesuaikan gaya dan latar agar terasa otentik (bukan stereotip). Pikirkan "penargetan piksel": pastikan latar dan gaya (misalnya, dekorasi kamar, pakaian) secara visual mengkodekan demografi gender target untuk AI Meta.
-      4. **Pergeseran Bukti Sosial:** Jika menggunakan testimoni, ganti gender pemberi testimoni agar sesuai dengan target.
-      
-      **TETAP KONSTAN:** Angle strategis, pemicu, format, penempatan yang sama.
-      
-      ⚠️ HINDARI STEREOTIP. Pivot harus terasa otentik, bukan menggurui.
-    `,
-    'lifestyle-swap': `
-      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk gaya hidup/tipe kreator yang berbeda.
-      - **Tipe Asli:** ${baseConcept.personaCreatorType}
-      - **Target Tipe:** ${config.targetLifestyle}
-      
-      **TUGAS ANDA:**
-      1. **Profil Ulang Gaya Hidup:** Bayangkan kembali persona sebagai seorang "${config.targetLifestyle}". Ubah:
-         - Rutinitas & tantangan harian
-         - Nilai & aspirasi (misalnya, Influencer menghargai estetika, Pengguna Biasa menghargai kepraktisan)
-         - Sumber bukti sosial yang mereka percayai
-      2. **Pivot Gaya Visual:** 
-         - Influencer: Terkurasi, aspiratif, produksi tinggi
-         - Pengguna Biasa: Otentik, relatable, kualitas "foto iPhone"
-         - Ahli: Latar profesional, sinyal kredibilitas (misalnya, jas lab, grafik)
-         Pikirkan "penargetan piksel": gaya visual yang dipilih harus secara langsung memberi sinyal subkultur dan tingkat pendapatan target kepada AI Meta.
-      3. **Pergeseran Nada Teks:**
-         - Influencer: "Ini mengubah permainan kontenku!" (aspiratif)
-         - Pengguna Biasa: "Sebagai ibu yang sibuk, ini sangat membantuku." (praktis)
-         - Ahli: "Data menunjukkan ini adalah metode yang paling efektif." (otoritatif)
-      
-      **TETAP KONSTAN:** Angle, pemicu, format.
-    `,
-    'market-expand': `
-      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk pasar/budaya yang berbeda.
-      - **Pasar Asli:** ${blueprint.adDna.targetCountry}
-      - **Target Pasar:** ${config.targetCountry}
-      
-      **TUGAS ANDA:**
-      1. **Lokalisasi Persona:** Ganti nama dan referensi budaya agar sesuai dengan ${config.targetCountry}.
-      2. **Lokalisasi Teks & Visual:** Terjemahkan teks ke dalam bahasa lokal (jika berbeda). Sesuaikan visual prompt untuk menampilkan model, latar, dan gaya yang otentik dengan ${config.targetCountry}.
-      3. **Adaptasi Budaya:** Pertimbangkan nuansa budaya. Humor, bukti sosial, dan nilai-nilai mungkin perlu disesuaikan.
-      
-      **TETAP KONSTAN:** Angle, pemicu, format.
-    `,
-    'awareness-shift': `
-      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk tahap kesadaran yang berbeda.
-      - **Tahap Asli:** ${baseConcept.awarenessStage}
-      - **Target Tahap:** ${config.targetAwareness}
-      
-      **TUGAS ANDA:**
-      1. **Bingkai Ulang Pesan:** Ubah hook dan headline.
-         - Unaware/Problem Aware: Fokus pada masalah/agitasi.
-         - Solution/Product Aware: Fokus pada solusi/bukti/penawaran.
-      2. **Sesuaikan CTA:** CTA harus cocok dengan tahap baru.
-      
-      **TETAP KONSTAN:** Persona, angle, format.
-    `,
-    'channel-adapt': `
-      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk platform yang berbeda.
-      - **Platform Asli:** Instagram
-      - **Target Platform:** ${config.targetPlatform}
-      
-      **TUGAS ANDA:**
-      1. **Adaptasi Format:**
-         - TikTok: Video pendek, tren suara, teks di layar.
-         - Facebook: Teks lebih panjang, link-focused.
-         - YouTube: Pre-roll skippable, hook 5 detik.
-      2. **Ubah Visual Prompt:** Sesuaikan rasio aspek dan gaya agar asli dengan platform target.
-      
-      **TETAP KONSTAN:** Persona, angle, pesan inti.
-    `,
-    'emotional-flip': `
-      MANDAT KRITIS: Lakukan pivot emosional. Balikkan emosi inti dari rasa sakit ke keinginan, atau sebaliknya, untuk menguji kerangka pesan yang sama sekali berbeda.
-      - **Emosi Asli:** ${baseConcept.entryPoint === 'Emotional' ? 'Fokus pada emosi' : 'Fokus pada logika/sosial'}
-      - **Target Emosi:** Balikkan dari positif ke negatif, atau sebaliknya.
-      
-      **TUGAS ANDA:**
-      1. **Bingkai Ulang Hook/Headline:** Jika asli berfokus pada rasa sakit ("Benci X?"), balikkan menjadi berfokus pada keinginan ("Ingin Y?").
-      2. **Adaptasi Visual:** Ubah emosi subjek dalam prompt visual agar sesuai dengan emosi baru.
-      
-      **TETAP KONSTAN:** Persona, angle, format.
-    `,
-    'proof-type-shift': `
-      MANDAT KRITIS: Lakukan pivot jenis bukti. Ubah mekanisme kepercayaan untuk membangun kredibilitas dengan cara yang berbeda.
-      - **Jenis Bukti Asli:** ${baseConcept.trigger.name}
-      - **Target Jenis Bukti:** Pilih pemicu yang berbeda (misalnya, dari Bukti Sosial ke Otoritas).
-      
-      **TUGAS ANDA:**
-      1. **Ubah Pemicu:** Ganti pemicu inti dalam hook/headline.
-      2. **Sesuaikan Visual:** Visual harus mencerminkan jenis bukti baru (misalnya, dari kerumunan orang menjadi seorang ahli).
-      
-      **TETAP KONSTAN:** Persona, angle, format.
-    `,
-    'urgency-vs-evergreen': `
-      MANDAT KRITIS: Lakukan pivot urgensi. Uji pesan berbasis kelangkaan versus proposisi nilai yang tak lekang oleh waktu.
-      - **Pendekatan Asli:** (Tentukan apakah asli menggunakan urgensi)
-      - **Target Pendekatan:** Balikkan. Jika mendesak, buat menjadi abadi. Jika abadi, tambahkan urgensi.
-      
-      **TUGAS ANDA:**
-      1. **Ubah Teks:** Tambahkan atau hapus elemen kelangkaan/urgensi (misalnya, "Penawaran berakhir malam ini" vs. "Solusi tepercaya").
-      2. **Sesuaikan Visual:** Visual harus mencerminkan pendekatan baru (misalnya, timer hitung mundur vs. adegan yang tenang dan meyakinkan).
-      
-      **TETAP KONSTAN:** Persona, angle, format.
-    `
-  };
-
-  const prompt = `
-    Anda adalah seorang Creative Director elit yang bertugas melakukan "Quick Pivot" pada konsep iklan yang sudah terbukti berhasil.
-    Tugas Anda adalah mengadaptasi konsep ini untuk audiens atau konteks BARU, dengan tetap mempertahankan DNA strategis yang membuatnya berhasil.
-
-    **Blueprint Kampanye:**
-    - Produk: ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
-    - DNA Penjualan: Gunakan formula persuasi "${blueprint.adDna.persuasionFormula}" dengan nada "${blueprint.adDna.toneOfVoice}".
-
-    **Konsep Iklan Asli (PEMENANG):**
-    - Headline: "${baseConcept.headline}"
-    - Persona: ${baseConcept.personaDescription}
-    - Angle: "${baseConcept.angle}"
-    - Pemicu: "${baseConcept.trigger.name}"
-    - Format: "${baseConcept.format}"
-
-    **🔥 MANDAT PIVOT: ${pivotInstructions[pivotType]}**
-
-    Sekarang, hasilkan sebuah array yang berisi SATU objek JSON baru untuk konsep yang telah di-pivot.
-    Patuhi skema JSON yang disediakan dengan ketat.
-    - Untuk 'adSetName', buat nama baru yang mencerminkan parameter pivot, seperti: [PivotType]_[Target]_[...]
-    - Untuk 'personaDescription', 'personaAge', dll., Anda HARUS memperbarui bidang-bidang ini untuk mencerminkan persona baru.
-    - Untuk 'strategicPathId', gunakan kembali ID dari konsep dasar: "${baseConcept.strategicPathId}".
-
-    Respons HANYA dengan array JSON yang berisi satu objek konsep baru.
-  `;
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-pro',
-    contents: [{ text: prompt }],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: pivotAdConceptSchema
-      }
-    }
-  });
-
-  const rawJson = response.text;
-  const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-  const result = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
-
-  return result.map((concept): Omit<AdConcept, 'imageUrls'> => addMockPerformanceSignals({
-    ...concept,
-    entryPoint: 'Pivoted',
-  }));
-};
-
-// FIX: Added generateConceptsFromPersona function
 export const generateConceptsFromPersona = async (blueprint: CampaignBlueprint, persona: TargetPersona, strategicPathId: string): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const prompt = `
     Anda adalah seorang ahli strategi kreatif senior. Untuk produk dan persona yang diberikan, hasilkan satu paket berisi 3 konsep iklan berpotensi tinggi yang beragam.
@@ -1283,8 +1087,7 @@ export const generateConceptsFromPersona = async (blueprint: CampaignBlueprint, 
     }));
 };
 
-// FIX: Added generateUgcPack function
-export const generateUgcPack = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+export const generateUgcPack = async (blueprint: CampaignBlueprint, persona: TargetPersona, strategicPathId: string): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const prompt = `
       Anda adalah seorang direktur kreatif yang berspesialisasi dalam kampanye Konten Buatan Pengguna (UGC) berkinerja tinggi.
       
@@ -1295,45 +1098,25 @@ export const generateUgcPack = async (blueprint: CampaignBlueprint, angle: strin
       
       **Brief:**
       - Produk: ${blueprint.productAnalysis.name}
-      - Persona: ${persona.description}
-      - Sudut Pandang: "${angle}"
-      - Pemicu: "${trigger.name}"
-      - Tahap Kesadaran: "${awarenessStage}"
-      - Penempatan: "${placement}"
-      - Penawaran: "${offer.name}"
+      - Persona Induk: ${persona.description}
+      - Penawaran: "${blueprint.adDna.offerSummary}"
       - Negara Target: ${blueprint.adDna.targetCountry}
       
       **INSTRUKSI KRITIS:**
-      1.  Buat 4 konsep, masing-masing mewakili sub-tipe kreator yang BERBEDA dalam persona utama.
+      1.  Untuk setiap konsep, pilih sudut pandang strategis, pemicu, dan tahap kesadaran yang paling sesuai.
+      2.  Setiap konsep HARUS mewakili sub-tipe kreator yang BERBEDA dalam persona utama.
           - Contoh sub-tipe: "Si Skeptis yang menjadi Percaya", "Ibu Sibuk yang menemukan jalan pintas", "Ahli yang didorong oleh Data", "Influencer yang berfokus pada Estetika".
-      2.  Setiap konsep HARUS menggunakan Sudut Pandang, Pemicu, dan Penawaran yang SAMA. Ini adalah tes terkontrol dari sudut pandang kreator.
       3.  'format' untuk SEMUA konsep harus 'UGC'.
       4.  Teks (hook, headline) untuk setiap konsep harus disesuaikan dengan suara sub-tipe kreatornya yang spesifik.
       5.  Prompt visual harus menggambarkan orang yang berbeda dalam latar yang berbeda dan otentik untuk memaksimalkan keragaman.
-      6. Untuk 'strategicPathId' gunakan "${strategicPathId}".
+      6.  Untuk 'strategicPathId' gunakan "${strategicPathId}".
 
       **🔥 ATURAN KERAGAMAN UGC KRITIS (Mandat Keragaman Kreator Meta):**
-      Untuk SETIAP dari 4 mikro-persona, Anda HARUS memvariasikan:
-      1. **Demografi Kreator:**
-         - Konsep 1: Usia 18-24, gaya kasual
-         - Konsep 2: Usia 25-34, gaya profesional
-         - Konsep 3: Usia 35-44, gaya orang tua/keluarga
-         - Konsep 4: Usia 45+, gaya dewasa/ahli
-      2. **Latar Visual (HARUS sama sekali berbeda):**
-         - Konsep 1: Latar kamar tidur/kamar kos
-         - Konsep 2: Kantor/ruang kerja bersama
-         - Konsep 3: Dapur/ruang tamu (ruang keluarga)
-         - Konsep 4: Luar ruangan/ruang publik
-      3. **Gaya Kamera:**
-         - Konsep 1: Gaya selfie vertikal (kamera depan)
-         - Konsep 2: Pengaturan tripod, jarak sedang
-         - Konsep 3: Genggam, sedikit goyang (otentik)
-         - Konsep 4: Pembingkaian profesional tetapi pencahayaan alami
-      4. **Waktu Hari (untuk variasi pencahayaan):**
-         - Konsep 1: Malam hari (pencahayaan dalam ruangan yang hangat)
-         - Konsep 2: Tengah hari (cahaya alami yang terang)
-         - Konsep 3: Pagi hari (cahaya alami yang lembut)
-         - Konsep 4: Golden hour (luar ruangan)
+      Untuk SETIAP dari 4 konsep, Anda HARUS memvariasikan:
+      1. **Demografi Kreator:** Usia dan gaya yang berbeda (mis. Mahasiswa 18-24, Profesional 30-an).
+      2. **Latar Visual:** Latar yang sama sekali berbeda (mis. Kamar kos, Kantor, Dapur, Luar ruangan).
+      3. **Gaya Kamera:** Gaya yang berbeda (mis. Selfie, Tripod, Genggam).
+      4. **Waktu Hari:** Waktu yang berbeda untuk variasi pencahayaan (mis. Pagi, Malam, Golden hour).
       
       Variasi ini WAJIB untuk menghindari pengelompokan Entity ID. AI Meta akan memperlakukan masing-masing sebagai iklan yang berbeda secara fundamental.
       
@@ -1357,7 +1140,6 @@ export const generateUgcPack = async (blueprint: CampaignBlueprint, angle: strin
     return ideas.map(idea => addMockPerformanceSignals(idea));
 };
 
-// FIX: Added generateRemixSuggestions function
 export const generateRemixSuggestions = async (component: AdDnaComponent, baseConcept: AdConcept, adDna: AdDna, blueprint: CampaignBlueprint): Promise<RemixSuggestion[]> => {
     const suggestionsPrompt = `
       Anda adalah seorang ahli strategi kreatif. Diberikan sebuah konsep iklan dan salah satu komponen DNA-nya, hasilkan 3 saran alternatif untuk komponen tersebut.
@@ -1403,9 +1185,8 @@ export const generateRemixSuggestions = async (component: AdDnaComponent, baseCo
     return JSON.parse(rawJson.replace(/^```json\s*|```$/g, ''));
 };
 
-// FIX: Added generateConceptFromRemix function
 export const generateConceptFromRemix = async (baseConcept: AdConcept, component: AdDnaComponent, payload: any, blueprint: CampaignBlueprint): Promise<Omit<AdConcept, 'imageUrls'>> => {
-    const evolutionType = component as ('angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona' | 'visualVehicle');
+    const evolutionType = component as ('angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona' | 'visualVehicle' | 'objection');
     const evolvedConcepts = await evolveConcept(baseConcept, blueprint, evolutionType, payload);
     const newConcept = {
         ...evolvedConcepts[0],
@@ -1418,18 +1199,17 @@ export const generateMatrixConcepts = async (
     blueprint: CampaignBlueprint, 
     persona: TargetPersona, 
     formats: CreativeFormat[], 
-    triggerNames: string[], 
     strategicPathId: string
 ): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     
     const prompt = `
-        Anda adalah seorang ahli strategi kreatif dan copywriter direct response kelas dunia yang berspesialisasi dalam kampanye iklan Meta. Tugas Anda adalah menghasilkan satu set konsep iklan yang sangat beragam berdasarkan matriks format kreatif dan pemicu psikologis.
+        Anda adalah seorang ahli strategi kreatif dan copywriter direct response kelas dunia yang berspesialisasi dalam kampanye iklan Meta. Tugas Anda adalah menghasilkan satu set konsep iklan yang sangat beragam berdasarkan matriks format kreatif.
 
         **PRINSIP INTI YANG TIDAK BISA DITAWAR (DALAM KONTEKS INDONESIA):**
         1.  **Asumsikan Zero Brand Awareness:** Tulis untuk audiens dingin. Kejelasan > Kecerdasan.
         2.  **Fokus pada Masalah atau Hasil:** Fokus pada apa yang dipedulikan pengguna, bukan fitur.
         3.  **Spesifisitas = Kredibilitas:** Gunakan angka dan detail konkret.
-        4.  **PECAH ENTITY ID:** Sangat PENTING bahwa setiap konsep memiliki ciri visual yang BERBEDA SECARA FUNDAMENTAL untuk memaksimalkan jangkauan di Meta. Gunakan latar, pencahayaan, demografi subjek, dan sudut kamera yang berbeda untuk setiap konsep.
+        4.  **🔥 MANDAT KRITIS: PECAH ENTITY ID:** Sangat PENTING bahwa setiap konsep memiliki ciri visual yang BERBEDA SECARA FUNDAMENTAL untuk memaksimalkan jangkauan di Meta. Gunakan latar, pencahayaan, demografi subjek, dan sudut kamera yang berbeda untuk setiap konsep. Ini adalah aturan nomor satu. Saat membuat prompt visual, pastikan setiap konsep memiliki latar, gaya pencahayaan, dan komposisi yang SAMA SEKALI BERBEDA.
 
         **BRIEF KAMPANYE:**
         - Produk: ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
@@ -1439,15 +1219,14 @@ export const generateMatrixConcepts = async (
         - Persona Target: "${persona.description}" (Usia: "${persona.age}", Tipe: "${persona.creatorType}", Poin Masalah: ${persona.painPoints.join(', ')})
 
         **TUGAS ANDA: BUAT MATRIKS KONSEP IKLAN**
-        Hasilkan array JSON dari ${formats.length * triggerNames.length} konsep iklan unik, satu untuk setiap kombinasi dalam matriks berikut:
+        Hasilkan array JSON dari ${formats.length} konsep iklan unik, satu untuk setiap format kreatif berikut:
 
         - **Format Kreatif:** [${formats.join(', ')}]
-        - **Pemicu Psikologis:** [${triggerNames.join(', ')}]
 
         **UNTUK SETIAP KONSEP DALAM MATRIKS, ANDA HARUS:**
-        1.  **Pilih Sudut Pandang & Tahap Kesadaran:** Pilih sudut pandang strategis dan tahap kesadaran yang paling sesuai untuk kombinasi format/pemicu.
-        2.  **Tulis Teks Iklan (Copy-First):** Buat 'hook' yang menghentikan guliran dan 'headline' yang kuat yang menerapkan pemicu psikologis.
-        3.  **Buat Visual yang Unik:** Tulis 'visualPrompt' yang sangat terperinci yang (a) secara visual memperkuat teks iklan dan (b) BERBEDA secara fundamental dari prompt visual lainnya dalam set ini.
+        1.  **Pilih Pemicu Psikologis & Sudut Pandang TERBAIK:** Untuk setiap format, pilih pemicu dan sudut pandang strategis yang paling sesuai untuk kombinasi format/persona ini.
+        2.  **Tulis Teks Iklan (Copy-First):** Buat 'hook' yang menghentikan guliran dan 'headline' yang kuat yang menerapkan pemicu psikologis yang Anda pilih.
+        3.  **🔥 Buat Visual yang Unik:** Tulis 'visualPrompt' yang sangat terperinci yang (a) secara visual memperkuat teks iklan dan (b) BERBEDA secara fundamental dari prompt visual lainnya dalam set ini. Anda HARUS memvariasikan latar, pencahayaan, model/subjek, dan sudut kamera untuk setiap konsep untuk menjamin Entity ID yang unik.
         4.  **Isi Semua Bidang:** Lengkapi semua bidang yang diperlukan dari skema JSON adConcept, termasuk nama set iklan yang deskriptif.
         5.  **Gunakan ID Jalur Strategis yang Disediakan:** Untuk 'strategicPathId', gunakan nilai ini: "${strategicPathId}".
         6.  **Gunakan Penawaran yang Disediakan:** Untuk bidang 'offer', gunakan objek ini: ${JSON.stringify({name: blueprint.adDna.offerSummary, description: blueprint.adDna.offerSummary, psychologicalPrinciple: "Penawaran Langsung"})}.
