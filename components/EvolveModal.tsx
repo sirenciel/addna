@@ -108,6 +108,15 @@ export const EvolveModal: React.FC<EvolveModalProps> = ({ concept, nodes, onClos
                 </header>
 
                 <main className="p-6 space-y-4 overflow-y-auto">
+                    <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                        <p className="text-sm font-bold text-yellow-300">💡 Recommendation:</p>
+                        <p className="text-xs mt-1 text-yellow-200">
+                            {concept.performanceSignals?.scalingPotential === 'high' 
+                                ? "This concept has high scaling potential. To reach NEW audiences, change the Visual (different setting/persona) by creating a 'Quick Pivot' while keeping the angle/trigger. To find a new winning message, change the Angle or Trigger here."
+                                : "This concept's potential is undetermined. Consider evolving the Angle or Trigger first to test a different message strategy before scaling visuals."}
+                        </p>
+                    </div>
+
                    <EvolutionSection
                         title="Angle"
                         type="angle"

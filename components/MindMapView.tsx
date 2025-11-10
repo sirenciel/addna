@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CampaignBlueprint, MindMapNode, AdConcept, AwarenessStage, CreativeFormat, PlacementFormat, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject } from '../types';
 import { RefreshCwIcon, ZoomInIcon, ZoomOutIcon, LocateIcon, Trash2Icon, UsersIcon, FireIcon, ShieldAlertIcon, HeartIcon, HeartCrackIcon, TagIcon } from './icons';
@@ -27,6 +28,8 @@ const Y_SPACING_TRIGGER = 30;
 const Y_SPACING_FORMAT = 30;
 const Y_SPACING_PLACEMENT = 20;
 const Y_SPACING_CREATIVE = 30;
+
+const CAROUSEL_ARCS = ['PAS', 'Transformation', 'Educational', 'Testimonial Story'];
 
 
 // --- Tooltip Component ---
@@ -120,14 +123,14 @@ const PainDesireNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => vo
     const iconColor = isPain ? 'text-rose-200' : 'text-emerald-200';
     const textColor = isPain ? 'text-rose-100' : 'text-emerald-100';
     const promptText = 'Click to analyze objections';
-
     return (
         <div
             onClick={() => onToggle(node.id)}
             className={`relative p-3 w-full h-full rounded-lg shadow-lg flex flex-col justify-between text-center transition-all duration-300 cursor-pointer
             ${node.isExpanded
                 ? 'bg-brand-surface border-2 border-gray-700'
-                : `${bgColor} transform hover:scale-105`}`
+                : `${bgColor} transform hover:scale-105`
+            }`
             }
         >
             {isPain ? <HeartCrackIcon className={`w-5 h-5 absolute top-2 right-2 ${iconColor}`} /> : <HeartIcon className={`w-5 h-5 absolute top-2 right-2 ${iconColor}`} />}
@@ -269,9 +272,9 @@ const FormatNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }
     </div>
 );
 
-const PlacementNode: React.FC<{ node: MindMapNode, onToggle: (id: string) => void }> = ({ node, onToggle }) => (
+const PlacementNode: React.FC<{ node: MindMapNode, onClick: (id: string) => void }> = ({ node, onClick }) => (
     <div
-        onClick={() => onToggle(node.id)}
+        onClick={() => onClick(node.id)}
         className={`p-3 w-full h-full rounded-lg shadow-lg flex items-center justify-center text-center transition-all duration-300 cursor-pointer
             ${node.isExpanded
                 ? 'bg-brand-surface border-2 border-gray-600'
@@ -298,7 +301,7 @@ const NodeComponent: React.FC<{
     onToggleTrigger: (id: string) => void;
     onToggleAwareness: (id: string) => void;
     onToggleFormat: (id: string) => void;
-    onTogglePlacement: (id: string) => void;
+    onPlacementClick: (id: string) => void;
     onGenerateImage: (id: string) => void;
     onEditConcept: (id: string) => void;
     onInitiateEvolution: (id: string) => void;
@@ -309,7 +312,7 @@ const NodeComponent: React.FC<{
     onNodeHover: (id: string | null, event: React.MouseEvent | null) => void;
     onEducationHover: (type: 'angle' | 'trigger' | null, event: React.MouseEvent | null) => void;
 }> = (props) => {
-    const { node, onTogglePersona, onTogglePainDesire, onToggleObjection, onToggleOffer, onToggleAngle, onToggleTrigger, onToggleAwareness, onToggleFormat, onTogglePlacement, onDeleteNode, onNodeHover, onEducationHover } = props;
+    const { node, onTogglePersona, onTogglePainDesire, onToggleObjection, onToggleOffer, onToggleAngle, onToggleTrigger, onToggleAwareness, onToggleFormat, onPlacementClick, onDeleteNode, onNodeHover, onEducationHover } = props;
     
     return (
         <div className="node-container group relative" onMouseEnter={(e) => onNodeHover(node.id, e)} onMouseLeave={() => onNodeHover(null, null)}>
@@ -322,8 +325,8 @@ const NodeComponent: React.FC<{
             {node.type === 'angle' && <AngleNode node={node} onToggle={onToggleAngle} onEducationHover={onEducationHover} />}
             {node.type === 'trigger' && <TriggerNode node={node} onToggle={onToggleTrigger} onEducationHover={onEducationHover} />}
             {node.type === 'format' && <FormatNode node={node} onToggle={onToggleFormat} />}
-            {node.type === 'placement' && <PlacementNode node={node} onToggle={onTogglePlacement} />}
-            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onInitiateQuickPivot={props.onInitiateQuickPivot} onInitiateRemix={props.onInitiateRemix} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" />}
+            {node.type === 'placement' && <PlacementNode node={node} onClick={onPlacementClick} />}
+            {node.type === 'creative' && <CreativeCard node={node} onGenerateImage={props.onGenerateImage} onEditConcept={props.onEditConcept} onInitiateEvolution={props.onInitiateEvolution} onInitiateQuickPivot={props.onInitiateQuickPivot} onInitiateRemix={props.onInitiateRemix} onOpenLightbox={props.onOpenLightbox} className="w-[160px] h-[240px]" isSelected={false} onSelect={()=>{}} />}
             
             {node.type !== 'dna' && (
                 <button
@@ -499,7 +502,7 @@ interface MindMapViewProps {
     onToggleTrigger: (nodeId: string) => void;
     onToggleAwareness: (nodeId: string) => void;
     onToggleFormat: (nodeId: string) => void;
-    onTogglePlacement: (nodeId: string) => void;
+    onTogglePlacement: (nodeId: string, options?: { isUgcPack?: boolean, preferredCarouselArc?: string }) => void;
     onGenerateImage: (conceptId: string) => void;
     onEditConcept: (conceptId: string) => void;
     onInitiateEvolution: (conceptId: string) => void;
@@ -513,7 +516,7 @@ interface MindMapViewProps {
 }
 
 export const MindMapView: React.FC<MindMapViewProps> = (props) => {
-    const { nodes } = props;
+    const { nodes, onTogglePlacement } = props;
     const [view, setView] = useState({ x: 0, y: 0, k: 0.7 });
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
@@ -522,8 +525,23 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
     const [tooltip, setTooltip] = useState<{ content: React.ReactNode; x: number; y: number } | null>(null);
     const [educationTooltip, setEducationTooltip] = useState<{ content: React.ReactNode; x: number; y: number } | null>(null);
 
+    const [ugcModalNodeId, setUgcModalNodeId] = useState<string | null>(null);
+    const [carouselModal, setCarouselModal] = useState<{ nodeId: string; selectedArc: string | null }>({ nodeId: '', selectedArc: null });
+
     const laidOutNodes = useMemo(() => calculateLayout(nodes), [nodes]);
     const nodesMap = useMemo(() => new Map(laidOutNodes.map(node => [node.id, node])), [laidOutNodes]);
+
+    const handlePlacementClick = (nodeId: string) => {
+        const placementNode = nodesMap.get(nodeId);
+        const formatNode = placementNode?.parentId ? nodesMap.get(placementNode.parentId) : undefined;
+        if (formatNode?.label === 'UGC') {
+            setUgcModalNodeId(nodeId);
+        } else if (formatNode?.label === 'Carousel') {
+            setCarouselModal({ nodeId: nodeId, selectedArc: null });
+        } else {
+            onTogglePlacement(nodeId);
+        }
+    };
 
     const isNodeVisible = (node: MindMapNode, map: Map<string, MindMapNode>): boolean => {
         if (!node.parentId) return true;
@@ -801,6 +819,7 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
                             <NodeComponent 
                                 {...props} 
                                 node={node} 
+                                onPlacementClick={handlePlacementClick}
                                 onNodeHover={handleNodeHover}
                                 onEducationHover={handleEducationHover}
                             />
@@ -811,6 +830,68 @@ export const MindMapView: React.FC<MindMapViewProps> = (props) => {
              
              {tooltip && <Tooltip content={tooltip.content} x={tooltip.x} y={tooltip.y} />}
              {educationTooltip && <Tooltip content={educationTooltip.content} x={educationTooltip.x} y={educationTooltip.y} />}
+             
+             {ugcModalNodeId && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setUgcModalNodeId(null)}>
+                    <div className="p-6 bg-brand-surface rounded-xl max-w-lg w-full" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold">🎬 UGC Best Practice Alert</h3>
+                        <p className="mt-2 text-brand-text-secondary">Meta's data shows that <strong>UGC accounts with 4-5 creator POVs perform 3x better</strong> than single-creator UGC.</p>
+                        
+                        <div className="mt-4 grid grid-cols-2 gap-4">
+                            <div className="border border-red-500/50 p-3 rounded-lg bg-red-500/10">
+                                <p className="font-bold text-red-400">❌ Low-Performing UGC</p>
+                                <p className="text-sm mt-1">1 creator, same background, slight variations</p>
+                            </div>
+                            <div className="border border-green-500/50 p-3 rounded-lg bg-green-500/10">
+                                <p className="font-bold text-green-400">✅ High-Performing UGC</p>
+                                <p className="text-sm mt-1">4-5 creators, different ages/settings/vibes, same core message</p>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                            <button 
+                                onClick={() => { onTogglePlacement(ugcModalNodeId, { isUgcPack: true }); setUgcModalNodeId(null); }} 
+                                className="flex-1 px-4 py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-indigo-500"
+                            >
+                                Generate 4-Creator Diversity Pack (Recommended)
+                            </button>
+                            <button 
+                                onClick={() => { onTogglePlacement(ugcModalNodeId, { isUgcPack: false }); setUgcModalNodeId(null); }}
+                                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
+                            >
+                                Generate 1 Concept Only
+                            </button>
+                        </div>
+                    </div>
+                </div>
+             )}
+
+            {carouselModal.nodeId && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setCarouselModal({ nodeId: '', selectedArc: null })}>
+                    <div className="p-6 bg-brand-surface rounded-xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold">📖 Choose Carousel Story Arc</h3>
+                        <p className="text-sm mt-1 text-brand-text-secondary">Select a narrative structure for your carousel ad.</p>
+                        <div className="grid grid-cols-2 gap-3 mt-4">
+                            {CAROUSEL_ARCS.map(arc => (
+                                <button
+                                    key={arc}
+                                    onClick={() => setCarouselModal(prev => ({ ...prev, selectedArc: arc }))}
+                                    className={`text-sm p-3 rounded-lg transition-colors ${carouselModal.selectedArc === arc ? 'bg-brand-primary' : 'bg-gray-700 hover:bg-gray-600'}`}
+                                >
+                                    {arc}
+                                </button>
+                            ))}
+                        </div>
+                         <button 
+                            onClick={() => { onTogglePlacement(carouselModal.nodeId, { preferredCarouselArc: carouselModal.selectedArc ?? undefined }); setCarouselModal({ nodeId: '', selectedArc: null }); }}
+                            disabled={!carouselModal.selectedArc}
+                            className="mt-6 w-full px-4 py-2 bg-brand-secondary text-white font-bold rounded-lg hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Generate Carousel Concepts
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

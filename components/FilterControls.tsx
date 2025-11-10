@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { AdConcept, MindMapNode } from '../types';
 
@@ -8,6 +7,7 @@ export interface GalleryFilters {
   format: string;
   trigger: string;
   campaignTag: string;
+  statusTag: string;
 }
 
 interface FilterControlsProps {
@@ -18,7 +18,7 @@ interface FilterControlsProps {
 
 export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts, onFilterChange }) => {
     
-    const { angleOptions, personaOptions, formatOptions, triggerOptions, tagOptions } = useMemo(() => {
+    const { angleOptions, personaOptions, formatOptions, triggerOptions, tagOptions, statusTagOptions } = useMemo(() => {
         const angles = new Map<string, string>();
         nodes.forEach(node => {
             if (node.type === 'angle') {
@@ -30,6 +30,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
         const formats = [...new Set(concepts.map(c => c.format))];
         const triggers = [...new Set(concepts.map(c => c.trigger.name))];
         const tags = [...new Set(concepts.map(c => c.campaignTag).filter(Boolean))] as string[];
+        const statusTags = [...new Set(concepts.map(c => c.statusTag).filter(Boolean))] as string[];
 
         return {
             angleOptions: Array.from(angles.entries()).map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label)),
@@ -37,6 +38,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
             formatOptions: formats.sort(),
             triggerOptions: triggers.sort(),
             tagOptions: tags.sort(),
+            statusTagOptions: statusTags.sort(),
         };
     }, [nodes, concepts]);
 
@@ -47,6 +49,19 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
     return (
         <div className="px-4 md:px-0">
             <div className="flex flex-wrap items-center gap-4">
+                 {statusTagOptions.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="statusTagFilter" className="text-sm font-medium text-brand-text-secondary">Status:</label>
+                        <select 
+                            id="statusTagFilter"
+                            onChange={e => handleFilterChange('statusTag', e.target.value)}
+                            className="bg-gray-900 border border-gray-700 rounded-md py-1 pl-3 pr-8 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                        >
+                            <option value="all">Semua Status</option>
+                            {statusTagOptions.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                        </select>
+                    </div>
+                )}
                 {tagOptions.length > 0 && (
                     <div className="flex items-center gap-2">
                         <label htmlFor="tagFilter" className="text-sm font-medium text-brand-text-secondary">Batch:</label>
@@ -55,7 +70,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
                             onChange={e => handleFilterChange('campaignTag', e.target.value)}
                             className="bg-gray-900 border border-gray-700 rounded-md py-1 pl-3 pr-8 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                         >
-                            <option value="all">All Batches</option>
+                            <option value="all">Semua Batch</option>
                             {tagOptions.map(tag => <option key={tag} value={tag}>{tag}</option>)}
                         </select>
                     </div>
@@ -69,7 +84,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
                             onChange={e => handleFilterChange('persona', e.target.value)}
                             className="bg-gray-900 border border-gray-700 rounded-md py-1 pl-3 pr-8 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                         >
-                            <option value="all">All Personas</option>
+                            <option value="all">Semua Persona</option>
                             {personaOptions.map(persona => <option key={persona} value={persona}>{persona}</option>)}
                         </select>
                     </div>
@@ -83,7 +98,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
                             onChange={e => handleFilterChange('format', e.target.value)}
                             className="bg-gray-900 border border-gray-700 rounded-md py-1 pl-3 pr-8 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                         >
-                            <option value="all">All Formats</option>
+                            <option value="all">Semua Format</option>
                             {formatOptions.map(format => <option key={format} value={format}>{format}</option>)}
                         </select>
                     </div>
@@ -91,13 +106,13 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
                 
                 {triggerOptions.length > 0 && (
                     <div className="flex items-center gap-2">
-                         <label htmlFor="triggerFilter" className="text-sm font-medium text-brand-text-secondary">Trigger:</label>
+                         <label htmlFor="triggerFilter" className="text-sm font-medium text-brand-text-secondary">Pemicu:</label>
                         <select 
                             id="triggerFilter"
                             onChange={e => handleFilterChange('trigger', e.target.value)}
                             className="bg-gray-900 border border-gray-700 rounded-md py-1 pl-3 pr-8 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                         >
-                            <option value="all">All Triggers</option>
+                            <option value="all">Semua Pemicu</option>
                             {triggerOptions.map(trigger => <option key={trigger} value={trigger}>{trigger}</option>)}
                         </select>
                     </div>
@@ -105,13 +120,13 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ nodes, concepts,
                 
                 {angleOptions.length > 0 && (
                     <div className="flex items-center gap-2">
-                        <label htmlFor="angleFilter" className="text-sm font-medium text-brand-text-secondary">Angle:</label>
+                        <label htmlFor="angleFilter" className="text-sm font-medium text-brand-text-secondary">Sudut Pandang:</label>
                         <select 
                             id="angleFilter"
                             onChange={e => handleFilterChange('angle', e.target.value)}
                             className="bg-gray-900 border border-gray-700 rounded-md py-1 pl-3 pr-8 text-sm focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                         >
-                            <option value="all">All Angles</option>
+                            <option value="all">Semua Sudut Pandang</option>
                             {angleOptions.map(angle => (
                                 <option key={angle.id} value={angle.id}>{angle.label}</option>
                             ))}

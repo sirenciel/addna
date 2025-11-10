@@ -1,4 +1,3 @@
-
 export interface TargetPersona {
   description: string;
   painPoints: string[];
@@ -56,13 +55,13 @@ export interface BuyingTriggerObject {
 
 export type BuyingTrigger = string;
 
-export type AwarenessStage = "Unaware" | "Problem Aware" | "Solution Aware" | "Product Aware";
-export const ALL_AWARENESS_STAGES: AwarenessStage[] = ["Unaware", "Problem Aware", "Solution Aware", "Product Aware"];
+export type AwarenessStage = "Tidak Sadar" | "Sadar Masalah" | "Sadar Solusi" | "Sadar Produk";
+export const ALL_AWARENESS_STAGES: AwarenessStage[] = ["Tidak Sadar", "Sadar Masalah", "Sadar Solusi", "Sadar Produk"];
 
-export type CreativeFormat = 'UGC' | 'Before & After' | 'Comparison' | 'Demo' | 'Testimonial' | 'Problem/Solution' | 'Educational/Tip' | 'Storytelling' | 'Article Ad' | 'Split Screen' | 'Advertorial' | 'Listicle' | 'MultiProduct' | 'US vs Them' | 'Meme/Ugly Ad' | 'Direct Offer';
+export type CreativeFormat = 'UGC' | 'Sebelum & Sesudah' | 'Perbandingan' | 'Demo' | 'Testimoni' | 'Masalah/Solusi' | 'Edukasi/Tips' | 'Bercerita' | 'Iklan Artikel' | 'Layar Terpisah' | 'Advertorial' | 'Listicle' | 'Multi-Produk' | 'Kita vs Mereka' | 'Meme/Iklan Jelek' | 'Penawaran Langsung';
 export const ALL_CREATIVE_FORMATS: CreativeFormat[] = [
-    'UGC', 'Before & After', 'Comparison', 'Demo', 'Testimonial', 'Problem/Solution', 'Educational/Tip', 'Storytelling',
-    'Article Ad', 'Split Screen', 'Advertorial', 'Listicle', 'MultiProduct', 'US vs Them', 'Meme/Ugly Ad', 'Direct Offer'
+    'UGC', 'Sebelum & Sesudah', 'Perbandingan', 'Demo', 'Testimoni', 'Masalah/Solusi', 'Edukasi/Tips', 'Bercerita',
+    'Iklan Artikel', 'Layar Terpisah', 'Advertorial', 'Listicle', 'Multi-Produk', 'Kita vs Mereka', 'Meme/Iklan Jelek', 'Penawaran Langsung'
 ];
 
 export type PlacementFormat = 'Carousel' | 'Instagram Story' | 'Instagram Feed';
@@ -91,6 +90,7 @@ export interface AdConcept {
   adSetName: string;
   offer: OfferTypeObject;
   carouselSlides?: CarouselSlide[];
+  carouselArc?: string;
   triggerImplementationProof: {
     copyChecklistItemUsed: string;
     visualChecklistItemUsed: string;
@@ -108,6 +108,13 @@ export interface AdConcept {
   // For linking back to strategy
   strategicPathId: string;
   campaignTag?: string;
+  // For strategic guidance & management
+  statusTag?: 'Pengujian' | 'Unggulan' | 'Penskalaan' | 'Jenuh' | 'Diarsipkan';
+  performanceSignals?: {
+    estimatedCTR?: 'high' | 'medium' | 'low';
+    entityIDRisk?: 'duplicate' | 'similar' | 'unique';
+    scalingPotential?: 'limited' | 'moderate' | 'high';
+  };
 }
 
 export type NodeType = 'dna' | 'persona' | 'pain_desire' | 'objection' | 'offer' | 'angle' | 'trigger' | 'awareness' | 'format' | 'placement' | 'creative';
@@ -126,7 +133,7 @@ export interface MindMapNode {
   height?: number; // for layout
 }
 
-export type AppStep = 'input' | 'validateBlueprint' | 'mindmap' | 'remix';
+export type AppStep = 'input' | 'validateBlueprint' | 'mindmap' | 'remix' | 'chooseWorkflow';
 export type ViewMode = 'mindmap' | 'gallery';
 
 export type PivotType =
@@ -135,7 +142,10 @@ export type PivotType =
   | 'lifestyle-swap'
   | 'market-expand'
   | 'awareness-shift'
-  | 'channel-adapt';
+  | 'channel-adapt'
+  | 'emotional-flip'
+  | 'proof-type-shift'
+  | 'urgency-vs-evergreen';
 
 export type PivotConfig = {
     targetAge?: string;

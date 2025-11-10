@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 import { AdConcept, CampaignBlueprint, PivotConfig, PivotType, AwarenessStage, ALL_AWARENESS_STAGES } from '../types';
 import { ZapIcon } from './icons';
@@ -17,7 +18,10 @@ const PIVOT_LABELS: Record<PivotType, string> = {
     'lifestyle-swap': 'Lifestyle/Creator Type Swap',
     'market-expand': 'Market Expansion',
     'awareness-shift': 'Awareness Stage Shift',
-    'channel-adapt': 'Platform Adaptation'
+    'channel-adapt': 'Platform Adaptation',
+    'emotional-flip': 'Emotional Flip',
+    'proof-type-shift': 'Proof Type Shift',
+    'urgency-vs-evergreen': 'Urgency vs. Evergreen'
 };
 
 const inferGender = (description: string): 'Male' | 'Female' | 'Unknown' => {
@@ -216,6 +220,11 @@ export const QuickPivotModal: React.FC<QuickPivotModalProps> = ({ baseConcept, b
   const [selectedPivot, setSelectedPivot] = useState<PivotType | null>(null);
   const [config, setConfig] = useState<PivotConfig>({});
 
+  const handleSelectPivot = (pivot: PivotType) => {
+    setSelectedPivot(pivot);
+    setConfig({}); // Reset config when changing pivot type
+  };
+
   const handleGenerateClick = () => {
       if (selectedPivot) {
           onGenerate(selectedPivot, config);
@@ -224,7 +233,7 @@ export const QuickPivotModal: React.FC<QuickPivotModalProps> = ({ baseConcept, b
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-brand-surface rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-brand-surface rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <header className="p-6 border-b border-gray-700">
           <h2 className="text-2xl font-bold flex items-center gap-2"><ZapIcon className="w-6 h-6 text-yellow-400" />Quick Pivot from a Winning Concept</h2>
           <p className="text-sm text-brand-text-secondary mt-2">Base: <span className="text-brand-primary font-semibold">{baseConcept.headline}</span></p>
@@ -234,39 +243,52 @@ export const QuickPivotModal: React.FC<QuickPivotModalProps> = ({ baseConcept, b
           </div>
         </header>
 
-        <main className="p-6 space-y-4 overflow-y-auto">
-          <h3 className="text-lg font-semibold">Choose a Pivot Type:</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <PivotCard icon="👥" title="Age Group Shift" description="Adapt for a different age demographic" isSelected={selectedPivot === 'age-shift'} onClick={() => setSelectedPivot('age-shift')} examples={["25-35 → 18-24 (Gen Z TikTok)", "25-35 → 40-55 (Mature Market)"]}/>
-            <PivotCard icon="⚧️" title="Gender Flip" description="Change the target gender, adjusting pain points" isSelected={selectedPivot === 'gender-flip'} onClick={() => setSelectedPivot('gender-flip')} examples={["Targeting Men → Women", "Targeting Women → Men"]}/>
-            <PivotCard icon="🎨" title="Lifestyle/Creator Type Swap" description="Change the persona's aesthetic & values" isSelected={selectedPivot === 'lifestyle-swap'} onClick={() => setSelectedPivot('lifestyle-swap')} examples={["Influencer → Regular User", "Corporate → Freelancer"]}/>
-            <PivotCard icon="🌍" title="Market Expansion" description="Localize for another country/culture" isSelected={selectedPivot === 'market-expand'} onClick={() => setSelectedPivot('market-expand')} examples={["USA → UK", "USA → Australia"]}/>
-            <PivotCard icon="🧠" title="Awareness Stage Shift" description="Retarget for a different stage of awareness" isSelected={selectedPivot === 'awareness-shift'} onClick={() => setSelectedPivot('awareness-shift')} examples={["Product Aware → Unaware (cold)", "Problem Aware → Solution Aware"]}/>
-            <PivotCard icon="📱" title="Platform Adaptation" description="Optimize for a different platform" isSelected={selectedPivot === 'channel-adapt'} onClick={() => setSelectedPivot('channel-adapt')} examples={["Instagram → TikTok", "Instagram → Facebook (older demo)"]}/>
-          </div>
-
-          {selectedPivot && (
-            <div className="mt-6 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-              <h4 className="font-semibold mb-3 text-brand-primary">Configure {PIVOT_LABELS[selectedPivot]}:</h4>
-              {selectedPivot === 'age-shift' && <AgeShiftConfig currentAge={baseConcept.personaAge} onChange={(newAge) => setConfig({ targetAge: newAge })} />}
-              {selectedPivot === 'gender-flip' && <GenderFlipConfig currentGender={inferGender(baseConcept.personaDescription)} onChange={(newGender) => setConfig({ targetGender: newGender })} />}
-              {selectedPivot === 'lifestyle-swap' && <LifestyleSwapConfig currentType={baseConcept.personaCreatorType} onChange={(newType) => setConfig({ targetLifestyle: newType })} />}
-              {selectedPivot === 'market-expand' && <MarketExpandConfig currentCountry={blueprint.adDna.targetCountry} onChange={(newCountry) => setConfig({ targetCountry: newCountry })} />}
-              {selectedPivot === 'awareness-shift' && <AwarenessShiftConfig currentStage={baseConcept.awarenessStage} onChange={(newStage) => setConfig({ targetAwareness: newStage })} />}
-              {selectedPivot === 'channel-adapt' && <ChannelAdaptConfig currentPlatform="Instagram" onChange={(newPlatform) => setConfig({ targetPlatform: newPlatform })} />}
-
-              <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-md">
-                <p className="text-xs font-semibold text-blue-300 mb-2">🔄 What Will Change:</p>
-                <ul className="text-xs text-blue-200 space-y-1">
-                  <li>✓ Persona description & pain points adjusted</li>
-                  <li>✓ Headline & hook rewritten for the new audience</li>
-                  <li>✓ Visual prompt adapted (style, setting, model)</li>
-                  <li>✓ Tone & language patterns adjusted</li>
-                </ul>
-                <p className="text-xs text-brand-text-secondary mt-2">✅ What Stays: Angle ("{baseConcept.angle}"), Trigger ("{baseConcept.trigger.name}"), Format ("{baseConcept.format}")</p>
+        <main className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
+            <div>
+              <h3 className="text-lg font-semibold mb-3">1. Choose a Pivot Type:</h3>
+              <div className="space-y-3">
+                  <PivotCard icon="🎭" title="Emotional Flip" description="Change the core emotion from pain to desire, or vice-versa." isSelected={selectedPivot === 'emotional-flip'} onClick={() => handleSelectPivot('emotional-flip')} examples={['"Stop wasting money" → "Unlock financial freedom"']}/>
+                  <PivotCard icon="🛡️" title="Proof Type Shift" description="Change the trust mechanism from social proof to authority, etc." isSelected={selectedPivot === 'proof-type-shift'} onClick={() => handleSelectPivot('proof-type-shift')} examples={['"10k customers" → "Certified by experts"']}/>
+                  <PivotCard icon="⏳" title="Urgency vs. Evergreen" description="Test scarcity messaging against a timeless value proposition." isSelected={selectedPivot === 'urgency-vs-evergreen'} onClick={() => handleSelectPivot('urgency-vs-evergreen')} examples={['"Sale ends tonight" → "Join 10k+ members"']}/>
+                  <PivotCard icon="👥" title="Age Group Shift" description="Adapt for a different age demographic" isSelected={selectedPivot === 'age-shift'} onClick={() => handleSelectPivot('age-shift')} examples={["25-35 → 18-24 (Gen Z TikTok)"]}/>
+                  <PivotCard icon="⚧️" title="Gender Flip" description="Change the target gender, adjusting pain points" isSelected={selectedPivot === 'gender-flip'} onClick={() => handleSelectPivot('gender-flip')} examples={["Targeting Men → Women"]}/>
+                  <PivotCard icon="🎨" title="Lifestyle Swap" description="Change the persona's aesthetic & values" isSelected={selectedPivot === 'lifestyle-swap'} onClick={() => handleSelectPivot('lifestyle-swap')} examples={["Influencer → Regular User"]}/>
+                  <PivotCard icon="🌍" title="Market Expansion" description="Localize for another country/culture" isSelected={selectedPivot === 'market-expand'} onClick={() => handleSelectPivot('market-expand')} examples={["USA → UK"]}/>
               </div>
             </div>
-          )}
+            
+            <div>
+                <h3 className="text-lg font-semibold mb-3">2. Configure Pivot:</h3>
+                {selectedPivot ? (
+                    <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 h-full">
+                      <h4 className="font-semibold mb-3 text-brand-primary">Configure {PIVOT_LABELS[selectedPivot]}:</h4>
+                      {selectedPivot === 'age-shift' && <AgeShiftConfig currentAge={baseConcept.personaAge} onChange={(newAge) => setConfig({ targetAge: newAge })} />}
+                      {selectedPivot === 'gender-flip' && <GenderFlipConfig currentGender={inferGender(baseConcept.personaDescription)} onChange={(newGender) => setConfig({ targetGender: newGender })} />}
+                      {selectedPivot === 'lifestyle-swap' && <LifestyleSwapConfig currentType={baseConcept.personaCreatorType} onChange={(newType) => setConfig({ targetLifestyle: newType })} />}
+                      {selectedPivot === 'market-expand' && <MarketExpandConfig currentCountry={blueprint.adDna.targetCountry} onChange={(newCountry) => setConfig({ targetCountry: newCountry })} />}
+                      {selectedPivot === 'awareness-shift' && <AwarenessShiftConfig currentStage={baseConcept.awarenessStage} onChange={(newStage) => setConfig({ targetAwareness: newStage })} />}
+                      {selectedPivot === 'channel-adapt' && <ChannelAdaptConfig currentPlatform="Instagram" onChange={(newPlatform) => setConfig({ targetPlatform: newPlatform })} />}
+                      {(selectedPivot === 'emotional-flip' || selectedPivot === 'proof-type-shift' || selectedPivot === 'urgency-vs-evergreen') && (
+                        <p className="text-sm text-brand-text-secondary">No specific configuration needed. The AI will handle the strategic shift.</p>
+                      )}
+
+                      <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-md">
+                        <p className="text-xs font-semibold text-blue-300 mb-2">🔄 What Will Change:</p>
+                        <ul className="text-xs text-blue-200 space-y-1">
+                          <li>✓ Persona description & pain points adjusted</li>
+                          <li>✓ Headline & hook rewritten for the new audience</li>
+                          <li>✓ Visual prompt adapted (style, setting, model)</li>
+                          <li>✓ Tone & language patterns adjusted</li>
+                        </ul>
+                        <p className="text-xs text-brand-text-secondary mt-2">✅ What Stays: Angle ("{baseConcept.angle}"), Trigger ("{baseConcept.trigger.name}"), Format ("{baseConcept.format}")</p>
+                      </div>
+                    </div>
+                 ) : (
+                    <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 h-full flex items-center justify-center text-brand-text-secondary">
+                        <p>Select a pivot type from the left.</p>
+                    </div>
+                )}
+            </div>
         </main>
 
         <footer className="p-6 border-t border-gray-700 flex justify-between items-center">

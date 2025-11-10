@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { InputForm } from './components/InputForm';
 import { DnaValidationStep } from './components/DnaValidationStep';
@@ -8,6 +6,7 @@ import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
 import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDna, NodeType, AdDnaComponent, RemixSuggestion } from './types';
+// FIX: Changed import from generateUgcConceptsForPersona to generateConceptsFromPersona as it does not exist.
 import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails, generateQuickPivot, generateRemixSuggestions, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
@@ -26,21 +25,21 @@ function simpleUUID() {
 
 const FORMAT_PLACEMENT_MAP: Record<CreativeFormat, PlacementFormat[]> = {
     'UGC': ['Instagram Story', 'Instagram Feed', 'Carousel'],
-    'Before & After': ['Instagram Feed', 'Carousel'],
-    'Comparison': ['Carousel', 'Instagram Feed'],
+    'Sebelum & Sesudah': ['Instagram Feed', 'Carousel'],
+    'Perbandingan': ['Carousel', 'Instagram Feed'],
     'Demo': ['Instagram Story', 'Carousel', 'Instagram Feed'],
-    'Testimonial': ['Instagram Feed', 'Carousel'],
-    'Problem/Solution': ['Carousel', 'Instagram Feed'],
-    'Educational/Tip': ['Carousel', 'Instagram Story'],
-    'Storytelling': ['Carousel', 'Instagram Feed'],
-    'Article Ad': ['Instagram Feed', 'Carousel'],
-    'Split Screen': ['Instagram Feed', 'Carousel'],
+    'Testimoni': ['Instagram Feed', 'Carousel'],
+    'Masalah/Solusi': ['Carousel', 'Instagram Feed'],
+    'Edukasi/Tips': ['Carousel', 'Instagram Story'],
+    'Bercerita': ['Carousel', 'Instagram Feed'],
+    'Iklan Artikel': ['Instagram Feed', 'Carousel'],
+    'Layar Terpisah': ['Instagram Feed', 'Carousel'],
     'Advertorial': ['Instagram Feed', 'Carousel'],
     'Listicle': ['Carousel', 'Instagram Feed'],
-    'MultiProduct': ['Carousel', 'Instagram Feed'],
-    'US vs Them': ['Instagram Feed', 'Carousel'],
-    'Meme/Ugly Ad': ['Instagram Story', 'Instagram Feed'],
-    'Direct Offer': ['Instagram Story', 'Instagram Feed', 'Carousel'],
+    'Multi-Produk': ['Carousel', 'Instagram Feed'],
+    'Kita vs Mereka': ['Instagram Feed', 'Carousel'],
+    'Meme/Iklan Jelek': ['Instagram Story', 'Instagram Feed'],
+    'Penawaran Langsung': ['Instagram Story', 'Instagram Feed', 'Carousel'],
 };
 
 function App() {
@@ -60,7 +59,7 @@ function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>('input');
   const [viewMode, setViewMode] = useState<ViewMode>('mindmap');
   const [lightboxData, setLightboxData] = useState<{ concept: AdConcept, startIndex: number } | null>(null);
-  const [allowVisualExploration, setAllowVisualExploration] = useState<boolean>(false);
+  const [allowVisualExploration, setAllowVisualExploration] = useState<boolean>(true);
 
 
   const handleGenerate = async (imageBase64: string, caption: string, productInfo: string, offerInfo: string) => {
@@ -68,7 +67,7 @@ function App() {
     setError(null);
     setCampaignBlueprint(null);
     setNodes([]);
-    setLoadingMessage('Analyzing Campaign Blueprint...');
+    setLoadingMessage('Menganalisis Blueprint Kampanye...');
 
     try {
       const blueprint = await analyzeCampaignBlueprint(imageBase64, caption, productInfo, offerInfo);
@@ -77,20 +76,30 @@ function App() {
       setCurrentStep('validateBlueprint');
     } catch (e: any) {
       console.error(e);
-      setError(e.message || 'Failed to analyze campaign blueprint.');
+      setError(e.message || 'Gagal menganalisis blueprint kampanye.');
     } finally {
       setIsLoading(false);
       setLoadingMessage('');
     }
   };
 
-  const handleBlueprintValidated = async (validatedBlueprint: CampaignBlueprint) => {
+  const handleWorkflowSelected = (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack') => {
+      if (workflow === 'deep-dive') {
+          handleStartManualExploration(validatedBlueprint);
+      } else if (workflow === 'quick-scale') {
+          handleStartSmartRemix(validatedBlueprint);
+      } else if (workflow === 'ugc-diversity-pack') {
+          handleStartUgcDiversityPack(validatedBlueprint);
+      }
+  };
+
+  const handleStartManualExploration = (validatedBlueprint: CampaignBlueprint) => {
     setCampaignBlueprint(validatedBlueprint);
     setCurrentStep('mindmap');
     (window as any).appState = { referenceImage };
 
     const dnaNode: MindMapNode = {
-        id: 'dna-root', type: 'dna', label: 'Campaign Blueprint', content: validatedBlueprint,
+        id: 'dna-root', type: 'dna', label: 'Blueprint Kampanye', content: validatedBlueprint,
         position: { x: 0, y: 0 }, width: 300, height: 420
     };
     
@@ -118,14 +127,14 @@ function App() {
     setError(null);
 
     try {
-        const campaignTag = `Smart Remix ${new Date().toLocaleString()}`;
-        setLoadingMessage('Creating Campaign Blueprint...');
+        const campaignTag = `Skala Cepat ${new Date().toLocaleTimeString()}`;
+        setLoadingMessage('Membuat Blueprint Kampanye...');
         const dnaNode: MindMapNode = {
-            id: 'dna-root', type: 'dna', label: 'Campaign Blueprint', content: validatedBlueprint,
+            id: 'dna-root', type: 'dna', label: 'Blueprint Kampanye', content: validatedBlueprint,
             position: { x: 0, y: 0 }, width: 300, height: 420
         };
         
-        setLoadingMessage('Generating persona variations...');
+        setLoadingMessage('Menghasilkan variasi persona...');
         const newPersonas = await generatePersonaVariations(validatedBlueprint, [validatedBlueprint.targetPersona]);
         const allPersonas = [validatedBlueprint.targetPersona, ...newPersonas];
 
@@ -142,7 +151,7 @@ function App() {
         
         setNodes([dnaNode, ...personaNodes]);
 
-        setLoadingMessage(`Generating ad concepts for ${allPersonas.length} personas...`);
+        setLoadingMessage(`Menghasilkan konsep iklan untuk ${allPersonas.length} persona...`);
         const conceptPromises = allPersonas.map((persona, index) => 
             generateConceptsFromPersona(validatedBlueprint, persona, personaNodes[index].id)
         );
@@ -166,8 +175,75 @@ function App() {
         setNodes(prev => [...prev, ...creativeNodes]);
 
     } catch (e: any) {
-        console.error("Smart Remix failed:", e);
-        setError(e.message || "Failed to run Smart Remix.");
+        console.error("Remix Cerdas gagal:", e);
+        setError(e.message || "Gagal menjalankan Remix Cerdas.");
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+};
+
+const handleStartUgcDiversityPack = async (validatedBlueprint: CampaignBlueprint) => {
+    setCampaignBlueprint(validatedBlueprint);
+    setCurrentStep('mindmap');
+    setViewMode('gallery');
+    (window as any).appState = { referenceImage };
+    setIsLoading(true);
+    setError(null);
+
+    try {
+        const campaignTag = `Paket Keragaman UGC ${new Date().toLocaleTimeString()}`;
+        setLoadingMessage('Membuat Blueprint Kampanye...');
+        const dnaNode: MindMapNode = {
+            id: 'dna-root', type: 'dna', label: 'Blueprint Kampanye', content: validatedBlueprint,
+            position: { x: 0, y: 0 }, width: 300, height: 420
+        };
+        
+        setLoadingMessage('Menghasilkan 4 variasi persona beragam untuk paket UGC...');
+        // FIX: Removed extra argument from generatePersonaVariations call.
+        const newPersonas = await generatePersonaVariations(validatedBlueprint, [validatedBlueprint.targetPersona]);
+        const allPersonas = [validatedBlueprint.targetPersona, ...newPersonas];
+
+        const personaNodes: MindMapNode[] = allPersonas.map(persona => ({
+            id: simpleUUID(),
+            parentId: dnaNode.id,
+            type: 'persona',
+            label: persona.description,
+            content: { persona },
+            position: { x: 0, y: 0 },
+            isExpanded: false,
+            width: 250, height: 140,
+        }));
+        
+        setNodes([dnaNode, ...personaNodes]);
+
+        setLoadingMessage(`Menghasilkan konsep UGC untuk ${allPersonas.length} persona...`);
+        const conceptPromises = allPersonas.map((persona, index) => 
+            // FIX: Changed generateUgcConceptsForPersona to generateConceptsFromPersona as it does not exist.
+            generateConceptsFromPersona(validatedBlueprint, persona, personaNodes[index].id)
+        );
+
+        const conceptArrays = await Promise.all(conceptPromises);
+        const allNewConcepts = conceptArrays.flat();
+        const taggedConcepts = allNewConcepts.map(c => ({ ...c, campaignTag, format: 'UGC' as CreativeFormat }));
+
+
+        const creativeNodes: MindMapNode[] = taggedConcepts.map(concept => ({
+            id: concept.id,
+            parentId: concept.strategicPathId, // This is the persona node ID
+            type: 'creative',
+            label: concept.headline,
+            content: { concept },
+            position: { x: 0, y: 0 },
+            width: 160,
+            height: 240,
+        }));
+        
+        setNodes(prev => [...prev, ...creativeNodes]);
+
+    } catch (e: any) {
+        console.error("Paket Keragaman UGC gagal:", e);
+        setError(e.message || "Gagal menjalankan Paket Keragaman UGC.");
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -184,7 +260,7 @@ function App() {
           setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, isExpanded: !n.isExpanded } : n));
       } else {
           setIsLoading(true);
-          setLoadingMessage(`Analyzing Pain & Desire for persona "${personaNode.label}"...`);
+          setLoadingMessage(`Menganalisis Poin Masalah & Keinginan untuk persona "${personaNode.label}"...`);
           try {
               const persona = (personaNode.content as { persona: TargetPersona }).persona;
               const painDesires = await generatePainDesires(campaignBlueprint, persona);
@@ -207,7 +283,7 @@ function App() {
               ]);
           } catch (e: any) {
               console.error(e);
-              setError(e.message || 'Failed to analyze Pain & Desire.');
+              setError(e.message || 'Gagal menganalisis Poin Masalah & Keinginan.');
           } finally {
               setIsLoading(false);
               setLoadingMessage('');
@@ -227,12 +303,12 @@ function App() {
 
       const personaNode = nodes.find(n => n.id === painDesireNode.parentId);
       if (!personaNode) {
-          setError('Persona context not found.');
+          setError('Konteks persona tidak ditemukan.');
           return;
       }
       
       setIsLoading(true);
-      setLoadingMessage(`Analyzing potential objections for "${painDesireNode.label}"...`);
+      setLoadingMessage(`Menganalisis potensi keberatan untuk "${painDesireNode.label}"...`);
       try {
           const persona = (personaNode.content as { persona: TargetPersona }).persona;
           const painDesire = (painDesireNode.content as { painDesire: PainDesireObject }).painDesire;
@@ -256,7 +332,7 @@ function App() {
           ]);
       } catch (e: any) {
           console.error(e);
-          setError(e.message || 'Failed to analyze objections.');
+          setError(e.message || 'Gagal menganalisis keberatan.');
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -277,12 +353,12 @@ function App() {
       const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
   
       if (!personaNode) {
-          setError('Persona context not found.');
+          setError('Konteks persona tidak ditemukan.');
           return;
       }
   
       setIsLoading(true);
-      setLoadingMessage(`Finding offer types to address "${objectionNode.label}"...`);
+      setLoadingMessage(`Mencari jenis penawaran untuk mengatasi "${objectionNode.label}"...`);
       try {
           const persona = (personaNode.content as { persona: TargetPersona }).persona;
           const objection = (objectionNode.content as { objection: ObjectionObject }).objection;
@@ -306,7 +382,7 @@ function App() {
           ]);
       } catch (e: any) {
           console.error(e);
-          setError(e.message || 'Failed to create offer types.');
+          setError(e.message || 'Gagal membuat jenis penawaran.');
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -356,12 +432,12 @@ function App() {
           const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
   
           if (!personaNode || !objectionNode || !painDesireNode || !offerNode) {
-              setError('Persona, pain/desire, objection, or offer context not found for creating an angle.');
+              setError('Konteks persona, poin masalah/keinginan, keberatan, atau penawaran tidak ditemukan untuk membuat sudut pandang.');
               return;
           }
   
           setIsLoading(true);
-          setLoadingMessage(`Creating strategic angles for "${awarenessNode.label}" stage...`);
+          setLoadingMessage(`Membuat sudut pandang strategis untuk tahap "${awarenessNode.label}"...`);
           
           try {
               const personaContent = personaNode.content as { persona: TargetPersona };
@@ -395,7 +471,7 @@ function App() {
               ]);
           } catch (e: any) {
               console.error(e);
-              setError(e.message || 'Failed to create strategic angles.');
+              setError(e.message || 'Gagal membuat sudut pandang strategis.');
           } finally {
               setIsLoading(false);
               setLoadingMessage('');
@@ -419,12 +495,12 @@ function App() {
           const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
           
           if (!personaNode || !awarenessNode) {
-              setError('Context not found for creating a trigger.');
+              setError('Konteks tidak ditemukan untuk membuat pemicu.');
               return;
           }
   
           setIsLoading(true);
-          setLoadingMessage(`Analyzing triggers for angle "${angleNode.label}"...`);
+          setLoadingMessage(`Menganalisis pemicu untuk sudut pandang "${angleNode.label}"...`);
           try {
               const persona = (personaNode.content as { persona: TargetPersona }).persona;
               const triggers: BuyingTriggerObject[] = await generateBuyingTriggers(
@@ -453,7 +529,7 @@ function App() {
   
           } catch (e: any) {
               console.error(e);
-              setError(e.message || 'Failed to analyze buying triggers.');
+              setError(e.message || 'Gagal menganalisis pemicu pembelian.');
           } finally {
               setIsLoading(false);
               setLoadingMessage('');
@@ -519,7 +595,7 @@ function App() {
     }
   };
   
-  const handleTogglePlacement = async (nodeId: string) => {
+  const handleTogglePlacement = async (nodeId: string, options?: { isUgcPack?: boolean, preferredCarouselArc?: string }) => {
       const placementNode = nodes.find(n => n.id === nodeId);
       if (!placementNode || !campaignBlueprint) return;
 
@@ -539,7 +615,7 @@ function App() {
       const personaNode = painDesireNode ? nodes.find(n => n.id === painDesireNode.parentId) : undefined;
 
       if (!formatNode || !awarenessNode || !triggerNode || !angleNode || !personaNode || !offerNode) {
-          setError("Context for this brief could not be found.");
+          setError("Konteks untuk brief ini tidak dapat ditemukan.");
           return;
       }
 
@@ -551,56 +627,54 @@ function App() {
       const awareness = awarenessNode.label as AwarenessStage;
       const offer = (offerNode.content as { offer: OfferTypeObject }).offer;
       
-      // --- UGC PACK LOGIC ---
-      if (format === 'UGC') {
-          if (window.confirm("Generate a 4-Creator UGC Diversity Pack? This will create 4 concepts from different micro-personas, which is highly recommended for scaling UGC.")) {
-              setIsLoading(true);
-              setLoadingMessage(`Generating UGC Diversity Pack...`);
+      const isUgcPack = options?.isUgcPack || false;
+      const preferredCarouselArc = options?.preferredCarouselArc;
 
-              try {
-                  const ideas = await generateUgcPack(
-                      campaignBlueprint, angle, trigger, awareness, placement, persona, placementNode.id, allowVisualExploration, offer
-                  );
-                  
-                  const taggedIdeas = ideas.map(idea => ({ ...idea, campaignTag: 'UGC Diversity Pack' }));
+      if (isUgcPack) {
+          setIsLoading(true);
+          setLoadingMessage(`Menghasilkan Paket Keragaman UGC...`);
+          try {
+              const ideas = await generateUgcPack(
+                  campaignBlueprint, angle, trigger, awareness, placement, persona, placementNode.id, allowVisualExploration, offer
+              );
+              
+              const taggedIdeas = ideas.map(idea => ({ ...idea, campaignTag: 'Paket Keragaman UGC' }));
 
-                  const newCreativeNodes: MindMapNode[] = taggedIdeas.map(concept => ({
-                      id: concept.id,
-                      parentId: nodeId,
-                      type: 'creative',
-                      label: concept.headline,
-                      content: { concept },
-                      position: { x: 0, y: 0 },
-                      width: 160,
-                      height: 240,
-                  }));
+              const newCreativeNodes: MindMapNode[] = taggedIdeas.map(concept => ({
+                  id: concept.id,
+                  parentId: nodeId,
+                  type: 'creative',
+                  label: concept.headline,
+                  content: { concept },
+                  position: { x: 0, y: 0 },
+                  width: 160,
+                  height: 240,
+              }));
 
-                  setNodes(prev => [
-                      ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
-                      ...newCreativeNodes,
-                  ]);
+              setNodes(prev => [
+                  ...prev.map(n => n.id === nodeId ? { ...n, isExpanded: true } : n),
+                  ...newCreativeNodes,
+              ]);
 
-              } catch(e: any) {
-                  console.error(e);
-                  setError(`Failed to generate UGC Diversity Pack.`);
-              } finally {
-                  setIsLoading(false); 
-                  setLoadingMessage('');
-              }
-              return; // Exit the function after handling the UGC pack
+          } catch(e: any) {
+              console.error(e);
+              setError(`Gagal menghasilkan Paket Keragaman UGC.`);
+          } finally {
+              setIsLoading(false); 
+              setLoadingMessage('');
           }
+          return;
       }
-      // --- END UGC PACK LOGIC ---
-
+      
       setIsLoading(true);
-      setLoadingMessage(`Generating ${placement} ideas for "${format}" format...`);
+      setLoadingMessage(`Menghasilkan ide ${placement} untuk format "${format}"...`);
 
       try {
           const ideas = await generateCreativeIdeas(
-              campaignBlueprint, angle, trigger, awareness, format, placement, persona, placementNode.id, allowVisualExploration, offer
+              campaignBlueprint, angle, trigger, awareness, format, placement, persona, placementNode.id, allowVisualExploration, offer, preferredCarouselArc
           );
           
-          const taggedIdeas = ideas.map(idea => ({ ...idea, campaignTag: 'Manual Exploration' }));
+          const taggedIdeas = ideas.map(idea => ({ ...idea, campaignTag: 'Eksplorasi Manual' }));
 
           const newCreativeNodes: MindMapNode[] = taggedIdeas.map(concept => ({
               id: concept.id,
@@ -619,7 +693,7 @@ function App() {
           ]);
       } catch(e: any) {
           console.error(e);
-          setError(`Failed to generate ideas for "${placement}".`);
+          setError(`Gagal menghasilkan ide untuk "${placement}".`);
       } finally {
           setIsLoading(false); 
           setLoadingMessage('');
@@ -631,16 +705,16 @@ function App() {
       if (!nodeToDelete) return;
       
       const messageMap = {
-          'persona': 'Are you sure you want to delete this persona and all its children?',
-          'pain_desire': 'Are you sure you want to delete this Pain/Desire and all its children?',
-          'objection': 'Are you sure you want to delete this objection and all its children?',
-          'offer': 'Are you sure you want to delete this offer and all its children?',
-          'angle': 'Are you sure you want to delete this angle and all its children?',
-          'trigger': 'Are you sure you want to delete this trigger and all its children?',
-          'creative': 'Are you sure you want to delete this creative concept?',
+          'persona': 'Anda yakin ingin menghapus persona ini dan semua turunannya?',
+          'pain_desire': 'Anda yakin ingin menghapus Poin Masalah/Keinginan ini dan semua turunannya?',
+          'objection': 'Anda yakin ingin menghapus keberatan ini dan semua turunannya?',
+          'offer': 'Anda yakin ingin menghapus penawaran ini dan semua turunannya?',
+          'angle': 'Anda yakin ingin menghapus sudut pandang ini dan semua turunannya?',
+          'trigger': 'Anda yakin ingin menghapus pemicu ini dan semua turunannya?',
+          'creative': 'Anda yakin ingin menghapus konsep kreatif ini?',
       };
       // @ts-ignore
-      const message = messageMap[nodeToDelete.type] || 'Are you sure you want to delete this node and all its children?';
+      const message = messageMap[nodeToDelete.type] || 'Anda yakin ingin menghapus node ini dan semua turunannya?';
 
       if (!window.confirm(message)) return;
 
@@ -663,7 +737,7 @@ function App() {
   const handleGenerateMorePersonas = async () => {
     if (!campaignBlueprint) return;
     setIsLoading(true);
-    setLoadingMessage('Generating new persona variations...');
+    setLoadingMessage('Menghasilkan variasi persona baru...');
     try {
         const existingPersonas = nodes
             .filter(n => n.type === 'persona')
@@ -672,7 +746,7 @@ function App() {
         const newPersonas = await generatePersonaVariations(campaignBlueprint, existingPersonas);
 
         if (newPersonas.length === 0) {
-            setLoadingMessage('No new personas were found.');
+            setLoadingMessage('Tidak ada persona baru yang ditemukan.');
             setTimeout(() => setLoadingMessage(''), 2000);
             return;
         }
@@ -689,22 +763,22 @@ function App() {
         setNodes(prev => [...prev, ...newPersonaNodes]);
     } catch (e: any) {
         console.error(e);
-        setError('Failed to generate new personas.');
+        setError('Gagal menghasilkan persona baru.');
     } finally {
         setIsLoading(false); setLoadingMessage('');
     }
   };
   
    const handleAddCustomPersona = () => {
-    const description = window.prompt("Enter a brief description for your new persona:");
+    const description = window.prompt("Masukkan deskripsi singkat untuk persona baru Anda:");
     if (!description || description.trim() === "") return;
     
     const newPersona: TargetPersona = {
         description: description,
-        painPoints: ["Pain point 1", "Pain point 2"],
-        desiredOutcomes: ["Desired outcome 1", "Desired outcome 2"],
+        painPoints: ["Poin masalah 1", "Poin masalah 2"],
+        desiredOutcomes: ["Hasil yang diinginkan 1", "Hasil yang diinginkan 2"],
         age: "25-35",
-        creatorType: "Regular User",
+        creatorType: "Pengguna Biasa",
     };
 
     const newPersonaNode: MindMapNode = {
@@ -735,14 +809,14 @@ function App() {
       if (!campaignBlueprint) return;
       setEvolutionTarget(null);
       setIsLoading(true);
-      setLoadingMessage(`Evolving concept to ${evolutionType} "${newValue}"...`);
+      setLoadingMessage(`Mengevolusikan konsep ke ${evolutionType} "${newValue}"...`);
       setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isEvolving: true } } } : n));
 
       try {
           let evolvedConcepts: Omit<AdConcept, 'imageUrls'>[] = [];
 
           if (evolutionType === 'trigger') {
-              setLoadingMessage(`Getting details for trigger "${newValue}"...`);
+              setLoadingMessage(`Mendapatkan detail untuk pemicu "${newValue}"...`);
 
               const findParent = (startNodeId: string, type: 'angle' | 'persona'): MindMapNode | undefined => {
                   let currentNode = nodes.find(n => n.id === startNodeId);
@@ -758,7 +832,7 @@ function App() {
               const personaNode = findParent(angleNode?.id || '', 'persona');
 
               if (!angleNode || !personaNode) {
-                  throw new Error("Context (angle/persona) not found for trigger evolution.");
+                  throw new Error("Konteks (sudut pandang/persona) tidak ditemukan untuk evolusi pemicu.");
               }
 
               const persona = (personaNode.content as { persona: TargetPersona }).persona;
@@ -766,7 +840,7 @@ function App() {
               
               const triggerObject = await getBuyingTriggerDetails(newValue, campaignBlueprint, persona, angle);
               
-              setLoadingMessage(`Evolving concept with trigger "${newValue}"...`);
+              setLoadingMessage(`Mengevolusikan konsep dengan pemicu "${newValue}"...`);
               
               evolvedConcepts = await evolveConcept(baseConcept, campaignBlueprint, evolutionType, triggerObject);
 
@@ -778,7 +852,7 @@ function App() {
               const newConceptUntagged = evolvedConcepts[0];
               const newConcept = {
                   ...newConceptUntagged,
-                  campaignTag: `Evolved from "${baseConcept.headline.substring(0, 15)}..."`
+                  campaignTag: `Evolusi dari "${baseConcept.headline.substring(0, 15)}..."`
               };
               const newCreativeNode: MindMapNode = {
                   id: newConcept.id,
@@ -792,11 +866,11 @@ function App() {
               };
               setNodes(prev => [...prev, newCreativeNode]);
           } else {
-              throw new Error("Evolution did not yield a new concept.");
+              throw new Error("Evolusi tidak menghasilkan konsep baru.");
           }
       } catch (e: any) {
           console.error(e);
-          setError(`Failed to evolve concept.`);
+          setError(`Gagal mengevolusikan konsep.`);
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -816,7 +890,7 @@ function App() {
     const baseConcept = pivotTarget;
     setPivotTarget(null);
     setIsLoading(true);
-    setLoadingMessage(`Performing Quick Pivot: ${pivotType}...`);
+    setLoadingMessage(`Melakukan Pivot Cepat: ${pivotType}...`);
     setNodes(prev => prev.map(n => n.id === baseConcept.id ? { ...n, content: { concept: { ...(n.content as { concept: AdConcept }).concept, isPivoting: true } } } : n));
     
     try {
@@ -825,7 +899,7 @@ function App() {
           const newConceptUntagged = pivotedConcepts[0];
           const newConcept = {
               ...newConceptUntagged,
-              campaignTag: `Pivoted from "${baseConcept.headline.substring(0, 15)}..."`
+              campaignTag: `Pivot dari "${baseConcept.headline.substring(0, 15)}..."`
           };
           const newCreativeNode: MindMapNode = {
               id: newConcept.id,
@@ -839,11 +913,11 @@ function App() {
           };
           setNodes(prev => [...prev, newCreativeNode]);
       } else {
-          throw new Error("Quick Pivot did not yield a new concept.");
+          throw new Error("Pivot Cepat tidak menghasilkan konsep baru.");
       }
     } catch(e: any) {
-        console.error("Failed to perform Quick Pivot:", e);
-        setError(e.message || "Failed to perform Quick Pivot.");
+        console.error("Gagal melakukan Pivot Cepat:", e);
+        setError(e.message || "Gagal melakukan Pivot Cepat.");
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -865,7 +939,7 @@ function App() {
           return undefined;
       };
 
-      const placementNode = findParent(concept.strategicPathId, 'placement');
+      const placementNode = nodesMap.get(concept.strategicPathId);
       if (!placementNode) return null;
 
       const formatNode = findParent(placementNode.id, 'format');
@@ -877,14 +951,15 @@ function App() {
       const painDesireNode = findParent(objectionNode?.id || '', 'pain_desire');
       const personaNode = findParent(painDesireNode?.id || '', 'persona');
 
-      if (!personaNode || !painDesireNode || !triggerNode || !formatNode || !awarenessNode || !angleNode || !offerNode) {
-          console.error("Could not assemble full DNA path", { personaNode, painDesireNode, triggerNode, formatNode, awarenessNode, angleNode, offerNode });
+      if (!personaNode || !painDesireNode || !triggerNode || !formatNode || !awarenessNode || !angleNode || !offerNode || !objectionNode) {
+          console.error("Tidak dapat menyusun jalur DNA lengkap", { personaNode, painDesireNode, triggerNode, formatNode, awarenessNode, angleNode, offerNode, objectionNode });
           return null;
       }
 
       return {
           persona: (personaNode.content as { persona: TargetPersona }).persona,
           painDesire: (painDesireNode.content as { painDesire: PainDesireObject }).painDesire,
+          objection: (objectionNode.content as { objection: ObjectionObject }).objection,
           trigger: (triggerNode.content as { trigger: BuyingTriggerObject }).trigger,
           format: (formatNode.content as { format: CreativeFormat }).format,
           placement: (placementNode.content as { placement: PlacementFormat }).placement,
@@ -905,7 +980,7 @@ function App() {
       setRemixDna(dna);
       setCurrentStep('remix');
     } else {
-      setError("Failed to load ad DNA. The strategic path is incomplete.");
+      setError("Gagal memuat DNA iklan. Jalur strategis tidak lengkap.");
     }
   };
   
@@ -914,13 +989,13 @@ function App() {
     setRemixingComponent(component);
     setRemixSuggestions(null);
     setIsLoading(true);
-    setLoadingMessage(`Finding variations for ${component}...`);
+    setLoadingMessage(`Mencari variasi untuk ${component}...`);
     try {
       const suggestions = await generateRemixSuggestions(component, remixTarget, remixDna, campaignBlueprint);
       setRemixSuggestions(suggestions);
     } catch (e: any) {
         console.error(e);
-        setError(e.message || `Failed to generate suggestions for ${component}.`);
+        setError(e.message || `Gagal menghasilkan saran untuk ${component}.`);
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -931,13 +1006,13 @@ function App() {
       if (!remixTarget || !remixingComponent || !campaignBlueprint) return;
       const baseConcept = remixTarget;
       setIsLoading(true);
-      setLoadingMessage(`Creating new concept from ${remixingComponent} remix...`);
+      setLoadingMessage(`Membuat konsep baru dari remix ${remixingComponent}...`);
       
       try {
           const newConceptUntagged = await generateConceptFromRemix(baseConcept, remixingComponent, suggestion.payload, campaignBlueprint);
           const newConcept = {
               ...newConceptUntagged,
-              campaignTag: `Remixed from "${baseConcept.headline.substring(0, 15)}..."`
+              campaignTag: `Remix dari "${baseConcept.headline.substring(0, 15)}..."`
           };
           const newCreativeNode: MindMapNode = {
               id: newConcept.id,
@@ -954,7 +1029,7 @@ function App() {
           setViewMode('gallery'); // Switch to gallery to show the new result
       } catch (e: any) {
           console.error(e);
-          setError(e.message || "Failed to create concept from remix.");
+          setError(e.message || "Gagal membuat konsep dari remix.");
       } finally {
           setIsLoading(false);
           setLoadingMessage('');
@@ -986,8 +1061,8 @@ function App() {
         }
         setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, imageUrls: urls, isGenerating: false} } } : n));
     } catch(e: any) {
-        console.error(`Failed to generate image(s) for concept ${conceptId}`, e);
-        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, error: e.message || 'Failed to generate image', isGenerating: false} } } : n));
+        console.error(`Gagal menghasilkan gambar untuk konsep ${conceptId}`, e);
+        setNodes(prev => prev.map(n => n.id === conceptId ? { ...n, content: { concept: {...concept, error: e.message || 'Gagal menghasilkan gambar', isGenerating: false} } } : n));
     }
   };
 
@@ -997,11 +1072,11 @@ function App() {
     let i = 0;
     for (const conceptId of conceptIds) {
       i++;
-      setLoadingMessage(`Generating image ${i} of ${total}...`);
+      setLoadingMessage(`Menghasilkan gambar ${i} dari ${total}...`);
       try {
         await handleGenerateImage(conceptId);
       } catch (e) {
-        console.error(`Failed to generate image for concept ${conceptId} during bulk operation.`, e);
+        console.error(`Gagal menghasilkan gambar untuk konsep ${conceptId} selama operasi massal.`, e);
       }
     }
     setLoadingMessage('');
@@ -1029,6 +1104,16 @@ function App() {
     setEditingConceptId(null);
   };
 
+  const handleBatchTagConcepts = (conceptIds: string[], statusTag: AdConcept['statusTag']) => {
+      setNodes(prev => prev.map(n => {
+          if (conceptIds.includes(n.id) && n.type === 'creative') {
+              const concept = (n.content as { concept: AdConcept }).concept;
+              return { ...n, content: { concept: { ...concept, statusTag } } };
+          }
+          return n;
+      }));
+  };
+
   const handleOpenLightbox = (concept: AdConcept, startIndex: number) => {
     setLightboxData({ concept, startIndex });
   };
@@ -1050,8 +1135,8 @@ function App() {
                 <div className="p-4 md:p-8">
                     <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-br from-brand-primary/20 via-brand-background to-brand-background -z-10"></div>
                     <header className="text-center mb-12">
-                        <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Ad Concept Generator</h1>
-                        <p className="text-brand-text-secondary mt-2 text-lg">Turn one ad into dozens of high-performing variations.</p>
+                        <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Generator Konsep Iklan</h1>
+                        <p className="text-brand-text-secondary mt-2 text-lg">Ubah satu iklan menjadi puluhan variasi berkinerja tinggi.</p>
                     </header>
                     {error && <div className="max-w-4xl mx-auto bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-8" role="alert">{error}</div>}
                     <InputForm onGenerate={handleGenerate} />
@@ -1062,8 +1147,7 @@ function App() {
                 <DnaValidationStep 
                     initialBlueprint={campaignBlueprint} 
                     referenceImage={referenceImage}
-                    onContinue={handleBlueprintValidated}
-                    onStartSmartRemix={handleStartSmartRemix}
+                    onWorkflowSelected={handleWorkflowSelected}
                     onBack={handleReset}
                     allowVisualExploration={allowVisualExploration}
                     onAllowVisualExplorationChange={setAllowVisualExploration}
@@ -1127,6 +1211,7 @@ function App() {
                     nodes={nodes}
                     isLoading={isLoading}
                     onGenerateFilteredImages={handleGenerateFilteredImages}
+                    onBatchTagConcepts={handleBatchTagConcepts}
                 />
             );
         default: return null;
@@ -1145,14 +1230,14 @@ function App() {
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-brand-surface p-1 rounded-lg shadow-2xl flex items-center border border-gray-700">
            <button
              onClick={() => setViewMode('mindmap')}
-             title="Mind Map View"
+             title="Tampilan Peta Pikiran"
              className={`p-2 rounded-md transition-colors ${viewMode === 'mindmap' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
            >
              <NetworkIcon className="w-5 h-5" />
            </button>
            <button
              onClick={() => setViewMode('gallery')}
-             title="Gallery View"
+             title="Tampilan Galeri"
              className={`p-2 rounded-md transition-colors ${viewMode === 'gallery' ? 'bg-brand-primary' : 'hover:bg-gray-700'}`}
            >
              <LayoutGridIcon className="w-5 h-5" />

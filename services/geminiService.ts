@@ -1,5 +1,3 @@
-
-
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDnaComponent, AdDna, RemixSuggestion, VisualStyleDNA, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS, ALL_AWARENESS_STAGES } from '../types';
 
@@ -37,8 +35,41 @@ const COMPOSITION_FOR_ADS: Record<PlacementFormat, string> = {
 const CAROUSEL_ARCS: Record<string, string> = {
     'PAS': 'PAS (Problem-Agitate-Solution). Ideal untuk respons langsung. Slide 1 (Hook): Sebutkan MASALAH dengan cara yang mengejutkan atau relatable. Slide 2 (Agitate): Deskripsikan RASA SAKIT dan frustrasi dari masalah tersebut. Mengapa begitu buruk? Slide 3 (Solution): Perkenalkan produk Anda sebagai SOLUSI. Momen "aha!". Slide 4 (Proof): Tunjukkan bukti bahwa itu berhasil (testimoni, data, sebelum/sesudah). Slide 5 (CTA): Beri tahu mereka apa yang harus dilakukan selanjutnya.',
     'Transformation': 'Transformasi: Narasi Sebelum & Sesudah. Terbaik untuk format Sebelum & Sesudah, Testimoni. Slide 1 (Hook): Tunjukkan kondisi SETELAH yang luar biasa. Slide 2 (Sebelum): Ungkap kondisi SEBELUM yang menyakitkan. Slide 3 (Perjuangan): Rincikan perjalanan dan upaya yang gagal. Slide 4 (Penemuan): Bagaimana mereka menemukan solusi Anda. Slide 5 (CTA): Ajak orang lain untuk memulai transformasi mereka.',
-    'Educational': 'Edukasi: Ajarkan sesuatu yang berharga. Terbaik untuk format "Edukasi/Tip" atau "Demo". Struktur: (Hook yang Menarik -> Patahkan Mitos 1 -> Patahkan Mitos 2 -> Ungkap Kebenaran/Metode -> Tautan CTA/Produk)',
+    'Educational': 'Edukasi: Ajarkan sesuatu yang berharga. Terbaik untuk format "Edukasi/Tips" atau "Demo". Struktur: (Hook yang Menarik -> Patahkan Mitos 1 -> Patahkan Mitos 2 -> Ungkap Kebenaran/Metode -> Tautan CTA/Produk)',
     'Testimonial Story': 'Kisah Testimoni: Cerita yang berpusat pada pelanggan. Gunakan untuk format "Testimoni" atau "UGC". Struktur: (Hook dengan kutipan kuat -> Perkenalkan pelanggan & kisah mereka -> Hasil spesifik yang mereka dapatkan -> Bagaimana produk memungkinkannya -> CTA)'
+};
+
+// --- Strategic Helpers ---
+const getRecommendedFormats = (
+    awarenessStage: AwarenessStage,
+    trigger: BuyingTriggerObject,
+    persona: TargetPersona
+): CreativeFormat[] => {
+    if (awarenessStage === 'Tidak Sadar' || awarenessStage === 'Sadar Masalah') {
+        return ['UGC', 'Meme/Iklan Jelek', 'Edukasi/Tips', 'Masalah/Solusi'];
+    }
+    if (awarenessStage === 'Sadar Solusi') {
+        return ['Perbandingan', 'Demo', 'Sebelum & Sesudah', 'Iklan Artikel'];
+    }
+    if (awarenessStage === 'Sadar Produk') {
+        return ['Testimoni', 'Penawaran Langsung', 'UGC', 'Multi-Produk'];
+    }
+    if (trigger.name === 'Otoritas') {
+        return ['Testimoni', 'Edukasi/Tips', 'Iklan Artikel', 'Advertorial'];
+    }
+    return ALL_CREATIVE_FORMATS;
+};
+
+
+const addMockPerformanceSignals = (concept: Omit<AdConcept, 'imageUrls'>): Omit<AdConcept, 'imageUrls'> => {
+    const potentials: AdConcept['performanceSignals']['scalingPotential'][] = ['limited', 'moderate', 'high'];
+    return {
+        ...concept,
+        statusTag: 'Pengujian',
+        performanceSignals: {
+            scalingPotential: potentials[Math.floor(Math.random() * 3)],
+        }
+    };
 };
 
 // --- JSON Schemas for robust generation ---
@@ -222,16 +253,16 @@ const visualStyleDnaSchema = {
 export const analyzeCampaignBlueprint = async (imageBase64: string, caption: string, productInfo: string, offerInfo: string): Promise<CampaignBlueprint> => {
   const imagePart = imageB64ToGenerativePart(imageBase64, 'image/jpeg');
   const prompt = `
-    As a world-class DIRECT RESPONSE COPYWRITING EXPERT, your task is to analyze the provided ad creative and context to reverse-engineer its "SALES DNA" and create a comprehensive "Campaign Blueprint". Your goal is not just to describe what you see, but to deeply understand the persuasion strategy at play.
+    Sebagai AHLI COPYWRITING DIRECT RESPONSE kelas dunia, tugas Anda adalah menganalisis materi iklan dan konteks yang diberikan untuk merekayasa balik "DNA PENJUALAN" dan membuat "Blueprint Kampanye" yang komprehensif. Tujuan Anda bukan hanya mendeskripsikan apa yang Anda lihat, tetapi untuk memahami secara mendalam strategi persuasi yang digunakan.
 
-    CONTEXT:
-    - Ad Caption: "${caption}"
-    - Product/Service Description: "${productInfo || 'Not provided. Infer from ad.'}"
-    - Offer/CTA: "${offerInfo || 'Not provided. Infer from ad.'}"
+    KONTEKS:
+    - Caption Iklan: "${caption}"
+    - Deskripsi Produk/Layanan: "${productInfo || 'Tidak diberikan. Simpulkan dari iklan.'}"
+    - Penawaran/CTA: "${offerInfo || 'Tidak diberikan. Simpulkan dari iklan.'}"
 
-    Based on all the provided information (image and text), generate a structured JSON object for the Campaign Blueprint.
+    Berdasarkan semua informasi yang diberikan (gambar dan teks), hasilkan objek JSON terstruktur untuk Blueprint Kampanye.
 
-    Respond ONLY with the single, valid JSON object that conforms to the provided schema.
+    Hanya berikan respons berupa satu objek JSON yang valid dan sesuai dengan skema yang disediakan.
   `;
 
   const response = await ai.models.generateContent({
@@ -249,21 +280,52 @@ export const analyzeCampaignBlueprint = async (imageBase64: string, caption: str
 
 export const generatePersonaVariations = async (blueprint: CampaignBlueprint, existingPersonas: TargetPersona[]): Promise<TargetPersona[]> => {
     const prompt = `
-        You are a market research expert. Based on the provided 'Campaign Blueprint', generate 3 new, distinct target persona variations.
-        These personas should be plausible alternative audiences for the product, exploring different demographics, psychographics, or use cases.
-
-        Campaign Blueprint:
-        - Product: ${blueprint.productAnalysis.name}
-        - Key Benefit: ${blueprint.productAnalysis.keyBenefit}
-        - Original Persona: ${blueprint.targetPersona.description}
-        - Target Country: ${blueprint.adDna.targetCountry}
-
-        Existing Persona Descriptions to avoid:
-        ${existingPersonas.map(p => `- ${p.description}`).join('\n')}
-
-        For each new persona, create a JSON object with the structure defined in the schema.
+        Anda adalah seorang ahli segmentasi pasar yang menggunakan ilmu audiens terbaru dari Meta.
         
-        Respond ONLY with a JSON array of these persona objects.
+        **WAWASAN KUNCI DARI META:**
+        "Motivator yang berbeda membuka audiens baru 89% dari waktu."
+        Artinya: Produk yang sama, pendorong psikologis yang BERBEDA = audiens BARU.
+        
+        **Tugas Anda:**
+        Hasilkan 3 variasi persona yang mewakili MOTIVATOR BERBEDA untuk membeli produk yang sama.
+        
+        **Persona & Motivator Asli:**
+        - ${blueprint.targetPersona.description}
+        - Poin Masalah Utama: ${blueprint.targetPersona.painPoints[0]}
+        - Keinginan Utama: ${blueprint.targetPersona.desiredOutcomes[0]}
+        
+        **Persona yang Sudah Ada untuk Dihindari:**
+        ${existingPersonas.map(p => `- ${p.description}`).join('\n')}
+        
+        **🎯 Strategi Variasi (Pilih 3 jenis yang berbeda):**
+        
+        1️⃣ **Pergeseran Usia/Tahap Kehidupan:**
+           - Jika asli profesional 25-35 → coba mahasiswa 18-24 ATAU mapan 40-50
+           - Motivator baru: Prioritas hidup yang berbeda (membangun karir vs. keluarga vs. warisan)
+        
+        2️⃣ **Pergeseran Pendapatan/Aspirasi:**
+           - Jika asli berpenghasilan menengah → coba sadar anggaran ATAU mencari premium
+           - Motivator baru: Persamaan nilai berubah (termurah vs. terbaik vs. status)
+        
+        3️⃣ **Pergeseran Kasus Penggunaan/Konteks:**
+           - Jika asli menggunakan produk untuk bekerja → coba untuk rekreasi/hobi ATAU sebagai hadiah
+           - Motivator baru: "Pekerjaan yang harus diselesaikan" yang berbeda (produktivitas vs. kesenangan vs. hubungan)
+        
+        4️⃣ **Pergeseran Psikografis:**
+           - Jika asli menghindari risiko → coba pengadopsi awal/pembuat tren
+           - Motivator baru: Pendorong keputusan yang berbeda (keamanan vs. inovasi vs. bukti sosial)
+        
+        5️⃣ **Balik Gender (jika relevan):**
+           - Jika asli perempuan → coba persona laki-laki dengan poin masalah yang berbeda
+           - Motivator baru: Kekhawatiran atau aspirasi spesifik gender
+        
+        **Persyaratan Output:**
+        - Setiap persona HARUS memiliki motivator utama yang JELAS BERBEDA
+        - Poin masalah harus mencerminkan motivator baru (bukan hanya diubah kata-katanya)
+        - Usia, tipe kreator, dan hasil yang diinginkan semuanya harus mendukung psikologi baru
+        - Jadilah spesifik: "Ibu 2 anak yang sibuk, bekerja dari rumah" BUKAN "Profesional yang bekerja"
+        
+        Hanya berikan respons berupa array JSON dari 3 objek persona.
     `;
 
     const response = await ai.models.generateContent({
@@ -284,25 +346,25 @@ export const generatePersonaVariations = async (blueprint: CampaignBlueprint, ex
 
 export const generatePainDesires = async (blueprint: CampaignBlueprint, persona: TargetPersona): Promise<PainDesireObject[]> => {
     const prompt = `
-        You are a master consumer psychologist. Your task is to identify the deepest emotional drivers for a specific target persona.
-        Based on the provided campaign context, generate a mix of 4 distinct, core emotional drivers: 2 Pains (fears, frustrations) and 2 Desires (aspirations, goals).
+        Anda adalah seorang master psikolog konsumen. Tugas Anda adalah mengidentifikasi pendorong emosional terdalam untuk persona target tertentu.
+        Berdasarkan konteks kampanye yang diberikan, hasilkan campuran 4 pendorong emosional inti yang berbeda: 2 Poin Masalah (ketakutan, frustrasi) dan 2 Keinginan (aspirasi, tujuan).
 
-        **Context:**
-        - **Product:** ${blueprint.productAnalysis.name} - It solves problems by delivering "${blueprint.productAnalysis.keyBenefit}".
-        - **Target Persona:** ${persona.description}
-        - **Known Pains:** ${persona.painPoints.join(', ')}
-        - **Known Desires:** ${persona.desiredOutcomes.join(', ')}
-        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+        **Konteks:**
+        - **Produk:** ${blueprint.productAnalysis.name} - Ini memecahkan masalah dengan memberikan "${blueprint.productAnalysis.keyBenefit}".
+        - **Persona Target:** ${persona.description}
+        - **Poin Masalah yang Diketahui:** ${persona.painPoints.join(', ')}
+        - **Keinginan yang Diketahui:** ${persona.desiredOutcomes.join(', ')}
+        - **Negara Target untuk Lokalisasi:** "${blueprint.adDna.targetCountry}"
 
-        **Instructions:**
-        1.  Go beyond the surface-level pains and desires provided. Dig deeper into the *underlying emotional state*.
-        2.  For each driver, define its "type" as either "Pain" or "Desire".
-        3.  Provide a short, impactful "name" (e.g., "Fear of Being Left Behind", "Desire for Effortless Confidence").
-        4.  Provide a "description" explaining the driver from the persona's point of view.
-        5.  Provide the "emotionalImpact" which describes the raw feeling this driver causes (e.g., "Anxiety and social pressure", "Freedom and self-assurance").
+        **Instruksi:**
+        1.  Lihat lebih dalam dari poin masalah dan keinginan yang dangkal. Gali *keadaan emosional yang mendasarinya*.
+        2.  Untuk setiap pendorong, definisikan "type" sebagai "Pain" (Masalah) atau "Desire" (Keinginan).
+        3.  Berikan "name" (nama) yang singkat dan berdampak (misalnya, "Takut Ketinggalan", "Keinginan untuk Percaya Diri Tanpa Usaha").
+        4.  Berikan "description" (deskripsi) yang menjelaskan pendorong dari sudut pandang persona.
+        5.  Berikan "emotionalImpact" (dampak emosional) yang menggambarkan perasaan mentah yang disebabkan oleh pendorong ini (misalnya, "Kecemasan dan tekanan sosial", "Kebebasan dan keyakinan diri").
 
         **Output:**
-        Respond ONLY with a valid JSON array of 4 objects (2 Pains, 2 Desires) that conform to the schema.
+        Hanya berikan respons berupa array JSON yang valid dari 4 objek (2 Poin Masalah, 2 Keinginan) yang sesuai dengan skema.
     `;
 
     const response = await ai.models.generateContent({
@@ -320,28 +382,28 @@ export const generatePainDesires = async (blueprint: CampaignBlueprint, persona:
 
 export const generateObjections = async (blueprint: CampaignBlueprint, persona: TargetPersona, painDesire: PainDesireObject): Promise<ObjectionObject[]> => {
     const prompt = `
-        You are a seasoned market researcher and sales psychologist. Your task is to predict the 3 MOST LIKELY objections a specific persona will have, stemming directly from a core emotional driver (a pain or desire).
+        Anda adalah seorang peneliti pasar dan psikolog penjualan berpengalaman. Tugas Anda adalah memprediksi 3 keberatan PALING MUNGKIN yang akan dimiliki oleh persona tertentu, yang berasal langsung dari pendorong emosional inti (poin masalah atau keinginan).
 
-        **Context:**
-        - **Product:** ${blueprint.productAnalysis.name} (Key Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - **Offer:** ${blueprint.adDna.offerSummary}
-        - **Target Persona:** ${persona.description}
-        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+        **Konteks:**
+        - **Produk:** ${blueprint.productAnalysis.name} (Manfaat Utama: ${blueprint.productAnalysis.keyBenefit})
+        - **Penawaran:** ${blueprint.adDna.offerSummary}
+        - **Persona Target:** ${persona.description}
+        - **Negara Target untuk Lokalisasi:** "${blueprint.adDna.targetCountry}"
 
-        **🔥 Core Emotional Driver:**
-        - **Type:** ${painDesire.type}
-        - **Name:** "${painDesire.name}"
-        - **Description:** "${painDesire.description}"
-        - **Emotional Impact:** "${painDesire.emotionalImpact}"
+        **🔥 Pendorong Emosional Inti:**
+        - **Tipe:** ${painDesire.type}
+        - **Nama:** "${painDesire.name}"
+        - **Deskripsi:** "${painDesire.description}"
+        - **Dampak Emosional:** "${painDesire.emotionalImpact}"
 
-        **Instructions:**
-        1.  Connect the dots: How does the product's promise interact with this specific emotional driver to create skepticism or doubt?
-        2.  For each objection, provide a short, clear "name" (e.g., "This won't work for MY specific situation", "The results look too good to be true", "It's probably too expensive for the value").
-        3.  Provide a "description" explaining the psychology behind the objection, linking it back to the core emotional driver.
-        4.  Provide a strategic "counterAngle" that suggests the best way to address this objection in an ad.
+        **Instruksi:**
+        1.  Hubungkan titik-titiknya: Bagaimana janji produk berinteraksi dengan pendorong emosional spesifik ini untuk menciptakan skeptisisme atau keraguan?
+        2.  Untuk setiap keberatan, berikan "name" (nama) yang singkat dan jelas (misalnya, "Ini tidak akan berhasil untuk situasi SAYA yang spesifik", "Hasilnya terlihat terlalu bagus untuk menjadi kenyataan", "Mungkin terlalu mahal untuk nilainya").
+        3.  Berikan "description" (deskripsi) yang menjelaskan psikologi di balik keberatan tersebut, menghubungkannya kembali ke pendorong emosional inti.
+        4.  Berikan "counterAngle" (sudut pandang tandingan) strategis yang menyarankan cara terbaik untuk mengatasi keberatan ini dalam sebuah iklan.
 
         **Output:**
-        Respond ONLY with a valid JSON array of 3 objection objects that conform to the schema.
+        Hanya berikan respons berupa array JSON yang valid dari 3 objek keberatan yang sesuai dengan skema.
     `;
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
@@ -361,28 +423,28 @@ export const generateObjections = async (blueprint: CampaignBlueprint, persona: 
 
 export const generateOfferTypes = async (blueprint: CampaignBlueprint, persona: TargetPersona, objection: ObjectionObject): Promise<OfferTypeObject[]> => {
     const prompt = `
-        You are a master marketer and behavioral economist. Your task is to craft 3 distinct, compelling "Offer Types" designed specifically to neutralize a customer's objection.
+        Anda adalah seorang master pemasar dan ekonom perilaku. Tugas Anda adalah merancang 3 "Jenis Penawaran" yang berbeda dan menarik, yang dirancang khusus untuk menetralkan keberatan pelanggan.
 
-        **Context:**
-        - **Product:** ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - **Original Offer:** ${blueprint.adDna.offerSummary}
-        - **Target Persona:** ${persona.description}
-        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+        **Konteks:**
+        - **Produk:** ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
+        - **Penawaran Asli:** ${blueprint.adDna.offerSummary}
+        - **Persona Target:** ${persona.description}
+        - **Negara Target untuk Lokalisasi:** "${blueprint.adDna.targetCountry}"
 
-        **🔥 Customer Objection to Overcome:**
-        - **Objection Name:** "${objection.name}"
-        - **Psychology:** "${objection.description}"
+        **🔥 Keberatan Pelanggan yang Harus Diatasi:**
+        - **Nama Keberatan:** "${objection.name}"
+        - **Psikologi:** "${objection.description}"
 
-        **Instructions:**
-        1.  Analyze the objection. What is the root fear or concern? (e.g., Fear of loss, skepticism, price sensitivity).
-        2.  Generate 3 distinct offer structures that directly address this root concern.
-        3.  For each offer, provide:
-            - A clear "name" (e.g., "Risk-Free 30-Day Trial", "Value Bundle Discount", "Pay-in-3 Installments").
-            - A "description" explaining how the offer works for the customer.
-            - The core "psychologicalPrinciple" at play (e.g., "Risk Reversal", "Value Anchoring", "Pain of Payment Reduction").
+        **Instruksi:**
+        1.  Analisis keberatan tersebut. Apa ketakutan atau kekhawatiran dasarnya? (misalnya, Takut rugi, skeptisisme, sensitivitas harga).
+        2.  Hasilkan 3 struktur penawaran berbeda yang secara langsung mengatasi masalah dasar ini.
+        3.  Untuk setiap penawaran, berikan:
+            - "name" (nama) yang jelas (misalnya, "Uji Coba 30 Hari Bebas Risiko", "Diskon Bundel Hemat", "Cicilan Bayar dalam 3 Kali").
+            - "description" (deskripsi) yang menjelaskan cara kerja penawaran untuk pelanggan.
+            - "psychologicalPrinciple" (prinsip psikologis) inti yang bekerja (misalnya, "Pembalikan Risiko", "Penjangkaran Nilai", "Pengurangan Rasa Sakit Pembayaran").
 
         **Output:**
-        Respond ONLY with a valid JSON array of 3 offer objects that conform to the schema.
+        Hanya berikan respons berupa array JSON yang valid dari 3 objek penawaran yang sesuai dengan skema.
     `;
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
@@ -399,43 +461,43 @@ export const generateOfferTypes = async (blueprint: CampaignBlueprint, persona: 
 
 export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, persona: TargetPersona, awarenessStage: AwarenessStage, objection: ObjectionObject, painDesire: PainDesireObject, offer: OfferTypeObject, existingAngles: string[] = []): Promise<string[]> => {
     const prompt = `
-        You are a creative strategist. Your task is to generate 4 distinct, high-level strategic angles for an ad campaign.
-        **CRITICAL CONSTRAINTS:**
-        1. Each angle MUST directly counter a specific customer objection.
-        2. Each angle MUST resonate with a core emotional driver (Pain/Desire).
-        3. Each angle MUST be framed within the context of the provided Offer Type.
+        Anda adalah seorang ahli strategi kreatif. Tugas Anda adalah menghasilkan 4 sudut pandang strategis tingkat tinggi yang berbeda untuk sebuah kampanye iklan.
+        **BATASAN KRITIS:**
+        1. Setiap sudut pandang HARUS secara langsung melawan keberatan pelanggan tertentu.
+        2. Setiap sudut pandang HARUS beresonansi dengan pendorong emosional inti (Poin Masalah/Keinginan).
+        3. Setiap sudut pandang HARUS dibingkai dalam konteks Jenis Penawaran yang diberikan.
 
-        **Campaign Blueprint:**
-        - Product Benefit: ${blueprint.productAnalysis.keyBenefit}
-        - Core Persuasion Strategy: Use a "${blueprint.adDna.toneOfVoice}" tone to apply the "${blueprint.adDna.persuasionFormula}" formula.
-        - Target Country: ${blueprint.adDna.targetCountry}
+        **Blueprint Kampanye:**
+        - Manfaat Produk: ${blueprint.productAnalysis.keyBenefit}
+        - Strategi Persuasi Inti: Gunakan nada "${blueprint.adDna.toneOfVoice}" untuk menerapkan formula "${blueprint.adDna.persuasionFormula}".
+        - Negara Target: ${blueprint.adDna.targetCountry}
 
-        **Target Persona:**
-        - Description: ${persona.description}
+        **Persona Target:**
+        - Deskripsi: ${persona.description}
 
-        **🔥 Core Emotional Driver:**
-        - **Type:** ${painDesire.type}
-        - **Name:** "${painDesire.name}"
+        **🔥 Pendorong Emosional Inti:**
+        - **Tipe:** ${painDesire.type}
+        - **Nama:** "${painDesire.name}"
 
-        **🔥 Customer Objection to Overcome:**
-        - **Objection Name:** "${objection.name}"
-        - **Suggested Counter-Strategy:** "${objection.counterAngle}"
+        **🔥 Keberatan Pelanggan yang Harus Diatasi:**
+        - **Nama Keberatan:** "${objection.name}"
+        - **Strategi Tandingan yang Disarankan:** "${objection.counterAngle}"
 
-        **🔥 Strategic Offer Type:**
-        - **Offer Name:** "${offer.name}"
-        - **Psychology:** "${offer.psychologicalPrinciple}"
+        **🔥 Jenis Penawaran Strategis:**
+        - **Nama Penawaran:** "${offer.name}"
+        - **Psikologi:** "${offer.psychologicalPrinciple}"
 
-        **🔥 Target Awareness Stage:** ${awarenessStage}
+        **🔥 Tahap Kesadaran Target:** ${awarenessStage}
 
-        **Your Task:**
-        Based on all the context above, generate 4 strategic angles.
-        1. The angles must be tailored to someone in the "${awarenessStage}" stage.
-        2. **Crucially, each angle must be a creative execution of the counter-strategy, while also connecting to the core emotional driver and leveraging the provided offer.**
-        3. Use the "Suggested Counter-Strategy" and "Strategic Offer Type" as your primary inspiration.
+        **Tugas Anda:**
+        Berdasarkan semua konteks di atas, hasilkan 4 sudut pandang strategis.
+        1. Sudut pandang harus disesuaikan untuk seseorang dalam tahap "${awarenessStage}".
+        2. **Yang terpenting, setiap sudut pandang harus merupakan eksekusi kreatif dari strategi tandingan, sambil juga terhubung dengan pendorong emosional inti dan memanfaatkan penawaran yang diberikan.**
+        3. Gunakan "Strategi Tandingan yang Disarankan" dan "Jenis Penawaran Strategis" sebagai inspirasi utama Anda.
 
-        ${existingAngles.length > 0 ? `IMPORTANT: Do not generate any of the following angles, as they already exist: ${existingAngles.join(', ')}.` : ''}
+        ${existingAngles.length > 0 ? `PENTING: Jangan menghasilkan sudut pandang berikut, karena sudah ada: ${existingAngles.join(', ')}.` : ''}
 
-        Respond ONLY with a JSON array of 4 unique angle strings. For example: ["Highlight the risk-free trial to build trust and counter skepticism", "Showcase the long-term value and ROI from the bundle to justify the price", "Demonstrate the product's simplicity and then present the easy installment plan"]
+        Hanya berikan respons berupa array JSON dari 4 string sudut pandang unik. Contohnya: ["Tonjolkan uji coba bebas risiko untuk membangun kepercayaan dan melawan skeptisisme", "Tampilkan nilai jangka panjang dan ROI dari bundel untuk membenarkan harga", "Tunjukkan kesederhanaan produk dan kemudian sajikan rencana cicilan yang mudah"]
     `;
 
     const response = await ai.models.generateContent({
@@ -456,37 +518,37 @@ export const generateHighLevelAngles = async (blueprint: CampaignBlueprint, pers
 
 export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, persona: TargetPersona, angle: string, awarenessStage: AwarenessStage): Promise<BuyingTriggerObject[]> => {
     const prompt = `
-        You are a Direct Response Copywriting Coach. Your goal is to educate an advertiser on the best psychological triggers to use for their campaign by creating a mini "Swipe File".
-        Based on the campaign context, select the 4 MOST RELEVANT and POWERFUL psychological triggers from the predefined list below. The triggers must be appropriate for the audience's awareness stage.
-        Then, for each selected trigger, explain it clearly, provide a concrete example, and analyze why that example works for this specific audience.
+        Anda adalah seorang Pelatih Copywriting Direct Response. Tujuan Anda adalah untuk mengedukasi pengiklan tentang pemicu psikologis terbaik untuk digunakan dalam kampanye mereka dengan membuat "Swipe File" mini.
+        Berdasarkan konteks kampanye, pilih 4 pemicu psikologis PALING RELEVAN dan KUAT dari daftar yang telah ditentukan di bawah ini. Pemicu harus sesuai untuk tahap kesadaran audiens.
+        Kemudian, untuk setiap pemicu yang dipilih, jelaskan dengan jelas, berikan contoh konkret, dan analisis mengapa contoh itu berhasil untuk audiens spesifik ini.
 
-        **Predefined List of Psychological Triggers:**
-        - **Social Proof:** People trust what others are doing. (e.g., "Join 10,000+ happy customers").
-        - **Authority:** People trust experts and credible sources. (e.g., "Recommended by top dermatologists").
-        - **Scarcity:** People want what is rare or limited. (e.g., "Only 50 left in stock!").
-        - **Urgency:** People act when there's a time limit. (e.g., "Sale ends tonight!").
-        - **Reciprocity:** People feel obligated to give back after receiving something. (e.g., "Get a free guide & see how it works").
-        - **Liking:** People buy from those they know, like, and trust. (e.g., using a relatable influencer).
-        - **Fear of Missing Out (FOMO):** People don't want to be left out of a positive experience. (e.g., "See what everyone is talking about").
-        - **Exclusivity:** People want to be part of a select group. (e.g., "Get access to our private community").
-        - **Instant Gratification:** People want results now. (e.g., "See visible results in just 3 days").
+        **Daftar Pemicu Psikologis yang Telah Ditentukan:**
+        - **Bukti Sosial:** Orang percaya pada apa yang dilakukan orang lain. (misalnya, "Bergabunglah dengan 10.000+ pelanggan yang puas").
+        - **Otoritas:** Orang percaya pada para ahli dan sumber yang kredibel. (misalnya, "Direkomendasikan oleh para dermatologis ternama").
+        - **Kelangkaan:** Orang menginginkan apa yang langka atau terbatas. (misalnya, "Hanya tersisa 50 stok!").
+        - **Urgensi:** Orang bertindak ketika ada batas waktu. (misalnya, "Diskon berakhir malam ini!").
+        - **Timbal Balik:** Orang merasa wajib memberi kembali setelah menerima sesuatu. (misalnya, "Dapatkan panduan gratis & lihat cara kerjanya").
+        - **Rasa Suka:** Orang membeli dari mereka yang mereka kenal, sukai, dan percayai. (misalnya, menggunakan influencer yang relatable).
+        - **Takut Ketinggalan (FOMO):** Orang tidak ingin ketinggalan pengalaman positif. (misalnya, "Lihat apa yang sedang dibicarakan semua orang").
+        - **Eksklusivitas:** Orang ingin menjadi bagian dari kelompok terpilih. (misalnya, "Dapatkan akses ke komunitas pribadi kami").
+        - **Kepuasan Instan:** Orang menginginkan hasil sekarang juga. (misalnya, "Lihat hasil nyata hanya dalam 3 hari").
 
-        **Context:**
-        - **Product:** ${blueprint.productAnalysis.name}
-        - **Key Benefit:** ${blueprint.productAnalysis.keyBenefit}
-        - **Target Persona:** ${persona.description} (Pain Points: ${persona.painPoints.join(', ')})
-        - **Strategic Angle:** "${angle}"
-        - **Awareness Stage:** "${awarenessStage}"
-        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+        **Konteks:**
+        - **Produk:** ${blueprint.productAnalysis.name}
+        - **Manfaat Utama:** ${blueprint.productAnalysis.keyBenefit}
+        - **Persona Target:** ${persona.description} (Poin Masalah: ${persona.painPoints.join(', ')})
+        - **Sudut Pandang Strategis:** "${angle}"
+        - **Tahap Kesadaran:** "${awarenessStage}"
+        - **Negara Target untuk Lokalisasi:** "${blueprint.adDna.targetCountry}"
 
-        **Instructions:**
-        1.  Analyze the context and choose the 4 best triggers from the list. For "Unaware" or "Problem Aware" stages, triggers like Reciprocity or Liking are better. For "Solution Aware" or "Product Aware", triggers like Scarcity or Social Proof are more effective.
-        2.  For each chosen trigger, create a JSON object with four fields as defined in the schema: "name", "description", "example", and "analysis".
-        3.  The "example" should be a specific, actionable ad copy snippet or visual idea that resonates in "${blueprint.adDna.targetCountry}".
-        4.  **Crucially, the "analysis" field must explain in 1-2 sentences WHY this example is effective for this specific persona and context, as if you were annotating a successful ad in a swipe file.**
+        **Instruksi:**
+        1.  Analisis konteks dan pilih 4 pemicu terbaik dari daftar. Untuk tahap "Tidak Sadar" atau "Sadar Masalah", pemicu seperti Timbal Balik atau Rasa Suka lebih baik. Untuk "Sadar Solusi" atau "Sadar Produk", pemicu seperti Kelangkaan atau Bukti Sosial lebih efektif.
+        2.  Untuk setiap pemicu yang dipilih, buat objek JSON dengan empat bidang seperti yang didefinisikan dalam skema: "name", "description", "example", dan "analysis".
+        3.  "example" harus berupa cuplikan teks iklan atau ide visual yang spesifik dan dapat ditindaklanjuti yang beresonansi di "${blueprint.adDna.targetCountry}".
+        4.  **Yang terpenting, bidang "analysis" harus menjelaskan dalam 1-2 kalimat MENGAPA contoh ini efektif untuk persona dan konteks spesifik ini, seolah-olah Anda sedang memberikan anotasi pada iklan yang sukses di swipe file.**
 
         **Output:**
-        Respond ONLY with a valid JSON array of these 4 objects. Do not include any other text or markdown.
+        Hanya berikan respons berupa array JSON yang valid dari 4 objek ini. Jangan sertakan teks atau markdown lain.
     `;
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
@@ -506,26 +568,26 @@ export const generateBuyingTriggers = async (blueprint: CampaignBlueprint, perso
 
 export const getBuyingTriggerDetails = async (triggerName: string, blueprint: CampaignBlueprint, persona: TargetPersona, angle: string): Promise<BuyingTriggerObject> => {
     const prompt = `
-        You are a Direct Response Copywriting Coach.
-        Your task is to provide the details for a specific psychological trigger within a given campaign context, including a "swipe file" analysis.
+        Anda adalah seorang Pelatih Copywriting Direct Response.
+        Tugas Anda adalah memberikan detail untuk pemicu psikologis tertentu dalam konteks kampanye yang diberikan, termasuk analisis "swipe file".
 
-        **Psychological Trigger to Detail:** "${triggerName}"
+        **Pemicu Psikologis yang Perlu Dirinci:** "${triggerName}"
 
-        **Campaign Context:**
-        - **Product:** ${blueprint.productAnalysis.name}
-        - **Key Benefit:** ${blueprint.productAnalysis.keyBenefit}
-        - **Target Persona:** ${persona.description} (Pain Points: ${persona.painPoints.join(', ')})
-        - **Strategic Angle:** "${angle}"
-        - **Target Country for Localization:** "${blueprint.adDna.targetCountry}"
+        **Konteks Kampanye:**
+        - **Produk:** ${blueprint.productAnalysis.name}
+        - **Manfaat Utama:** ${blueprint.productAnalysis.keyBenefit}
+        - **Persona Target:** ${persona.description} (Poin Masalah: ${persona.painPoints.join(', ')})
+        - **Sudut Pandang Strategis:** "${angle}"
+        - **Negara Target untuk Lokalisasi:** "${blueprint.adDna.targetCountry}"
 
-        **Instructions:**
-        1.  Provide a clear, concise "description" for "${triggerName}".
-        2.  Create a concrete "example" of how this trigger applies directly to the provided campaign context.
-        3.  Provide an "analysis" explaining in 1-2 sentences WHY this example would be effective for this specific persona and context.
-        4.  Return a single JSON object with four fields: "name" (which should be "${triggerName}"), "description", "example", and "analysis".
+        **Instruksi:**
+        1.  Berikan "description" (deskripsi) yang jelas dan ringkas untuk "${triggerName}".
+        2.  Buat "example" (contoh) konkret tentang bagaimana pemicu ini berlaku langsung pada konteks kampanye yang diberikan.
+        3.  Berikan "analysis" (analisis) yang menjelaskan dalam 1-2 kalimat MENGAPA contoh ini akan efektif untuk persona dan konteks spesifik ini.
+        4.  Kembalikan satu objek JSON dengan empat bidang: "name" (yang seharusnya "${triggerName}"), "description", "example", dan "analysis".
 
         **Output:**
-        Respond ONLY with the single, valid JSON object that conforms to the schema. Do not include any other text or markdown.
+        Hanya berikan respons berupa satu objek JSON yang valid dan sesuai dengan skema. Jangan sertakan teks atau markdown lain.
     `;
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
@@ -541,100 +603,110 @@ export const getBuyingTriggerDetails = async (triggerName: string, blueprint: Ca
 };
 
 const HEADLINE_FORMULAS: Record<AwarenessStage, string[]> = {
-    'Unaware': [
+    'Tidak Sadar': [
         'Pola Aneh/Kontrarian: "Stop [Saran Umum]. (Ini cara yang benar)."',
         'Pertanyaan Fokus-Masalah: "Apakah Anda juga [Masalah yang sangat spesifik dan relatable]?"',
     ],
-    'Problem Aware': [
+    'Sadar Masalah': [
         'Masalah → Solusi: "[Masalah Menyakitkan]? → Ini solusinya."',
         'Hilangkan Rasa Sakit: "Ucapkan Selamat Tinggal pada [Rasa Sakit/Masalah]."',
     ],
-    'Solution Aware': [
+    'Sadar Solusi': [
         'Hasil + Jangka Waktu: "Dapatkan [Hasil Spesifik] dalam [Jangka Waktu] (Tanpa [Pengorbanan])"',
         'Transformasi Sebelum/Sesudah: "Dari [Kondisi Buruk] menjadi [Kondisi Baik] dalam [Jangka Waktu]."',
         'Perintah Langsung + Manfaat: "[Kata Kerja Aksi] untuk [Manfaat Utama]."',
     ],
-    'Product Aware': [
+    'Sadar Produk': [
         'Kredibilitas Berbasis Angka: "[Jumlah] [Tipe Orang] telah beralih ke [Produk Anda]."',
         'Penawaran Langsung: "Dapatkan [Penawaran Spesifik Anda] - Hanya [Elemen Urgensi/Kelangkaan]."',
     ]
 };
 
 const TRIGGER_IMPLEMENTATION_CHECKLIST: Record<string, { copyMust: string[], visualMust: string[] }> = {
-    'Social Proof': {
+    'Bukti Sosial': {
         copyMust: ["Sebutkan angka spesifik (misal, 'Bergabung dengan 10.000+ pelanggan bahagia')", "Kutip testimoni nyata ('Ini mengubah segalanya bagi saya.' - Jane D.)", "Gunakan kata-kata aksi kolektif seperti 'terbukti', 'semua orang menggunakan'"],
         visualMust: ["Tampilkan beberapa orang yang menggunakan produk dengan senang", "Tampilkan overlay kutipan/rating testimoni pada gambar", "Tampilkan kolase konten buatan pengguna (UGC) atau 'lautan wajah'"]
     },
-    'Authority': {
+    'Otoritas': {
         copyMust: ["Sebutkan ahli atau otoritas yang diakui (misal, 'Direkomendasikan oleh Dr. Anya Sharma')", "Sebutkan sertifikasi atau studi ('Terbukti secara klinis untuk...')", "Gunakan bahasa otoritas: 'Para ahli mengatakan', 'Studi menunjukkan'"],
         visualMust: ["Tampilkan seorang ahli di lingkungannya (jas lab, klinik, kantor)", "Tampilkan lencana sertifikasi resmi atau logo 'Seperti yang Dilihat Di'", "Tampilkan visualisasi data atau grafik dari sebuah studi"]
     },
-    'Scarcity': {
+    'Kelangkaan': {
         copyMust: ["Sebutkan kuantitas terbatas secara eksplisit ('Hanya 100 unit tersisa')", "Sebutkan eksklusivitas ('Desain edisi terbatas')", "Ciptakan ketakutan akan kehilangan ('Setelah habis, tidak akan ada lagi')"],
         visualMust: ["Tampilkan bar stok yang hampir kosong", "Tampilkan stempel 'Hampir Habis' atau 'Edisi Terbatas'", "Tampilkan seseorang bergegas untuk mengambil item terakhir"]
     },
-    'Urgency': {
+    'Urgensi': {
         copyMust: ["Sertakan tenggat waktu yang eksplisit ('Diskon 50% berakhir malam ini')", "Sebutkan konsekuensi dari penundaan ('Harga naik besok')", "Gunakan bahasa yang peka waktu: 'Sekarang', 'Segera'"],
         visualMust: ["Tampilkan timer hitung mundur atau grafik", "Tampilkan kalender dengan tanggal hari ini dilingkari merah", "Tampilkan seseorang yang tampak stres sambil melirik jam"]
     },
-    'Reciprocity': {
+    'Timbal Balik': {
         copyMust: ["Tawarkan sesuatu yang berharga secara gratis ('Dapatkan panduan gratis Anda')", "Bingkai sebagai memberi sebelum meminta ('Kami ingin Anda mencobanya terlebih dahulu')", "Gunakan bahasa kemurahan hati: 'Hadiah untuk Anda', 'Dari kami untuk Anda'"],
         visualMust: ["Tampilkan item gratis/bonus secara menonjol", "Tampilkan seseorang yang senang menerima hadiah gratis", "Tampilkan lencana 'GRATIS' atau visual kado"]
     },
-    'Liking': {
+    'Rasa Suka': {
         copyMust: ["Gunakan nada yang ramah dan percakapan", "Bagikan cerita pribadi atau relatable ('Saya dulu juga seperti itu')", "Gunakan bahasa inklusif: 'Kita semua tahu perasaan itu'"],
         visualMust: ["Tampilkan influencer atau orang yang relatable dengan persona target", "Tampilkan senyum tulus dan kontak mata yang hangat", "Gunakan latar yang kasual dan otentik, bukan studio yang kaku"]
     },
-    'Fear of Missing Out (FOMO)': {
+    'Takut Ketinggalan (FOMO)': {
         copyMust: ["Tonjolkan pengalaman orang lain ('Lihat apa yang semua orang bicarakan')", "Tekankan tren atau gerakan ('Jangan menjadi satu-satunya yang ketinggalan')", "Gunakan bahasa FOMO: 'Jangan sampai ketinggalan', 'Semua orang melakukannya'"],
         visualMust: ["Tampilkan kerumunan orang yang menikmati produk", "Tampilkan skenario 'semua orang memilikinya kecuali Anda'", "Tampilkan seseorang yang 'tertinggal' vs. kelompok yang bahagia dengan produk"]
     },
-    'Exclusivity': {
+    'Eksklusivitas': {
         copyMust: ["Tekankan akses terbatas ('Hanya untuk anggota', 'Khusus undangan')", "Sebutkan status VIP atau premium", "Gunakan bahasa eksklusif: 'Tidak tersedia untuk umum', 'Koleksi pribadi'"],
         visualMust: ["Tampilkan kartu VIP atau keanggotaan", "Tampilkan tanda 'hanya untuk anggota'", "Tampilkan kemasan mewah atau premium"]
     },
-    'Instant Gratification': {
+    'Kepuasan Instan': {
         copyMust: ["Janjikan hasil cepat ('Lihat hasilnya dalam 3 hari', 'Langsung terasa bedanya')", "Tekankan kecepatan dan kemudahan ('Cepat', 'Instan', 'Tanpa repot')", "Gunakan bahasa yang mendesak: 'Dapatkan sekarang juga', 'Langsung'"],
         visualMust: ["Tampilkan transformasi cepat (visual fast-forward)", "Tampilkan jam atau timer yang menunjukkan durasi singkat", "Tampilkan seseorang yang terkejut dengan cepatnya hasil"]
     }
 };
 
-export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, format: CreativeFormat, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject, preferredCarouselArc?: string): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+    const recommendedFormats = getRecommendedFormats(awarenessStage, trigger, persona);
+    const formatStrategy = `
+        **STRATEGI FORMAT (Gunakan Panduan Ini):**
+        Berdasarkan tahap kesadaran "${awarenessStage}" dan pemicu "${trigger.name}", format yang DIREKOMENDASIKAN adalah: ${recommendedFormats.join(', ')}.
+        
+        Anda diberi format "${format}". Jika format ini TIDAK ada dalam daftar yang direkomendasikan, Anda harus mengadaptasi eksekusi Anda agar berfungsi dengan sangat baik untuk kombinasi tahap/pemicu ini.
+        
+        **Tolok Ukur Kinerja Meta Saat Ini (Q4 2024):**
+        - Statis: Menang jika memiliki visual BOLD + headline numerik + teks yang menyenangkan.
+        - HP (Pendiri/Ahli): Menang dengan otoritas + penanganan keberatan + "Kita vs Mereka".
+        - UGC: Menang melalui KERAGAMAN kreator (4-5 sudut pandang berbeda, bukan 1 kreator).
+    `;
+
+    let carouselArcGuidance = '';
+    if (placement === 'Carousel') {
+        carouselArcGuidance = preferredCarouselArc
+            ? `ANDA HARUS menggunakan alur "${preferredCarouselArc}": ${CAROUSEL_ARCS[preferredCarouselArc]}`
+            : `Pilih alur yang PALING TEPAT dari: ${Object.keys(CAROUSEL_ARCS).join(', ')}`;
+    }
+
     const formatInstructions: Record<CreativeFormat, string> = {
-        'UGC': "Simulasikan video atau foto asli buatan pengguna. Nada harus otentik, tidak terlalu dipoles. Prompt visual harus mendeskripsikan suasana yang realistis. KHUSUS UNTUK UGC: Tren terbaru menekankan 'creator diversity'. Pastikan visualPrompt mencerminkan persona ini secara otentik (gaya 'TikTok Shop-style' yang sederhana) dan bukan UGC yang terlalu dipoles.",
-        'Before & After': "Tunjukkan dengan jelas keadaan 'sebelum' yang menunjukkan masalah dan keadaan 'sesudah' yang menunjukkan solusi yang diberikan oleh produk. Transformasi harus jelas.",
-        'Comparison': "Bandingkan produk secara langsung atau tidak langsung dengan alternatif (misalnya, 'cara lama'). Tonjolkan fitur atau manfaat unggulan produk.",
+        'UGC': "Simulasikan video atau foto asli buatan pengguna. Nada harus otentik, tidak terlalu dipoles. Prompt visual harus mendeskripsikan suasana yang realistis. KHUSUS UNTUK UGC: Tren terbaru menekankan 'keragaman kreator'. Pastikan visualPrompt mencerminkan persona ini secara otentik (gaya 'TikTok Shop-style' yang sederhana) dan bukan UGC yang terlalu dipoles.",
+        'Sebelum & Sesudah': "Tunjukkan dengan jelas keadaan 'sebelum' yang menunjukkan masalah dan keadaan 'sesudah' yang menunjukkan solusi yang diberikan oleh produk. Transformasi harus jelas.",
+        'Perbandingan': "Bandingkan produk secara langsung atau tidak langsung dengan alternatif (misalnya, 'cara lama'). Tonjolkan fitur atau manfaat unggulan produk.",
         'Demo': "Tunjukkan produk sedang beraksi. Prompt visual harus fokus pada produk yang digunakan dan fungsionalitas utamanya.",
-        'Testimonial': "Tampilkan pelanggan yang puas. Hook dan headline harus dibaca seperti kutipan. Prompt visual harus menggambarkan seseorang yang mewakili persona target, terlihat bahagia dan percaya diri.",
-        'Problem/Solution': "Mulai dengan menyajikan masalah umum yang dihadapi persona target dengan jelas. Agitasi masalah dengan mendeskripsikan frustrasi yang ditimbulkannya. Terakhir, sajikan produk sebagai solusi sempurna. Visual harus menggambarkan keadaan 'masalah' atau 'solusi' dengan jelas.",
-        'Educational/Tip': "Berikan nilai asli dengan mengajarkan audiens sesuatu yang berguna terkait dengan domain produk. Bingkai iklan sebagai tips bermanfaat atau 'cara cepat'. Produk harus diintegrasikan secara alami sebagai alat untuk mencapai hasil dari tips tersebut.",
-        'Storytelling': "Ceritakan kisah pendek yang relatable di mana seorang karakter (mewakili persona) mengatasi tantangan menggunakan produk. Narasi harus memiliki awal, tengah, dan akhir yang jelas. Fokusnya harus pada perjalanan emosional dan transformasi.",
-        'Article Ad': "Simulasikan cuplikan artikel berita atau posting blog otoritatif. Visual harus terlihat seperti tangkapan layar publikasi online berkualitas tinggi, dengan headline dan gambar yang menarik yang terasa seperti konten editorial.",
-        'Split Screen': "Buat visual yang secara harfiah terbagi dua. Satu sisi menunjukkan 'masalah' atau 'cara lama', dan sisi lain menunjukkan 'solusi' dengan produk Anda. Kontrasnya harus tajam dan langsung dapat dipahami.",
+        'Testimoni': "Tampilkan pelanggan yang puas. Hook dan headline harus dibaca seperti kutipan. Prompt visual harus menggambarkan seseorang yang mewakili persona target, terlihat bahagia dan percaya diri.",
+        'Masalah/Solusi': "Mulai dengan menyajikan masalah umum yang dihadapi persona target dengan jelas. Agitasi masalah dengan mendeskripsikan frustrasi yang ditimbulkannya. Terakhir, sajikan produk sebagai solusi sempurna. Visual harus menggambarkan keadaan 'masalah' atau 'solusi' dengan jelas.",
+        'Edukasi/Tips': "Berikan nilai asli dengan mengajarkan audiens sesuatu yang berguna terkait dengan domain produk. Bingkai iklan sebagai tips bermanfaat atau 'cara cepat'. Produk harus diintegrasikan secara alami sebagai alat untuk mencapai hasil dari tips tersebut.",
+        'Bercerita': "Ceritakan kisah pendek yang relatable di mana seorang karakter (mewakili persona) mengatasi tantangan menggunakan produk. Narasi harus memiliki awal, tengah, dan akhir yang jelas. Fokusnya harus pada perjalanan emosional dan transformasi.",
+        'Iklan Artikel': "Simulasikan cuplikan artikel berita atau posting blog otoritatif. Visual harus terlihat seperti tangkapan layar publikasi online berkualitas tinggi, dengan headline dan gambar yang menarik yang terasa seperti konten editorial.",
+        'Layar Terpisah': "Buat visual yang secara harfiah terbagi dua. Satu sisi menunjukkan 'masalah' atau 'cara lama', dan sisi lain menunjukkan 'solusi' dengan produk Anda. Kontrasnya harus tajam dan langsung dapat dipahami.",
         'Advertorial': "Rancang iklan yang meniru gaya konten editorial dari majalah atau blog tepercaya. Harus menarik secara visual, informatif, dan tidak terlalu 'menjual' pada pandangan pertama. Teks harus bersifat edukatif atau didorong oleh cerita.",
         'Listicle': "Bingkai iklan sebagai daftar, seperti '5 Alasan Mengapa...' atau '3 Kesalahan Teratas...'. Untuk carousel, setiap slide adalah satu poin dalam daftar. Untuk gambar statis, visual harus mewakili poin #1, dengan headline yang menggoda daftar tersebut.",
-        'MultiProduct': "Tampilkan beberapa produk sekaligus, baik sebagai bundel, koleksi, atau berbagai pilihan. Prompt visual harus dengan jelas mengatur produk-produk dengan cara yang menarik, menyoroti nilai dari grup tersebut.",
-        'US vs Them': "Ciptakan kontras yang kuat antara merek/produk Anda (Kami) dan persaingan atau cara lama yang inferior (Mereka). Visual dan teks harus dengan jelas menetapkan dua sisi yang berlawanan dan memposisikan produk Anda sebagai pemenang yang jelas.",
-        'Meme/Ugly Ad': "Gunakan format meme yang sedang populer atau buat desain 'jelek' yang disengaja dan berkualitas rendah yang terlihat seperti postingan asli dan organik. Tujuannya adalah untuk menghentikan guliran melalui humor, keterkaitan, dan dengan menghindari tampilan iklan yang dipoles.",
-        'Direct Offer': "Jadikan penawaran sebagai pahlawan mutlak dari iklan. Visual harus berani dan berpusat pada diskon, bonus, atau penawaran khusus (misalnya, 'DISKON 50%' dalam teks besar). Teks harus langsung dan jelas menjelaskan penawaran serta urgensi/kelangkaannya."
+        'Multi-Produk': "Tampilkan beberapa produk sekaligus, baik sebagai bundel, koleksi, atau berbagai pilihan. Prompt visual harus dengan jelas mengatur produk-produk dengan cara yang menarik, menyoroti nilai dari grup tersebut.",
+        'Kita vs Mereka': "Ciptakan kontras yang kuat antara merek/produk Anda (Kami) dan persaingan atau cara lama yang inferior (Mereka). Visual dan teks harus dengan jelas menetapkan dua sisi yang berlawanan dan memposisikan produk Anda sebagai pemenang yang jelas.",
+        'Meme/Iklan Jelek': "Gunakan format meme yang sedang populer atau buat desain 'jelek' yang disengaja dan berkualitas rendah yang terlihat seperti postingan asli dan organik. Tujuannya adalah untuk menghentikan guliran melalui humor, keterkaitan, dan dengan menghindari tampilan iklan yang dipoles.",
+        'Penawaran Langsung': "Jadikan penawaran sebagai pahlawan mutlak dari iklan. Visual harus berani dan berpusat pada diskon, bonus, atau penawaran khusus (misalnya, 'DISKON 50%' dalam teks besar). Teks harus langsung dan jelas menjelaskan penawaran serta urgensi/kelangkaannya."
     };
 
     const placementInstructions: Record<PlacementFormat, string> = {
         'Carousel': `**MANDAT PEMBUATAN CAROUSEL**: 
-1.  **CAROUSEL VISUAL CONSISTENCY RULES**:
-    - **ALL** slides must share the same: Color palette, Lighting style (e.g., all golden hour OR all studio), Model/subject (same person across slides).
-    - **VARY** only these elements per slide: Subject's action/pose, Props/objects in scene, Text overlay zone (but keep consistent placement).
-    - **Visual Flow Example (PAS Arc)**:
-        - Slide 1: Subject looking frustrated at [problem] - CLOSE-UP face
-        - Slide 2: Wider shot showing the mess/chaos from [problem]
-        - Slide 3: Subject discovers product - "aha!" expression
-        - Slide 4: Split screen before/after OR testimonial
-        - Slide 5: Subject celebrating with product - CALL TO ACTION text zone
-2.  Pertama, Anda HARUS memilih alur cerita yang PALING SESUAI dari daftar di bawah ini berdasarkan format kreatif ("${format}") dan angle strategis.
-    - **PAS (Problem-Agitate-Solution)**: ${CAROUSEL_ARCS['PAS']}
-    - **Transformasi**: ${CAROUSEL_ARCS['Transformation']}
-    - **Edukasi**: ${CAROUSEL_ARCS['Educational']}
-    - **Kisah Testimoni**: ${CAROUSEL_ARCS['Testimonial Story']}
+1.  **ATURAN KONSISTENSI VISUAL CAROUSEL**:
+    - **SEMUA** slide harus memiliki: Palet warna yang sama, Gaya pencahayaan yang sama (misalnya, semua golden hour ATAU semua studio), Model/subjek yang sama (orang yang sama di semua slide).
+    - **VARIASIKAN** hanya elemen-elemen ini per slide: Aksi/pose subjek, Properti/objek dalam adegan, Zona overlay teks (tetapi pertahankan penempatan yang konsisten).
+2.  ${carouselArcGuidance}
 3.  Setelah memilih alur, hasilkan array 'carouselSlides' dengan tepat 5 slide yang mengikuti struktur narasinya.
 4.  **KRITIS**: Anda harus mengikuti alur kerja COPY-FIRST. Pertama, tulis copy (headline, deskripsi) untuk semua 5 slide. KEMUDIAN, untuk setiap copy slide, buat 'visualPrompt' yang merupakan interpretasi visual langsung dari pesan slide spesifik tersebut dan mengikuti aturan komposisi untuk Carousel.
 5.  Slide terakhir HARUS selalu berupa Ajakan Bertindak (CTA) yang menggabungkan penawaran: "${offer.name}".
@@ -643,97 +715,95 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
         'Instagram Story': "Desain untuk rasio aspek vertikal 9:16. Visual harus terasa asli dan otentik dengan platform. Hook harus cepat dan tajam. Prompt visual dapat menyarankan overlay teks atau elemen interaktif."
     };
     
-     const visualStyleInstruction = allowVisualExploration
-    ? `- **Style**: Anda BEBAS mengusulkan visualStyle dan visualPrompt yang sama sekali baru, TAPI **gunakan gaya visual asli ("${blueprint.adDna.visualStyle}") sebagai titik awal atau inspirasi**. Tujuannya adalah variasi kreatif, bukan sesuatu yang sama sekali tidak berhubungan. Buatlah sesuatu yang tak terduga namun tetap terasa 'on-brand'.`
-    : `- **Style**: Gaya visual HARUS merupakan evolusi langsung dari 'DNA Gaya Visual' asli. Padukan DNA ("${blueprint.adDna.visualStyle}") dengan estetika persona ("${persona.creatorType}"). Hasilnya harus terlihat seperti iklan baru dari merek yang sama, untuk segmen audiens yang berbeda. **JANGAN membuat gaya visual yang sama sekali tidak berhubungan dengan DNA asli.**`;
-
+    const triggerKey = Object.keys(TRIGGER_IMPLEMENTATION_CHECKLIST).find(k => k.toLowerCase() === trigger.name.toLowerCase()) || trigger.name;
+    const triggerChecklist = TRIGGER_IMPLEMENTATION_CHECKLIST[triggerKey] || { copyMust: [], visualMust: [] };
 
     const prompt = `
-        You are a world-class direct response copywriter and creative director. Your task is to generate an array of 3 **strategically distinct** ad concepts based on a single brief. You must follow all principles and workflows provided.
+        Anda adalah seorang copywriter direct response dan direktur kreatif kelas dunia. Tugas Anda adalah menghasilkan sebuah array berisi 3 konsep iklan yang **berbeda secara strategis** berdasarkan satu brief. Anda harus mengikuti semua prinsip dan alur kerja yang disediakan.
 
         ---
-        **NON-NEGOTIALBE CORE PRINCIPLES (IN INDONESIAN CONTEXT):**
+        **PRINSIP INTI YANG TIDAK BISA DITAWAR (DALAM KONTEKS INDONESIA):**
         1.  **Asumsikan Zero Brand Awareness:** Tulis untuk audiens dingin. Kejelasan > Kecerdasan.
         2.  **Fokus pada Masalah atau Hasil:** Fokus pada apa yang dipedulikan pengguna, bukan fitur.
         3.  **Spesifisitas = Kredibilitas:** Gunakan angka dan detail konkret.
 
-        **MANDATORY WORKFLOW: COPY-FIRST**
-        Your process for EACH concept must be: First, write the selling words (hook, headline). Second, create a visual that makes those words 10x more powerful.
+        **ALUR KERJA WAJIB: COPY-FIRST**
+        Proses Anda untuk SETIAP konsep harus: Pertama, tulis kata-kata yang menjual (hook, headline). Kedua, buat visual yang membuat kata-kata itu 10x lebih kuat.
 
-        **🔥 YOUR CORE MISSION: A/B TEST VARIATIONS (Three Entry Points Framework)**
-        It is CRITICAL that the three concepts are NOT just reworded versions of each other. You MUST generate three genuinely different creative hypotheses:
+        **🔥 MISI INTI ANDA: VARIASI TES A/B (Kerangka Tiga Pintu Masuk)**
+        Sangat PENTING bahwa ketiga konsep tersebut BUKAN hanya versi yang diubah kata-katanya satu sama lain. Anda HARUS menghasilkan tiga hipotesis kreatif yang benar-benar berbeda:
         - **Konsep 1 - "Pintu Masuk Emosional"**: Berawal dari perasaan, identitas, atau aspirasi. Menjawab "Bagaimana ini akan membuat saya merasa?"
         - **Konsep 2 - "Pintu Masuk Logis"**: Berawal dari logika, bukti, data, atau mekanisme unik. Menjawab "Bagaimana cara kerjanya?"
         - **Konsep 3 - "Pintu Masuk Sosial"**: Berawal dari komunitas, suku, atau bukti sosial. Menjawab "Siapa lagi yang menggunakan ini?"
-        ---
-        **THE BRIEF (Your Foundation):**
-        - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - **Strategic Offer**: ${offer.name} - ${offer.description} (CTA: ${blueprint.adDna.cta})
-        - **Sales DNA**:
-            - Persuasion Formula: "${blueprint.adDna.persuasionFormula}"
-            - Tone of Voice: "${blueprint.adDna.toneOfVoice}"
-        - **Original Visual Style DNA: "${blueprint.adDna.visualStyle}"**
-        - **Target Country for Localization: "${blueprint.adDna.targetCountry}"**
-        - **Target Persona**: "${persona.description}" (Age: "${persona.age}", Type: "${persona.creatorType}", Pains: ${persona.painPoints.join(', ')})
-        - **Creative Mandate**:
-            - Angle: "${angle}"
-            - 🔥 Psychological Trigger: "${trigger.name}" (Description: ${trigger.description}). In your JSON response, you must return a full trigger object for "${trigger.name}".
-            - Awareness Stage: "${awarenessStage}"
-            - Format: "${format}" (Guidelines: ${formatInstructions[format]})
-            - Placement: "${placement}" (Guidelines: ${placementInstructions[placement]})
+        
+        ${formatStrategy}
 
-        **🔥 TRIGGER IMPLEMENTATION CHECKLIST for "${trigger.name}":**
-        Your COPY must include at least ONE of these: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.copyMust.join(', ')}.
-        Your VISUAL PROMPT must include at least ONE of these: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust.join(', ')}.
-        ⚠️ If your concept doesn't pass this checklist, it FAILS.
+        **🔥 MANDAT DIFERENSIASI VISUAL (KRITIS UNTUK ENTITY ID META):**
+        Setiap dari 3 konsep HARUS memiliki ciri visual yang BERBEDA SECARA FUNDAMENTAL:
+        - **Konsep 1 (Pintu Masuk Emosional) Gaya Visual:** Latar: Ruang pribadi, intim (kamar tidur, mobil). Pencahayaan: Lembut, hangat, golden hour. Kamera: Close-up pada ekspresi. Aksi: Kontemplatif, rentan.
+        - **Konsep 2 (Pintu Masuk Logis) Gaya Visual:** Latar: Lingkungan "demo" yang bersih (meja, lab). Pencahayaan: Terang, merata, klinis. Kamera: Medium shot menunjukkan produk + konteks. Aksi: Demonstratif, instruksional.
+        - **Konsep 3 (Pintu Masuk Sosial) Gaya Visual:** Latar: Ruang sosial, publik (kafe, gym). Pencahayaan: Alami, realistis. Kamera: Wide shot menunjukkan konteks grup. Aksi: Interaktif, dinamika grup.
+
+        **PEMERIKSAAN ATURAN ENTITY ID META:** Sebelum menyelesaikan 3 prompt visual Anda, tanyakan: "Jika saya menunjukkan 3 gambar ini berdampingan TANPA teks, akankah manusia segera melihat bahwa mereka berasal dari 3 kampanye iklan yang berbeda?" Jika TIDAK, BUAT ULANG.
+        ---
+        **BRIEF (Dasar Anda):**
+        - Produk: ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
+        - **Penawaran Strategis**: ${offer.name} - ${offer.description} (CTA: ${blueprint.adDna.cta})
+        - **DNA Penjualan**:
+            - Formula Persuasi: "${blueprint.adDna.persuasionFormula}"
+            - Nada Suara: "${blueprint.adDna.toneOfVoice}"
+        - **DNA Gaya Visual Asli: "${blueprint.adDna.visualStyle}"**
+        - **Negara Target untuk Lokalisasi: "${blueprint.adDna.targetCountry}"**
+        - **Persona Target**: "${persona.description}" (Usia: "${persona.age}", Tipe: "${persona.creatorType}", Poin Masalah: ${persona.painPoints.join(', ')})
+        - **Mandat Kreatif**:
+            - Sudut Pandang: "${angle}"
+            - 🔥 Pemicu Psikologis: "${trigger.name}" (Deskripsi: ${trigger.description}). Dalam respons JSON Anda, Anda harus mengembalikan objek pemicu lengkap untuk "${trigger.name}".
+            - Tahap Kesadaran: "${awarenessStage}"
+            - Format: "${format}" (Panduan: ${formatInstructions[format]})
+            - Penempatan: "${placement}" (Panduan: ${placementInstructions[placement]})
+
+        **🔥 DAFTAR PERIKSA IMPLEMENTASI PEMICU untuk "${trigger.name}":**
+        COPY Anda harus menyertakan setidaknya SATU dari ini: ${triggerChecklist.copyMust.join(', ')}.
+        PROMPT VISUAL Anda harus menyertakan setidaknya SATU dari ini: ${triggerChecklist.visualMust.join(', ')}.
+        ⚠️ Jika konsep Anda tidak lolos pemeriksaan ini, itu GAGAL.
         
         ---
-        **CREATION PROCESS FOR EACH OF THE 3 CONCEPTS (Emotional, Logical, Social):**
+        **PROSES PEMBUATAN UNTUK SETIAP DARI 3 KONSEP (Emosional, Logis, Sosial):**
 
-        **STEP 1: Write the Words (Copywriter Mode)**
-        1.  **HOOK:** Generate a world-class, scroll-stopping hook that scores high on at least TWO of:
-            - **Curiosity Gap:** Creates a powerful need to know the answer.
-            - **Specificity:** Uses concrete numbers, details, timelines.
-            - **Contrarianism:** Challenges a common belief.
-        2.  **HEADLINE:** You MUST use one of these formulas for the "${awarenessStage}" stage, adapting it to your chosen entry point (Emotional/Logical/Social). You will fill in the bracketed placeholders with specific, compelling text. When creating the 'Logical Entry' concept, prioritize the "Number-Based Credibility" or "Problem -> Solution" headline formulas.
+        **LANGKAH 1: Tulis Kata-kata (Mode Copywriter)**
+        1.  **HOOK:** Hasilkan hook kelas dunia yang menghentikan guliran.
+        2.  **HEADLINE:** Anda HARUS menggunakan salah satu formula ini untuk tahap "${awarenessStage}", menyesuaikannya dengan pintu masuk yang Anda pilih.
             ${HEADLINE_FORMULAS[awarenessStage].map((f, i) => `${i + 1}. ${f}`).join('\n')}
-        3.  The copy must align with the trigger "${trigger.name}", the offer "${offer.name}", and be localized for ${blueprint.adDna.targetCountry}.
+        3.  Teks harus selaras dengan pemicu "${trigger.name}", penawaran "${offer.name}", dan dilokalkan untuk ${blueprint.adDna.targetCountry}.
 
-        **STEP 2: Visualize the Message (Art Director Mode)**
-        - Create a detailed **visualPrompt** using this EXACT **VISUAL PROMPT TEMPLATE**:
+        **LANGKAH 2: Visualisasikan Pesan (Mode Art Director)**
+        - Buat **visualPrompt** yang terperinci menggunakan **TEMPLATE PROMPT VISUAL** INI TEPAT:
 
-        **VISUAL PROMPT TEMPLATE (Fill in each section explicitly):**
-        [SCROLL-STOPPER ELEMENT] One unexpected object/action: ...
-        [EMOTION & EXPRESSION] Subject's core feeling: ... | Facial expression detail: ...
-        [PERSONA AUTHENTICITY] Setting for ${persona.description} in ${blueprint.adDna.targetCountry}: ... | Subject styling authentic to ${persona.creatorType}: ...
-        [META AI TARGETING] How this visual targets the persona via pixels for Meta's algorithm to read (e.g., for high-income, describe 'minimalist, high-end home office'; for Gen Z, 'trendy dorm room with ring light'): ...
-        [TRIGGER VISUALIZATION for "${trigger.name}"] How scene shows ${trigger.name} (Must use one of: ${TRIGGER_IMPLEMENTATION_CHECKLIST[trigger.name]?.visualMust.join('; ')}): ...
-        [PRODUCT PLACEMENT] Where/how product appears: ...
-        [STYLE DNA FUSION] Original DNA: "${blueprint.adDna.visualStyle}" | Resulting color palette: ... | Resulting mood: ...
-        [TECHNICAL SPECS] Composition for '${placement}': "${COMPOSITION_FOR_ADS[placement]}" | Aspect ratio: ${placement === 'Instagram Story' ? '9:16 vertical' : placement === 'Instagram Feed' ? '1:1 or 4:5' : 'digital ad optimized'}. | Camera angle: ... | Lighting: ...
+        **TEMPLATE PROMPT VISUAL (Isi setiap bagian secara eksplisit):**
+        [ELEMEN PENGHENTI GULIRAN] Satu objek/aksi tak terduga: ...
+        [EMOSI & EKSPRESI] Perasaan inti subjek: ... | Detail ekspresi wajah: ...
+        [OTENTISITAS PERSONA] Latar untuk ${persona.description} di ${blueprint.adDna.targetCountry}: ... | Gaya subjek yang otentik dengan ${persona.creatorType}: ...
+        [PENARGETAN AI META] Bagaimana visual ini menargetkan persona melalui piksel untuk dibaca oleh algoritma Meta (misalnya, untuk berpenghasilan tinggi, jelaskan 'kantor rumah minimalis, mewah'; untuk Gen Z, 'kamar kos trendi dengan ring light'): ...
+        [VISUALISASI PEMICU untuk "${trigger.name}"] Bagaimana adegan menunjukkan ${trigger.name} (Harus menggunakan salah satu dari: ${triggerChecklist.visualMust.join('; ')}): ...
+        [PENEMPATAN PRODUK] Di mana/bagaimana produk muncul: ...
+        [FUSI DNA GAYA] DNA Asli: "${blueprint.adDna.visualStyle}" | Palet warna yang dihasilkan: ... | Suasana hati yang dihasilkan: ...
+        [SPESIFIKASI TEKNIS] Komposisi untuk '${placement}': "${COMPOSITION_FOR_ADS[placement]}" | Rasio aspek: ${placement === 'Instagram Story' ? '9:16 vertikal' : placement === 'Instagram Feed' ? '1:1 atau 4:5' : 'dioptimalkan untuk iklan digital'}. | Sudut kamera: ... | Pencahayaan: ...
 
-        **STEP 3: Fill Trigger Implementation Proof**
-        - For each concept, fill the 'triggerImplementationProof' object in the JSON.
-        - **copyChecklistItemUsed**: Quote the specific copy element that implements the trigger.
-        - **visualChecklistItemUsed**: Describe the specific visual element that implements the trigger.
-
+        **LANGKAH 3: Isi Bukti Implementasi Pemicu**
+        - Untuk setiap konsep, isi objek 'triggerImplementationProof' di JSON.
+        
         ---
         
-        **INTERNAL QUALITY CHECK BEFORE RESPONDING:**
-        For each concept you created, ask yourself:
-        1.  Does the visual prompt AMPLIFY the emotional core of the hook/headline?
-        2.  If I showed this image WITHOUT text, would it still evoke the right feeling?
-        3.  Does the subject's facial expression match the copy's emotion?
-        4.  Example of BAD alignment: Headline "Stop wasting money" + Visual "Happy person smiling"
-        5.  Example of GOOD alignment: Headline "Stop wasting money" + Visual "Frustrated person looking at bills with stressed expression"
-        6.  **META ENTITY ID RULE**: Are the visual prompts for the Emotional, Logical, and Social concepts fundamentally different? They MUST use different settings, compositions, camera angles, and emotional expressions to avoid creative fatigue and platform penalties.
-        
-        Ensure your 3 concepts are truly DIFFERENT (Emotional vs Logical vs Social) and that each one follows the COPY-FIRST workflow and passes the trigger checklist. If any concept fails this check, REGENERATE it before responding.
+        **PEMERIKSAAN KUALITAS INTERNAL SEBELUM MERESPONS:**
+        Untuk setiap konsep yang Anda buat, tanyakan pada diri sendiri:
+        1.  Apakah prompt visual MEMPERKUAT inti emosional dari hook/headline?
+        2.  Jika saya menunjukkan gambar ini TANPA teks, apakah masih akan membangkitkan perasaan yang benar?
+        3.  **ATURAN ENTITY ID META**: Apakah prompt visual untuk konsep Emosional, Logis, dan Sosial berbeda secara fundamental? Mereka HARUS menggunakan latar, komposisi, sudut kamera, dan ekspresi emosional yang berbeda untuk menghindari kejenuhan kreatif dan penalti platform.
         
         ---
 
-        Now, generate an array of 3 JSON objects using the process above. Adhere strictly to the provided JSON schema. For 'adSetName', follow this format: [PersonaShort]_[AngleKeyword]_[Trigger]_[Awareness]_[Format]_[Placement]_v[1, 2, or 3]. For the 'offer' field, you MUST return a full offer object matching the Strategic Offer.
-        Respond ONLY with the JSON array.
+        Sekarang, hasilkan array berisi 3 objek JSON menggunakan proses di atas. Patuhi skema JSON yang disediakan dengan ketat. Untuk 'adSetName', ikuti format ini: [PersonaSingkat]_[KataKunciSudutPandang]_[Pemicu]_[Kesadaran]_[Format]_[Penempatan]_v[1, 2, atau 3]. Untuk bidang 'offer', Anda HARUS mengembalikan objek penawaran lengkap yang cocok dengan Penawaran Strategis.
+        Hanya berikan respons berupa array JSON.
     `;
     
     const response = await ai.models.generateContent({
@@ -754,7 +824,7 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
     
     const entryPoints: ('Emotional' | 'Logical' | 'Social')[] = ['Emotional', 'Logical', 'Social'];
 
-    return ideas.map((idea, index) => ({
+    return ideas.map((idea, index) => addMockPerformanceSignals({
         ...idea,
         entryPoint: entryPoints[index % 3] as 'Emotional' | 'Logical' | 'Social'
     }));
@@ -763,15 +833,15 @@ export const generateCreativeIdeas = async (blueprint: CampaignBlueprint, angle:
 export const analyzeReferenceImageStyle = async (imageBase64: string): Promise<VisualStyleDNA> => {
     const imagePart = imageB64ToGenerativePart(imageBase64);
     const prompt = `
-    Analyze this ad image and extract its VISUAL STYLE DNA.
-    Return a JSON object with:
+    Analisis gambar iklan ini dan ekstrak DNA GAYA VISUALNYA.
+    Kembalikan objek JSON dengan:
         {
-            "colorPalette": "Describe dominant colors and mood (e.g., 'Warm earth tones with vibrant orange accents')",
-            "lightingStyle": "Natural/Studio/Dramatic/etc + time of day",
-            "compositionApproach": "Rule of thirds/Center-focused/Z-pattern/etc",
-            "photographyStyle": "UGC raw/Professional editorial/Lifestyle/etc",
-            "modelStyling": "Describe hair, makeup, clothing aesthetic",
-            "settingType": "Indoor studio/Outdoor urban/Home setting/etc"
+            "colorPalette": "Jelaskan warna dominan dan suasana hati (misalnya, 'Warna tanah hangat dengan aksen oranye cerah')",
+            "lightingStyle": "Alami/Studio/Dramatis/dll + waktu hari",
+            "compositionApproach": "Aturan sepertiga/Fokus tengah/Pola-Z/dll",
+            "photographyStyle": "Mentah UGC/Editorial profesional/Gaya hidup/dll",
+            "modelStyling": "Jelaskan rambut, riasan, estetika pakaian",
+            "settingType": "Studio dalam ruangan/Perkotaan luar ruangan/Latar rumah/dll"
         }
     `;
 
@@ -790,43 +860,43 @@ export const analyzeReferenceImageStyle = async (imageBase64: string): Promise<V
 
 export const generateAdImage = async (prompt: string, referenceImageBase64?: string, allowVisualExploration: boolean = false): Promise<string> => {
     
-    const NEGATIVE_PROMPT = "NO generic stock photo look, NO obvious AI artifacts (weird hands, distorted faces), NO text in image (we'll add overlay), NO watermarks or logos unless product branding, NO cluttered composition, NO excessive filters that look unnatural.";
-    const salesIntent = `A highly persuasive, high-converting, and scroll-stopping advertisement image designed to sell a product. The image must be ultra-photorealistic, high-contrast, and emotionally resonant. The central focus must be on the user's benefit or transformation. Negative prompt: ${NEGATIVE_PROMPT}`;
+    const NEGATIVE_PROMPT = "TIDAK ADA tampilan foto stok generik, TIDAK ADA artefak AI yang jelas (tangan aneh, wajah terdistorsi), TIDAK ADA teks dalam gambar (kami akan menambahkan overlay), TIDAK ADA tanda air atau logo kecuali branding produk, TIDAK ADA komposisi yang berantakan, TIDAK ADA filter berlebihan yang terlihat tidak alami.";
+    const salesIntent = `Gambar iklan yang sangat persuasif, berkonversi tinggi, dan menghentikan guliran yang dirancang untuk menjual produk. Gambar harus sangat fotorealistik, kontras tinggi, dan beresonansi secara emosional. Fokus utama harus pada manfaat atau transformasi pengguna. Prompt negatif: ${NEGATIVE_PROMPT}`;
     
     let textPrompt: string;
     const parts: any[] = [];
 
     if (referenceImageBase64) {
-        // STEP 1: Analyze the reference image style first for more precise control.
+        // LANGKAH 1: Analisis gaya gambar referensi terlebih dahulu untuk kontrol yang lebih presisi.
         const styleDNA = await analyzeReferenceImageStyle(referenceImageBase64);
         
-        // Always include the reference image for the model to see.
+        // Selalu sertakan gambar referensi agar model dapat melihatnya.
         parts.push(imageB64ToGenerativePart(referenceImageBase64));
 
         if (allowVisualExploration) {
-            // Use the extracted DNA as INSPIRATION, but prioritize the new scene.
+            // Gunakan DNA yang diekstraksi sebagai INSPIRASI, tetapi prioritaskan adegan baru.
             textPrompt = `${salesIntent} 
-Using the provided reference image as INSPIRATION:
-1.  Extract these style elements: color palette from "${styleDNA.colorPalette}", lighting mood from "${styleDNA.lightingStyle}", and composition principles from "${styleDNA.compositionApproach}".
-2.  You MAY evolve/remix the visual concept while keeping the brand feel.
-3.  The scene described below is your PRIMARY guide: ${prompt}
-4.  Balance the final image: 60% new scene description + 40% reference style DNA.`;
+Menggunakan gambar referensi yang disediakan sebagai INSPIRASI:
+1.  Ekstrak elemen gaya ini: palet warna dari "${styleDNA.colorPalette}", suasana pencahayaan dari "${styleDNA.lightingStyle}", dan prinsip komposisi dari "${styleDNA.compositionApproach}".
+2.  Anda BOLEH mengembangkan/meremix konsep visual sambil mempertahankan nuansa merek.
+3.  Adegan yang dijelaskan di bawah ini adalah panduan UTAMA Anda: ${prompt}
+4.  Seimbangkan gambar akhir: 60% deskripsi adegan baru + 40% DNA gaya referensi.`;
         } else {
-            // Use the extracted DNA as a STRICT GUIDE or TEMPLATE.
+            // Gunakan DNA yang diekstraksi sebagai PANDUAN KETAT atau TEMPLAT.
             textPrompt = `${salesIntent} 
-Using the provided reference image as a STRICT GUIDE with the following style DNA:
-- Color Palette: ${styleDNA.colorPalette}
-- Lighting: ${styleDNA.lightingStyle}
-- Composition: ${styleDNA.compositionApproach}
-- Photography Style: ${styleDNA.photographyStyle}
+Menggunakan gambar referensi yang disediakan sebagai PANDUAN KETAT dengan DNA gaya berikut:
+- Palet Warna: ${styleDNA.colorPalette}
+- Pencahayaan: ${styleDNA.lightingStyle}
+- Komposisi: ${styleDNA.compositionApproach}
+- Gaya Fotografi: ${styleDNA.photographyStyle}
 
-1.  Maintain this exact style, lighting, and composition approach.
-2.  Adapt ONLY the subject/setting to match this new scene: ${prompt}
-3.  The reference image and its DNA are your TEMPLATE - stay very close to it.`;
+1.  Pertahankan gaya, pencahayaan, dan pendekatan komposisi yang sama persis.
+2.  Adaptasi HANYA subjek/latar agar sesuai dengan adegan baru ini: ${prompt}
+3.  Gambar referensi dan DNA-nya adalah TEMPLAT Anda - tetaplah sangat mirip dengannya.`;
         }
     } else {
-        // No reference image at all.
-        textPrompt = `${salesIntent} The scene is: ${prompt}. The final image must look like a professional, high-converting ad, not a generic stock photo or AI illustration.`;
+        // Tidak ada gambar referensi sama sekali.
+        textPrompt = `${salesIntent} Adegan adalah: ${prompt}. Gambar akhir harus terlihat seperti iklan profesional berkonversi tinggi, bukan foto stok generik atau ilustrasi AI.`;
     }
     
     parts.push({ text: textPrompt });
@@ -851,36 +921,36 @@ Using the provided reference image as a STRICT GUIDE with the following style DN
       }
     }
     
-    console.error("Image generation failed. Response:", JSON.stringify(response, null, 2));
+    console.error("Pembuatan gambar gagal. Respons:", JSON.stringify(response, null, 2));
     throw new Error('Gagal membuat gambar: Tidak ada data gambar yang diterima dari API atau permintaan diblokir.');
 };
 
 export const refineVisualPrompt = async (concept: AdConcept, blueprint: CampaignBlueprint): Promise<string> => {
     const prompt = `
-        You are an expert prompt engineer for AI image generators.
-        Your task is to generate a new, detailed, specific visual prompt that is perfectly aligned with the provided ad copy (hook) and visual direction (visual vehicle).
+        Anda adalah seorang ahli rekayasa prompt untuk generator gambar AI.
+        Tugas Anda adalah menghasilkan prompt visual baru yang terperinci dan spesifik yang selaras sempurna dengan teks iklan (hook) dan arahan visual (visual vehicle) yang disediakan.
 
-        **Ad Concept Details:**
-        - **Product:** ${blueprint.productAnalysis.name}
-        - **Persona:** ${concept.personaDescription} (Age: ${concept.personaAge}, Style: ${concept.personaCreatorType})
+        **Detail Konsep Iklan:**
+        - **Produk:** ${blueprint.productAnalysis.name}
+        - **Persona:** ${concept.personaDescription} (Usia: ${concept.personaAge}, Gaya: ${concept.personaCreatorType})
         - **Headline:** ${concept.headline}
-        - **🔥 Text Hook (The primary text the user sees):** "${concept.hook}"
-        - **Psychological Trigger:** "${concept.trigger.name}"
-        - **Creative Format:** ${concept.format}
-        - **Target Country:** ${blueprint.adDna.targetCountry}
-        - **Visual Vehicle (The high-level visual direction):** "${concept.visualVehicle}"
+        - **🔥 Hook Teks (Teks utama yang dilihat pengguna):** "${concept.hook}"
+        - **Pemicu Psikologis:** "${concept.trigger.name}"
+        - **Format Kreatif:** ${concept.format}
+        - **Negara Target:** ${blueprint.adDna.targetCountry}
+        - **Arahan Visual (Visual Vehicle):** "${concept.visualVehicle}"
 
-        **Task:**
-        Generate a new \`visualPrompt\` string that:
-        1.  **Creates a strong 'Visual Hook'**: The scene described must be the visual counterpart to the 'Text Hook'. What visual would make that text hook 10x more powerful and scroll-stopping?
-        2.  Faithfully executes the direction given in the \`visualVehicle\`.
-        3.  Visually embodies the psychological trigger: "${concept.trigger.name}".
-        4.  Is authentic to the persona's age and style, and culturally appropriate for **${blueprint.adDna.targetCountry}**. The scene must feel genuine to them.
-        5.  Creates a unique visual style by thoughtfully blending the original ad's DNA ("${blueprint.adDna.visualStyle}") with the persona's authentic aesthetic.
-        6.  Includes rich details about composition, lighting, subject's expression, action, and environment.
-        7.  Is highly descriptive and specific, ready to be used with an AI image generator.
+        **Tugas:**
+        Hasilkan string \`visualPrompt\` baru yang:
+        1.  **Menciptakan 'Kait Visual' yang kuat**: Adegan yang dijelaskan harus menjadi padanan visual dari 'Kait Teks'. Visual apa yang akan membuat kait teks itu 10x lebih kuat dan menghentikan guliran?
+        2.  Dengan setia melaksanakan arahan yang diberikan dalam \`visualVehicle\`.
+        3.  Secara visual mewujudkan pemicu psikologis: "${concept.trigger.name}".
+        4.  Otentik dengan usia dan gaya persona, serta sesuai secara budaya untuk **${blueprint.adDna.targetCountry}**. Adegan harus terasa asli bagi mereka.
+        5.  Menciptakan gaya visual yang unik dengan memadukan DNA iklan asli ("${blueprint.adDna.visualStyle}") dengan estetika otentik persona secara cermat.
+        6.  Menyertakan detail kaya tentang komposisi, pencahayaan, ekspresi subjek, aksi, dan lingkungan.
+        7.  Sangat deskriptif dan spesifik, siap digunakan dengan generator gambar AI.
 
-        Respond ONLY with the text for the new visual prompt, without any labels or quotation marks.
+        Hanya berikan respons berupa teks untuk prompt visual baru, tanpa label atau tanda kutip.
     `;
 
     const response = await ai.models.generateContent({
@@ -895,50 +965,52 @@ export const refineVisualPrompt = async (concept: AdConcept, blueprint: Campaign
 export const evolveConcept = async (
     baseConcept: AdConcept,
     blueprint: CampaignBlueprint,
-    evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire',
+    // FIX: Added 'persona' to the evolutionType union type.
+    evolutionType: 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona',
     newValue: any
 ): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     
     const evolutionInstructions: Record<string, string> = {
-        angle: `Adapt the concept to a new strategic angle: "${newValue}". The trigger ("${baseConcept.trigger.name}") and format ("${baseConcept.format}") should remain consistent, but the core message (headline, hook) and visual must be re-imagined to reflect this new angle.`,
-        trigger: `Adapt the concept to use a new psychological trigger: "${(newValue as BuyingTriggerObject).name}" (Description: ${(newValue as BuyingTriggerObject).description}). The angle ("${baseConcept.angle}") and format ("${baseConcept.format}") should remain consistent, but the headline, hook, and visual must be rewritten to powerfully evoke the feeling of "${(newValue as BuyingTriggerObject).name}".`,
-        format: `Adapt the concept to a new creative format: "${newValue}". The angle ("${baseConcept.angle}") and trigger ("${baseConcept.trigger.name}") are the same, but the entire execution (headline, hook, visual) must be re-imagined for the new format. If the new format is "Carousel", you MUST generate a "carouselSlides" array.`,
-        placement: `Adapt the concept for a new placement: "${newValue}". The core creative (angle, trigger, format) is the same, but the execution must be optimized. For "Instagram Story", this means a 9:16 aspect ratio and a punchier hook. For "Carousel", it means telling a story across multiple slides.`,
-        awareness: `Adapt the concept for a new awareness stage: "${newValue}". The core message is the same but the entry point must change. Re-write the hook and headline to match the new stage.`,
-        offer: `Adapt the concept to a new offer: "${(newValue as OfferTypeObject).name}". The core message (angle, trigger) is the same, but the CTA and final part of the copy must be rewritten to reflect this new offer.`,
-        painDesire: `Adapt the concept to a new Pain/Desire: "${(newValue as PainDesireObject).name}". This is a significant shift. The core angle must be re-evaluated to connect with this new emotional driver. The headline, hook, and visual must be completely re-imagined.`
+        angle: `Adaptasi konsep ke sudut pandang strategis baru: "${newValue}". Pemicu ("${baseConcept.trigger.name}") dan format ("${baseConcept.format}") harus tetap konsisten, tetapi pesan inti (headline, hook) dan visual harus dibayangkan ulang untuk mencerminkan sudut pandang baru ini.`,
+        trigger: `Adaptasi konsep untuk menggunakan pemicu psikologis baru: "${(newValue as BuyingTriggerObject).name}" (Deskripsi: ${(newValue as BuyingTriggerObject).description}). Sudut pandang ("${baseConcept.angle}") dan format ("${baseConcept.format}") harus tetap konsisten, tetapi headline, hook, dan visual harus ditulis ulang untuk membangkitkan perasaan "${(newValue as BuyingTriggerObject).name}" dengan kuat.`,
+        format: `Adaptasi konsep ke format kreatif baru: "${newValue}". Sudut pandang ("${baseConcept.angle}") dan pemicu ("${baseConcept.trigger.name}") sama, tetapi seluruh eksekusi (headline, hook, visual) harus dibayangkan ulang untuk format baru. Jika format baru adalah "Carousel", Anda HARUS menghasilkan array "carouselSlides".`,
+        placement: `Adaptasi konsep untuk penempatan baru: "${newValue}". Kreatif inti (sudut pandang, pemicu, format) sama, tetapi eksekusi harus dioptimalkan. Untuk "Instagram Story", ini berarti rasio aspek 9:16 dan hook yang lebih tajam. Untuk "Carousel", ini berarti menceritakan sebuah kisah di beberapa slide.`,
+        awareness: `Adaptasi konsep untuk tahap kesadaran baru: "${newValue}". Pesan inti sama tetapi titik masuk harus berubah. Tulis ulang hook dan headline agar sesuai dengan tahap baru.`,
+        offer: `Adaptasi konsep ke penawaran baru: "${(newValue as OfferTypeObject).name}". Pesan inti (sudut pandang, pemicu) sama, tetapi CTA dan bagian akhir dari teks harus ditulis ulang untuk mencerminkan penawaran baru ini.`,
+        painDesire: `Adaptasi konsep ke Poin Masalah/Keinginan baru: "${(newValue as PainDesireObject).name}". Ini adalah pergeseran yang signifikan. Sudut pandang inti harus dievaluasi ulang untuk terhubung dengan pendorong emosional baru ini. Headline, hook, dan visual harus dibayangkan ulang sepenuhnya.`,
+        persona: `Adaptasi seluruh konsep untuk persona target baru: "${(newValue as TargetPersona).description}". Ini memerlukan penulisan ulang headline, hook, dan prompt visual agar sangat relevan dengan poin masalah dan keinginan spesifik persona baru ini. Sudut pandang inti ("${baseConcept.angle}") mungkin perlu sedikit dibingkai ulang.`
     };
 
     const prompt = `
-        You are a world-class creative director tasked with strategically evolving an existing ad concept.
-        Given a base creative concept and a specific evolution mandate, generate ONE new, distinct ad concept that expertly adapts the original idea.
+        Anda adalah seorang direktur kreatif kelas dunia yang ditugaskan untuk secara strategis mengembangkan konsep iklan yang sudah ada.
+        Diberikan konsep kreatif dasar dan mandat evolusi spesifik, hasilkan SATU konsep iklan baru yang berbeda yang dengan ahli mengadaptasi ide asli.
 
-        **Campaign Blueprint:**
-        - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - Persona: ${baseConcept.personaDescription} (Age: ${baseConcept.personaAge}, Creator Type: ${baseConcept.personaCreatorType})
-        - **Sales DNA**:
-            - Persuasion Formula: "${blueprint.adDna.persuasionFormula}"
-            - Tone of Voice: "${blueprint.adDna.toneOfVoice}"
-        - Visual Style DNA: "${blueprint.adDna.visualStyle}"
-        - Target Country for Localization: "${blueprint.adDna.targetCountry}"
-        - **Strategic Offer to use**: "${baseConcept.offer.name} - ${baseConcept.offer.description}"
+        **Blueprint Kampanye:**
+        - Produk: ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
+        - Persona: ${baseConcept.personaDescription} (Usia: ${baseConcept.personaAge}, Tipe Kreator: ${baseConcept.personaCreatorType})
+        - **DNA Penjualan**:
+            - Formula Persuasi: "${blueprint.adDna.persuasionFormula}"
+            - Nada Suara: "${blueprint.adDna.toneOfVoice}"
+        - DNA Gaya Visual: "${blueprint.adDna.visualStyle}"
+        - Negara Target untuk Lokalisasi: "${blueprint.adDna.targetCountry}"
+        - **Penawaran Strategis untuk digunakan**: "${baseConcept.offer.name} - ${baseConcept.offer.description}"
 
-        **Base Creative Concept:**
-        - Angle: "${baseConcept.angle}"
-        - Trigger: "${baseConcept.trigger.name}"
+        **Konsep Kreatif Dasar:**
+        - Sudut Pandang: "${baseConcept.angle}"
+        - Pemicu: "${baseConcept.trigger.name}"
         - Format: "${baseConcept.format}"
-        - Placement: "${baseConcept.placement}"
+        - Penempatan: "${baseConcept.placement}"
         - Headline: "${baseConcept.headline}"
         - Hook: "${baseConcept.hook}"
         
-        **🔥 Evolution Mandate: ${evolutionInstructions[evolutionType]}**
+        **🔥 Mandat Evolusi: ${evolutionInstructions[evolutionType]}**
 
-        Now, generate an array containing ONE new JSON object for the evolved concept.
-        Adhere strictly to the provided JSON schema.
-        For 'adSetName', create a new name reflecting the new evolved parameters, like: [Persona]_[NewAngle/Trigger/etc]_[...]_v1.
-        For the 'offer' field, if the evolution type is 'offer', use the new offer provided in the mandate. Otherwise, you MUST return the full offer object from the 'Strategic Offer to use' section above.
+        Sekarang, hasilkan sebuah array yang berisi SATU objek JSON baru untuk konsep yang telah berevolusi.
+        Patuhi skema JSON yang disediakan dengan ketat.
+        Untuk 'adSetName', buat nama baru yang mencerminkan parameter evolusi baru, seperti: [Persona]_[SudutPandang/PemicuBaru/dll]_[...]_v1.
+        Untuk bidang 'offer', jika jenis evolusi adalah 'offer', gunakan penawaran baru yang disediakan dalam mandat. Jika tidak, Anda HARUS mengembalikan objek penawaran lengkap dari bagian 'Penawaran Strategis untuk digunakan' di atas.
 
-        Respond ONLY with a JSON array containing the single new concept object.
+        Hanya berikan respons berupa array JSON yang berisi satu objek konsep baru.
     `;
 
     const response = await ai.models.generateContent({
@@ -957,7 +1029,7 @@ export const evolveConcept = async (
     const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
     const result = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
     
-    return result.map((concept): Omit<AdConcept, 'imageUrls'> => ({
+    return result.map((concept): Omit<AdConcept, 'imageUrls'> => addMockPerformanceSignals({
         ...concept,
         entryPoint: 'Evolved',
     }));
@@ -996,7 +1068,6 @@ export const generateQuickPivot = async (
       
       STRATEGI tetap sama, tetapi EKSEKUSI harus secara otentik berbicara kepada ${config.targetAge}.
     `,
-
     'gender-flip': `
       MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk gender yang berlawanan.
       - **Persona Asli:** ${baseConcept.personaDescription}
@@ -1016,7 +1087,6 @@ export const generateQuickPivot = async (
       
       ⚠️ HINDARI STEREOTIP. Pivot harus terasa otentik, bukan menggurui.
     `,
-
     'lifestyle-swap': `
       MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk gaya hidup/tipe kreator yang berbeda.
       - **Tipe Asli:** ${baseConcept.personaCreatorType}
@@ -1034,467 +1104,150 @@ export const generateQuickPivot = async (
          Pikirkan "penargetan piksel": gaya visual yang dipilih harus secara langsung memberi sinyal subkultur dan tingkat pendapatan target kepada AI Meta.
       3. **Pergeseran Nada Teks:**
          - Influencer: "Ini mengubah permainan kontenku!" (aspiratif)
-         - Pengguna Biasa: "Sebagai ibu yang sibuk, ini sangat menghemat waktuku!" (relatable)
-         - Ahli: "Berdasarkan 10 tahun pengalaman saya di bidang ini..." (otoritatif)
-      4. **Pembingkaian Ulang Pain Point:** Produk yang sama, "pekerjaan yang harus diselesaikan" yang berbeda:
-         - Influencer: "Aku butuh ini untuk membuat konten yang lebih baik"
-         - Pengguna Biasa: "Aku butuh ini untuk menyederhanakan hidupku"
+         - Pengguna Biasa: "Sebagai ibu yang sibuk, ini sangat membantuku." (praktis)
+         - Ahli: "Data menunjukkan ini adalah metode yang paling efektif." (otoritatif)
       
-      **TETAP KONSTAN:** Angle strategis, pemicu, format, penempatan yang sama.
+      **TETAP KONSTAN:** Angle, pemicu, format.
     `,
-
     'market-expand': `
-      MANDAT KRITIS: Lokalkan konsep UNGGULAN ini untuk pasar baru.
+      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk pasar/budaya yang berbeda.
       - **Pasar Asli:** ${blueprint.adDna.targetCountry}
       - **Target Pasar:** ${config.targetCountry}
       
-      **TUGAS ANDA - LOKALISASI BUDAYA MENDALAM:**
-      1. **Lokalisasi Bahasa:**
-         - Jika menargetkan Indonesia: Gunakan "Bahasa Gaul" (slang Jaksel), misal, "literally", "which is"
-         - Jika menargetkan Malaysia: Campurkan Melayu/Inggris secara alami
-         - Jika menargetkan Singapura: Pola Singlish, misal, "lah", "lor"
-         - Jika menargetkan Filipina: Taglish, misal, "Grabe, super effective!"
+      **TUGAS ANDA:**
+      1. **Lokalisasi Persona:** Ganti nama dan referensi budaya agar sesuai dengan ${config.targetCountry}.
+      2. **Lokalisasi Teks & Visual:** Terjemahkan teks ke dalam bahasa lokal (jika berbeda). Sesuaikan visual prompt untuk menampilkan model, latar, dan gaya yang otentik dengan ${config.targetCountry}.
+      3. **Adaptasi Budaya:** Pertimbangkan nuansa budaya. Humor, bukti sosial, dan nilai-nilai mungkin perlu disesuaikan.
       
-      2. **Pergeseran Nilai Budaya:**
-         - Indonesia: Berpusat pada keluarga, kesadaran halal, "gotong royong" (komunitas)
-         - Malaysia: Mentalitas "Kiasu" (takut ketinggalan), nilai-nilai Islam
-         - Singapura: Efisiensi, meritokrasi, budaya "chope" (memesan tempat)
-         - Filipina: Semangat "Bayanihan", kebanggaan keluarga, "utang na loob" (utang budi)
-      
-      3. **Penanda Budaya Visual:**
-         - Latar harus DAPAT DIKENALI oleh pasar target (misalnya, flat HDB untuk Singapura, "warung" untuk Indonesia)
-         - Model harus memiliki fitur & gaya otentik untuk wilayah tersebut
-         - Sertakan properti budaya yang halus (misalnya, sajadah untuk demo Muslim Malaysia/Indonesia). Pikirkan "penargetan piksel": gunakan latar, properti, dan gaya yang secara visual mengkodekan pasar ${config.targetCountry} kepada AI Meta.
-      
-      4. **Lokalisasi Pembayaran & Harga:**
-         - Indonesia: Selalu sebutkan "cicilan 0%"
-         - Singapura: Tekankan kualitas premium, sepadan dengan investasi
-         - Filipina: Tunjukkan keterjangkauan, dapat diakses oleh "masa"
-      
-      5. **Sumber Bukti Sosial:**
-         - Gunakan influencer LOKAL, testimoni dari negara target
-         - Referensi tren lokal, bukan global
-      
-      **TETAP KONSTAN:** Angle strategis, pemicu, format, penempatan yang sama.
-      
-      ⚠️ KRITIS: Ini BUKAN hanya terjemahan. Ini adalah TRANSFORMASI budaya.
+      **TETAP KONSTAN:** Angle, pemicu, format.
     `,
-
     'awareness-shift': `
-      MANDAT KRITIS: Targetkan ulang konsep UNGGULAN ini untuk tahap kesadaran yang berbeda.
+      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk tahap kesadaran yang berbeda.
       - **Tahap Asli:** ${baseConcept.awarenessStage}
       - **Target Tahap:** ${config.targetAwareness}
       
-      **TUGAS ANDA - ADAPTASI TAHAP KESADARAN:**
-      1. **Penulisan Ulang Hook (PALING KRITIS):**
-         - **Tidak Sadar:** Fokus masalah, pemecah pola. "Pernah perhatikan bagaimana...?"
-         - **Sadar Masalah:** Agitasi, empati. "Lelah berjuang dengan...?"
-         - **Sadar Solusi:** Pengungkapan mekanisme, diferensiasi. "Tidak seperti solusi lain..."
-         - **Sadar Produk:** Penawaran langsung, bukti sosial. "Bergabunglah dengan 10.000+ pelanggan..."
+      **TUGAS ANDA:**
+      1. **Bingkai Ulang Pesan:** Ubah hook dan headline.
+         - Unaware/Problem Aware: Fokus pada masalah/agitasi.
+         - Solution/Product Aware: Fokus pada solusi/bukti/penawaran.
+      2. **Sesuaikan CTA:** CTA harus cocok dengan tahap baru.
       
-      2. **Pergeseran Formula Headline:**
-         - Gunakan formula yang sesuai untuk tahap ${config.targetAwareness} dari formula hook.
-      
-      3. **Pergeseran Visual:**
-         - Tidak Sadar: Tunjukkan "momen masalah" yang relatable yang tidak mereka sadari adalah masalah
-         - Sadar Masalah: Dramatisir rasa sakit/frustrasi
-         - Sadar Solusi: Tunjukkan mekanisme atau perbandingan
-         - Sadar Produk: Tunjukkan produk sedang digunakan + hasilnya
-      
-      4. **Kedalaman Teks:**
-         - Tidak Sadar: Singkat, didorong oleh rasa ingin tahu. Jangan "menjual" dulu.
-         - Sadar Masalah: Sedang, agitasi lalu goda dengan solusi.
-         - Sadar Solusi: Lebih panjang, jelaskan "cara kerjanya" dan mengapa lebih baik.
-         - Sadar Produk: Singkat, langsung. Mereka tahu produknya, cukup dorong mereka.
-      
-      **TETAP KONSTAN:** Angle, pemicu, format, penempatan yang sama.
-      
-      PESAN tetap sama, tetapi TITIK MASUK berubah berdasarkan tingkat pengetahuan mereka.
+      **TETAP KONSTAN:** Persona, angle, format.
     `,
-
     'channel-adapt': `
-      MANDAT KRITIS: Optimalkan konsep UNGGULAN ini untuk platform yang berbeda.
+      MANDAT KRITIS: Adaptasi konsep UNGGULAN ini untuk platform yang berbeda.
       - **Platform Asli:** Instagram
       - **Target Platform:** ${config.targetPlatform}
       
-      **TUGAS ANDA - OPTIMASI SPESIFIK PLATFORM:**
+      **TUGAS ANDA:**
+      1. **Adaptasi Format:**
+         - TikTok: Video pendek, tren suara, teks di layar.
+         - Facebook: Teks lebih panjang, link-focused.
+         - YouTube: Pre-roll skippable, hook 5 detik.
+      2. **Ubah Visual Prompt:** Sesuaikan rasio aspek dan gaya agar asli dengan platform target.
       
-      ${config.targetPlatform === 'TikTok' ? `
-        **Optimasi TikTok:**
-        1. **Hook:** HARUS menarik perhatian dalam 0,5 detik. Gunakan pemecah pola atau referensi suara yang sedang tren.
-        2. **Alur Video:** "Hook → Agitasi → Solusi → CTA" dalam maks 15-30 detik.
-        3. **Gaya Visual:** Mentah, otentik, nuansa "di balik layar". TIDAK ADA tampilan iklan yang dipoles.
-        4. **Nada Teks:** Sangat santai, bahasa gaul Gen Z, banyak emoji. Gunakan bahasa TikTok (misalnya, "no cap", "slay", "paham tugasnya").
-        5. **CTA:** "Link di bio" atau "Duet ini jika kamu relate!"
-        6. **Overlay Teks:** Gunakan gaya teks asli TikTok (putih dengan garis hitam, diposisikan atas/bawah).
-      ` : ''}
+      **TETAP KONSTAN:** Persona, angle, pesan inti.
+    `,
+    'emotional-flip': `
+      MANDAT KRITIS: Lakukan pivot emosional. Balikkan emosi inti dari rasa sakit ke keinginan, atau sebaliknya, untuk menguji kerangka pesan yang sama sekali berbeda.
+      - **Emosi Asli:** ${baseConcept.entryPoint === 'Emotional' ? 'Fokus pada emosi' : 'Fokus pada logika/sosial'}
+      - **Target Emosi:** Balikkan dari positif ke negatif, atau sebaliknya.
       
-      ${config.targetPlatform === 'Facebook' ? `
-        **Optimasi Facebook:**
-        1. **Hook:** 3 baris pertama caption KRITIS (sebelum "Lihat Lainnya"). Buat menjadi pemikiran yang utuh.
-        2. **Gaya Visual:** Lebih dipoles daripada TikTok, tetapi tidak sekurator Instagram. Pikirkan "profesional tapi relatable".
-        3. **Panjang Teks:** Facebook memungkinkan teks lebih panjang - manfaatkan itu. Ceritakan sebuah kisah, sertakan FAQ.
-        4. **Audiens:** Cenderung lebih tua (35+). Gunakan bahasa yang jelas dan membangun kepercayaan. Kurangi bahasa gaul.
-        5. **Bukti Sosial:** Berat pada testimoni, ulasan, sebelum-sesudah. Pengguna Facebook lebih skeptis.
-        6. **CTA:** Tombol "Pelajari Selengkapnya" bekerja paling baik. Arahkan ke halaman arahan, bukan halaman produk langsung.
-      ` : ''}
+      **TUGAS ANDA:**
+      1. **Bingkai Ulang Hook/Headline:** Jika asli berfokus pada rasa sakit ("Benci X?"), balikkan menjadi berfokus pada keinginan ("Ingin Y?").
+      2. **Adaptasi Visual:** Ubah emosi subjek dalam prompt visual agar sesuai dengan emosi baru.
       
-      ${config.targetPlatform === 'YouTube' ? `
-        **Optimasi YouTube (Iklan Pre-Roll/In-Stream):**
-        1. **Hook:** 5 detik pertama harus menetapkan WIIFM ("What's In It For Me"). Penonton bisa melewati setelah 5 detik.
-        2. **Struktur:** "Masalah → Agitasi → Demo Solusi → CTA" dalam 15-30 detik.
-        3. **Visual:** Tunjukkan produk sedang BERAKSI. Format demo bekerja paling baik.
-        4. **Audio:** Harus bekerja DENGAN suara (tidak seperti Instagram Feed yang sering dibisukan). Gunakan sulih suara atau talenta di layar yang berbicara.
-        5. **CTA:** Overlay kartu akhir yang dapat diklik dengan URL situs web.
-      ` : ''}
+      **TETAP KONSTAN:** Persona, angle, format.
+    `,
+    'proof-type-shift': `
+      MANDAT KRITIS: Lakukan pivot jenis bukti. Ubah mekanisme kepercayaan untuk membangun kredibilitas dengan cara yang berbeda.
+      - **Jenis Bukti Asli:** ${baseConcept.trigger.name}
+      - **Target Jenis Bukti:** Pilih pemicu yang berbeda (misalnya, dari Bukti Sosial ke Otoritas).
       
-      **TETAP KONSTAN:** Angle strategis, pemicu, pesan inti yang sama.
+      **TUGAS ANDA:**
+      1. **Ubah Pemicu:** Ganti pemicu inti dalam hook/headline.
+      2. **Sesuaikan Visual:** Visual harus mencerminkan jenis bukti baru (misalnya, dari kerumunan orang menjadi seorang ahli).
       
-      KONTEN tetap serupa, tetapi PRESENTASI harus asli untuk ${config.targetPlatform}.
+      **TETAP KONSTAN:** Persona, angle, format.
+    `,
+    'urgency-vs-evergreen': `
+      MANDAT KRITIS: Lakukan pivot urgensi. Uji pesan berbasis kelangkaan versus proposisi nilai yang tak lekang oleh waktu.
+      - **Pendekatan Asli:** (Tentukan apakah asli menggunakan urgensi)
+      - **Target Pendekatan:** Balikkan. Jika mendesak, buat menjadi abadi. Jika abadi, tambahkan urgensi.
+      
+      **TUGAS ANDA:**
+      1. **Ubah Teks:** Tambahkan atau hapus elemen kelangkaan/urgensi (misalnya, "Penawaran berakhir malam ini" vs. "Solusi tepercaya").
+      2. **Sesuaikan Visual:** Visual harus mencerminkan pendekatan baru (misalnya, timer hitung mundur vs. adegan yang tenang dan meyakinkan).
+      
+      **TETAP KONSTAN:** Persona, angle, format.
     `
   };
 
   const prompt = `
-    You are a world-class creative strategist performing a "Quick Pivot" on a PROVEN WINNING ad concept.
-    
-    **CONTEXT:**
-    This ad concept has already been tested and is performing well. Your job is NOT to reinvent it, but to ADAPT it intelligently for a different audience/context while keeping the core winning elements intact.
-    
-    **Base Winning Concept:**
+    Anda adalah seorang Creative Director elit yang bertugas melakukan "Quick Pivot" pada konsep iklan yang sudah terbukti berhasil.
+    Tugas Anda adalah mengadaptasi konsep ini untuk audiens atau konteks BARU, dengan tetap mempertahankan DNA strategis yang membuatnya berhasil.
+
+    **Blueprint Kampanye:**
+    - Produk: ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
+    - DNA Penjualan: Gunakan formula persuasi "${blueprint.adDna.persuasionFormula}" dengan nada "${blueprint.adDna.toneOfVoice}".
+
+    **Konsep Iklan Asli (PEMENANG):**
     - Headline: "${baseConcept.headline}"
-    - Hook: "${baseConcept.hook}"
-    - Persona: ${baseConcept.personaDescription} (Age: ${baseConcept.personaAge}, Type: ${baseConcept.personaCreatorType})
+    - Persona: ${baseConcept.personaDescription}
     - Angle: "${baseConcept.angle}"
-    - Trigger: "${baseConcept.trigger.name}"
+    - Pemicu: "${baseConcept.trigger.name}"
     - Format: "${baseConcept.format}"
-    - Visual: ${baseConcept.visualVehicle}
-    
-    **Campaign Blueprint (for context):**
-    - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-    - Sales DNA Tone: "${blueprint.adDna.toneOfVoice}"
-    - Visual Style DNA: "${blueprint.adDna.visualStyle}"
-    - Offer: "${baseConcept.offer.name} - ${baseConcept.offer.description}"
-    
-    ---
-    **PIVOT TYPE: ${pivotType.toUpperCase().replace('-', ' ')}**
-    
-    ${pivotInstructions[pivotType]}
-    
-    ---
-    **QUALITY STANDARDS:**
-    - The pivoted concept must feel like a NATURAL SIBLING of the original, not a forced rewrite.
-    - Maintain the same "energy" and persuasive power.
-    - Don't make it generic - keep it specific and emotionally resonant for the new target.
-    
-    Now, generate an array of ONE pivoted ad concept as a JSON object following the schema.
-    For 'adSetName', use this format: [NewPersonaShort]_[Angle]_[Trigger]_[Awareness]_[Format]_[Placement]_pivot
-    For 'id', generate a new unique ID.
-    For 'strategicPathId', keep the same as the base concept: "${baseConcept.strategicPathId}"
-    For the 'offer' field, you MUST return the full offer object from the 'Base Winning Concept' context above.
 
-    Respond ONLY with a JSON array containing the single new concept object.
-    `;
+    **🔥 MANDAT PIVOT: ${pivotInstructions[pivotType]}**
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: [{ parts: [{ text: prompt }] }],
-        config: { 
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.ARRAY,
-                items: pivotAdConceptSchema
-            }
-        }
-    });
+    Sekarang, hasilkan sebuah array yang berisi SATU objek JSON baru untuk konsep yang telah di-pivot.
+    Patuhi skema JSON yang diberikan dengan ketat.
+    - Untuk 'adSetName', buat nama baru yang mencerminkan parameter pivot, seperti: [PivotType]_[Target]_[...]
+    - Untuk 'personaDescription', 'personaAge', dll., Anda HARUS memperbarui bidang-bidang ini untuk mencerminkan persona baru.
+    - Untuk 'strategicPathId', gunakan kembali ID dari konsep dasar: "${baseConcept.strategicPathId}".
 
-    const rawJson = response.text;
-    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    const ideas = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
-    
-    return ideas.map(idea => ({ ...idea, entryPoint: 'Pivoted' }));
-};
+    Respons HANYA dengan array JSON yang berisi satu objek konsep baru.
+  `;
 
-export const generateRemixSuggestions = async (
-    component: AdDnaComponent,
-    baseConcept: AdConcept,
-    dna: AdDna,
-    blueprint: CampaignBlueprint
-): Promise<RemixSuggestion[]> => {
-
-    let prompt: string;
-    let payloadSchema: any;
-    let responseProcessor: (payload: any) => any = (p) => p;
-
-    switch (component) {
-        case 'persona':
-            payloadSchema = targetPersonaSchema;
-            prompt = `
-                You are an expert creative strategist. Your task is to generate 3 smart, distinct alternatives for a 'Persona'.
-                **Winning Ad DNA:**
-                - Product: ${blueprint.productAnalysis.name}
-                - Original Persona: ${dna.persona.description}
-                - Country: ${blueprint.adDna.targetCountry}
-                **Your Mission:**
-                Generate 3 entirely new, plausible Target Persona variations. For each, create a "title" summarizing the persona, a "description" of the necessary strategic shifts, and a full "payload" object which is a valid JSON object for the new Target Persona.
-                The variations must be genuinely different.
-            `;
-            break;
-
-        case 'format':
-            payloadSchema = { type: Type.STRING };
-            prompt = `
-                You are an expert creative strategist. Your task is to generate 3 smart, distinct alternatives for a 'Creative Format'.
-                **Winning Ad DNA:**
-                - Persona: ${dna.persona.description}
-                - Original Format: ${dna.format}
-                - Angle: ${dna.angle}
-                **Your Mission:**
-                Generate 3 new 'Creative Format' variations that would work well for this angle and persona.
-                For each variation, create a "title", a "description" explaining why this format is a good fit, and a "payload" which is the format name string.
-                Do not suggest the original format: "${dna.format}".
-                Available formats: ${ALL_CREATIVE_FORMATS.join(', ')}.
-            `;
-            break;
-
-        case 'trigger':
-            payloadSchema = buyingTriggerObjectSchema;
-            prompt = `
-                You are an expert creative strategist. Your task is to generate 3 smart, distinct alternatives for a 'Buying Trigger'.
-                **Winning Ad DNA:**
-                - Persona: ${dna.persona.description}
-                - Angle: ${dna.angle}
-                - Original Trigger: ${dna.trigger.name}
-                **Your Mission:**
-                Generate 3 new 'Buying Triggers'. For each, create a "title", a "description" explaining why it's a good fit, and a "payload" which is a full BuyingTriggerObject with name, description, example, and analysis.
-            `;
-            break;
-        
-        case 'placement':
-            payloadSchema = { type: Type.STRING };
-            prompt = `
-                You are an expert creative strategist. Your task is to generate alternative 'Placement' options.
-                **Winning Ad DNA:**
-                - Format: ${dna.format}
-                - Original Placement: ${dna.placement}
-                **Your Mission:**
-                Suggest alternative placements for the format "${dna.format}". For each, provide a "title", "description", and "payload" (the placement name string).
-                Do not suggest the original: "${dna.placement}".
-                Available placements: ${ALL_PLACEMENT_FORMATS.join(', ')}.
-            `;
-            break;
-            
-        case 'awareness':
-            payloadSchema = { type: Type.STRING };
-            prompt = `
-                You are an expert creative strategist. Your task is to generate alternative 'Awareness Stage' options.
-                **Winning Ad DNA:**
-                - Persona: ${dna.persona.description}
-                - Original Stage: ${dna.awareness}
-                **Your Mission:**
-                Suggest alternative awareness stages to target. For each, provide a "title", "description" explaining the strategic shift, and "payload" (the stage name string).
-                Do not suggest the original: "${dna.awareness}".
-                Available stages: ${ALL_AWARENESS_STAGES.join(', ')}.
-            `;
-            break;
-            
-        case 'angle':
-            payloadSchema = { type: Type.STRING };
-            responseProcessor = (payload) => payload[0]; // The helper function returns an array of strings. We need one. Let's ask for 3 arrays and flatten.
-            prompt = `
-                You are an expert creative strategist. Your task is to generate 3 new strategic 'Angles'.
-                **Winning Ad DNA:**
-                - Persona: ${dna.persona.description}
-                - Pain/Desire: ${dna.painDesire.name}
-                - Objection to Overcome: ${dna.objection?.name || 'General skepticism'}
-                - Offer: ${dna.offer.name}
-                - Original Angle: ${dna.angle}
-                **Your Mission:**
-                Generate 3 new strategic angles. For each, create a "title", "description" of the angle's focus, and a "payload" which is the angle string itself.
-                The angles must be distinct from the original.
-            `;
-             // This case is more complex as it depends on other functions. We can simplify by just generating angle strings.
-            const angles = await generateHighLevelAngles(blueprint, dna.persona, dna.awareness, dna.objection!, dna.painDesire, dna.offer, [dna.angle]);
-            return angles.slice(0, 3).map(angle => ({
-                title: angle.substring(0, 50) + "...",
-                description: `A new strategic angle focusing on: ${angle}`,
-                payload: angle
-            }));
-
-
-        case 'offer':
-            payloadSchema = offerTypeObjectSchema;
-            if(!dna.objection) throw new Error("Objection context is required to remix offers.");
-            const offers = await generateOfferTypes(blueprint, dna.persona, dna.objection);
-            return offers.map(offer => ({
-                title: offer.name,
-                description: offer.description,
-                payload: offer,
-            }));
-
-        case 'painDesire':
-             payloadSchema = painDesireObjectSchema;
-             const painDesires = await generatePainDesires(blueprint, dna.persona);
-             return painDesires.filter(pd => pd.name !== dna.painDesire.name).slice(0, 3).map(pd => ({
-                title: `${pd.type}: ${pd.name}`,
-                description: pd.description,
-                payload: pd,
-             }));
-
-        default:
-            throw new Error(`Remixing for component type "${component}" is not yet implemented.`);
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-pro',
+    contents: [{ text: prompt }],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: pivotAdConceptSchema
+      }
     }
+  });
 
-    const remixSuggestionSchema = {
-        type: Type.OBJECT,
-        properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            payload: payloadSchema,
-        },
-        required: ['title', 'description', 'payload']
-    };
+  const rawJson = response.text;
+  const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
+  const result = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: [{ text: `${prompt} Respond ONLY with a valid JSON array of 3 suggestion objects.` }],
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.ARRAY,
-                items: remixSuggestionSchema,
-            }
-        }
-    });
-    
-    const rawJson = response.text;
-    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    return JSON.parse(cleanedJson);
+  return result.map((concept): Omit<AdConcept, 'imageUrls'> => addMockPerformanceSignals({
+    ...concept,
+    entryPoint: 'Pivoted',
+  }));
 };
 
-
-export const generateConceptFromRemix = async (
-    baseConcept: AdConcept,
-    remixComponent: AdDnaComponent,
-    newPayload: any,
-    blueprint: CampaignBlueprint
-): Promise<Omit<AdConcept, 'imageUrls'>> => {
-
-    let newConcept: Omit<AdConcept, 'imageUrls'>;
-
-    if (remixComponent === 'persona') {
-        const newPersona = newPayload as TargetPersona;
-        const prompt = `
-            You are a world-class creative director. Your task is to adapt a proven winning ad concept for a COMPLETELY NEW target persona. You must retain the core strategic successful elements but completely re-imagine the execution to be authentic and resonant for the new audience.
-
-            **Core Winning Strategy (DO NOT CHANGE):**
-            - Angle: "${baseConcept.angle}"
-            - Trigger: "${baseConcept.trigger.name}"
-            - Format: "${baseConcept.format}"
-            - Placement: "${baseConcept.placement}"
-            - Awareness Stage: "${baseConcept.awarenessStage}"
-            - Offer: "${baseConcept.offer.name} - ${baseConcept.offer.description}"
-            - Sales DNA Tone: "${blueprint.adDna.toneOfVoice}"
-            - Original Visual Style DNA: "${blueprint.adDna.visualStyle}"
-
-            **Base Concept (for context only):**
-            - Original Persona: "${baseConcept.personaDescription}"
-            - Original Headline: "${baseConcept.headline}"
-
-            **🔥 NEW TARGET PERSONA (YOUR ADAPTATION MANDATE):**
-            - **Description:** ${newPersona.description}
-            - **Age:** ${newPersona.age}
-            - **Creator Type/Style:** ${newPersona.creatorType}
-            - **Pain Points:** ${newPersona.painPoints.join(', ')}
-            - **Desired Outcomes:** ${newPersona.desiredOutcomes.join(', ')}
-            - **Target Country:** ${blueprint.adDna.targetCountry}
-
-            **Your Task:**
-            Generate ONE new ad concept JSON object.
-            1.  **Rewrite Copy:** Create a new 'hook' and 'headline' that speaks directly to the new persona's pains and desires, in their language and tone.
-            2.  **Re-imagine Visuals:** Create a new 'visualPrompt' and 'visualVehicle' that are authentic to the new persona's world (setting, style, model).
-            3.  **Update Persona Fields:** The 'personaDescription', 'personaAge', and 'personaCreatorType' fields in the JSON must reflect the NEW persona.
-            4.  **Create New Ad Set Name:** Generate a new 'adSetName' that reflects the new persona.
-            5.  Keep the 'strategicPathId' the same as the base concept.
-            6.  For the 'offer' field, you MUST return the full offer object from the 'Core Winning Strategy' context above.
-
-            Respond ONLY with a single valid JSON object that conforms to the ad concept schema.
-        `;
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
-            contents: [{ text: prompt }],
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: adConceptSchema,
-            }
-        });
-
-        const rawJson = response.text;
-        const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-        // FIX: Property 'entryPoint' is missing in the parsed object but required by `newConcept`.
-        // The property is added here and will be correctly set to 'Remixed' in the return statement.
-        const parsedConcept = JSON.parse(cleanedJson) as Omit<AdConcept, 'imageUrls' | 'entryPoint'>;
-        newConcept = { ...parsedConcept, entryPoint: 'Remixed' };
-
-    } else {
-        // For all other components, the logic is identical to 'evolveConcept'.
-        const evolutionType = remixComponent as 'angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire';
-        const evolvedConcepts = await evolveConcept(baseConcept, blueprint, evolutionType, newPayload);
-        if (evolvedConcepts.length === 0) {
-            throw new Error(`Remix for ${remixComponent} did not yield a new concept.`);
-        }
-        newConcept = evolvedConcepts[0];
-    }
-    
-    return {
-        ...newConcept,
-        entryPoint: 'Remixed',
-    };
-};
-
-
-export const generateConceptsFromPersona = async (
-    blueprint: CampaignBlueprint,
-    persona: TargetPersona,
-    strategicPathId: string
-): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
-    
+// FIX: Added generateConceptsFromPersona function
+export const generateConceptsFromPersona = async (blueprint: CampaignBlueprint, persona: TargetPersona, strategicPathId: string): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
     const prompt = `
-        You are a world-class direct response copywriter and full-stack creative strategist. Your task is to generate an array of 3 strategically distinct ad concepts based on a Campaign Blueprint and a specific Target Persona.
+    Anda adalah seorang ahli strategi kreatif senior. Untuk produk dan persona yang diberikan, hasilkan satu paket berisi 3 konsep iklan berpotensi tinggi yang beragam.
+    
+    **Produk:** ${blueprint.productAnalysis.name} - ${blueprint.productAnalysis.keyBenefit}
+    **Persona:** ${persona.description} (${persona.age}, ${persona.creatorType}). Poin Masalah: ${persona.painPoints.join(', ')}. Keinginan: ${persona.desiredOutcomes.join(', ')}.
+    **Negara Target:** ${blueprint.adDna.targetCountry}
 
-        **CORE MISSION: A/B TEST VARIATIONS (Three Entry Points Framework)**
-        It is CRITICAL that you generate three genuinely different creative hypotheses:
-        - **Concept 1 - "Emotional Entry"**: Leads with feeling, identity, or aspiration.
-        - **Concept 2 - "Logical Entry"**: Leads with logic, proof, or a unique mechanism.
-        - **Concept 3 - "Social Entry"**: Leads with community or social proof.
-
-        **THE BRIEF:**
-        - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - Strategic Offer: ${blueprint.adDna.offerSummary} (CTA: ${blueprint.adDna.cta})
-        - Sales DNA Tone: "${blueprint.adDna.toneOfVoice}"
-        - Original Visual Style DNA: "${blueprint.adDna.visualStyle}"
-        - Target Country for Localization: "${blueprint.adDna.targetCountry}"
-        - **🔥 Target Persona**: "${persona.description}" (Age: "${persona.age}", Type: "${persona.creatorType}", Pains: ${persona.painPoints.join(', ')})
-
-        **YOUR FULL-STACK TASK FOR EACH OF THE 3 CONCEPTS (Emotional, Logical, Social):**
-
-        **STEP 1: Invent a Plausible Strategic Path (Strategist Mode)**
-        1.  **Invent an Angle:** Create a high-level strategic angle that resonates with the persona.
-        2.  **Choose a Psychological Trigger:** Select the MOST effective trigger from the list: [Social Proof, Authority, Scarcity, Urgency, Reciprocity, Liking, FOMO, Exclusivity, Instant Gratification]. For the chosen trigger, you must generate a full object containing the 'name', a detailed 'description', a concrete 'example', and an 'analysis' of why it works for this persona.
-        3.  **Choose a Creative Format & Placement:** Select the best format and placement for your idea.
-        4.  **Choose an Awareness Stage:** Select the most appropriate stage for your angle.
-
-        **STEP 2: Write the Words & Visualize the Message (Copywriter & Art Director Mode)**
-        1.  Based on the path you invented, write a world-class, scroll-stopping **hook** and **headline**.
-        2.  Create a detailed **visualPrompt** that brings the concept to life, is authentic to the persona, and visually embodies the chosen trigger.
-
-        **Final Output Generation:**
-        - For each concept, generate a complete JSON object.
-        - The 'adSetName' should follow this format: [PersonaShort]_[AngleKeyword]_[Trigger]_[Awareness]_[Format]_[Placement]_v[1, 2, or 3].
-        - The 'offer' object's 'name' must be "${blueprint.adDna.offerSummary}". You must invent a plausible 'description' and 'psychologicalPrinciple' for it.
-        - **CRITICAL**: The 'strategicPathId' field for ALL concepts MUST be exactly this value: "${strategicPathId}".
-
-        Respond ONLY with a JSON array of 3 concept objects. Adhere strictly to the provided JSON schema.
+    **Tugas Anda:**
+    1.  Buat 3 konsep yang berbeda. Masing-masing HARUS menggunakan "Pintu Masuk" yang berbeda (Emosional, Logis, Sosial) untuk menguji sudut pandang psikologis yang berbeda.
+    2.  Untuk setiap konsep, pilih Tahap Kesadaran, Sudut Pandang, Pemicu, Format, dan Penempatan yang sesuai.
+    3.  Ikuti alur kerja COPY-FIRST: tulis hook & headline yang mematikan, KEMUDIAN buat prompt visual terperinci yang menghidupkannya.
+    4.  Pastikan prompt visual berbeda untuk menghindari kejenuhan kreatif (latar, pencahayaan, komposisi yang berbeda).
+    5.  Kembalikan konsep sebagai array JSON berisi 3 objek, yang mematuhi adConceptSchema.
+    6.  Untuk 'strategicPathId', gunakan nilai ini: "${strategicPathId}".
+    7.  Untuk bidang 'offer', gunakan objek ini: ${JSON.stringify({name: blueprint.adDna.offerSummary, description: blueprint.adDna.offerSummary, psychologicalPrinciple: "Penawaran Langsung"})}.
     `;
 
     const response = await ai.models.generateContent({
@@ -1504,94 +1257,148 @@ export const generateConceptsFromPersona = async (
             responseMimeType: "application/json",
             responseSchema: {
                 type: Type.ARRAY,
-                items: adConceptSchema,
+                items: adConceptSchema
             }
         }
     });
 
     const rawJson = response.text;
-    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    const ideas = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
-    
+    const ideas = JSON.parse(rawJson.replace(/^```json\s*|```$/g, '')) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
+
     const entryPoints: ('Emotional' | 'Logical' | 'Social')[] = ['Emotional', 'Logical', 'Social'];
-
-    return ideas.map((idea, index) => ({
-        ...idea,
-        entryPoint: entryPoints[index % 3] as 'Emotional' | 'Logical' | 'Social'
-    }));
-};
-
-
-export const generateUgcPack = async (
-    blueprint: CampaignBlueprint, 
-    angle: string, 
-    trigger: BuyingTriggerObject, 
-    awarenessStage: AwarenessStage, 
-    placement: PlacementFormat, 
-    persona: TargetPersona, 
-    strategicPathId: string, 
-    allowVisualExploration: boolean, 
-    offer: OfferTypeObject
-): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
-    
-    const prompt = `
-        You are a world-class UGC (User-Generated Content) campaign strategist. Your task is to generate a "UGC Diversity Pack" consisting of 4 distinct ad concepts.
-
-        **CORE MISSION:**
-        The pack must feature 4 different "creator POVs" (micro-personas) that all fall under the umbrella of the main target persona. Each concept will use the SAME core strategy (angle, trigger) but will be executed uniquely for its micro-persona. This diversity is key to campaign success.
-
-        **THE SHARED BRIEF (Foundation for ALL 4 Concepts):**
-        - Product: ${blueprint.productAnalysis.name} (Benefit: ${blueprint.productAnalysis.keyBenefit})
-        - **Strategic Offer**: ${offer.name} - ${offer.description} (CTA: ${blueprint.adDna.cta})
-        - **Main Target Persona**: "${persona.description}" (Age: "${persona.age}", Pains: ${persona.painPoints.join(', ')})
-        - **Core Strategy to Maintain:**
-            - Angle: "${angle}"
-            - 🔥 Psychological Trigger: "${trigger.name}"
-            - Awareness Stage: "${awarenessStage}"
-            - Placement: "${placement}"
-        - **Sales DNA**:
-            - Tone of Voice: "${blueprint.adDna.toneOfVoice}"
-            - Original Visual Style DNA: "${blueprint.adDna.visualStyle}"
-        - **Target Country for Localization: "${blueprint.adDna.targetCountry}"**
-
-        **YOUR TASK:**
-        1.  **Invent 4 Distinct Micro-Personas:** Brainstorm 4 specific, relatable sub-groups within the main persona. (e.g., If main persona is "Busy Professional", micro-personas could be "Freelancer working from a cafe", "Corporate executive in a high-rise office", "Working mom juggling kids and deadlines", "Young entrepreneur in a startup space").
-        2.  **Generate 4 Unique Concepts:** For EACH micro-persona, create a complete ad concept.
-            - **Persona Fields:** The 'personaDescription', 'personaAge', etc., must be updated for the specific micro-persona.
-            - **Copy:** Write a unique hook and headline in the authentic voice of that micro-persona.
-            - **Visuals:** Create a unique visual prompt that shows that micro-persona in their genuine environment, following the 'TikTok-shop' simple & authentic UGC style.
-            - **Consistency:** All 4 concepts MUST use the same 'angle', 'trigger', 'awarenessStage', and 'offer'.
-            - **Ad Set Name:** Create a unique ad set name for each, like [MicroPersona]_[Angle]_[Trigger]_UGC_v[1-4].
-
-        Respond ONLY with a valid JSON array of 4 ad concept objects that conform to the provided schema. Each object must have its 'format' field set to 'UGC'.
-    `;
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: [{ text: prompt }],
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.ARRAY,
-                items: adConceptSchema,
-            }
-        }
-    });
-    
-    const rawJson = response.text;
-    const cleanedJson = rawJson.replace(/^```json\s*|```$/g, '');
-    const ideas = JSON.parse(cleanedJson) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
-    
-    // Assign entry points for consistency, although they are all UGC.
-    const entryPoints: ('Emotional' | 'Logical' | 'Social')[] = ['Emotional', 'Logical', 'Social'];
-    return ideas.map((idea, index) => ({
+    return ideas.map((idea, index) => addMockPerformanceSignals({
         ...idea,
         entryPoint: entryPoints[index % 3]
     }));
 };
 
+// FIX: Added generateUgcPack function
+export const generateUgcPack = async (blueprint: CampaignBlueprint, angle: string, trigger: BuyingTriggerObject, awarenessStage: AwarenessStage, placement: PlacementFormat, persona: TargetPersona, strategicPathId: string, allowVisualExploration: boolean, offer: OfferTypeObject): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+    const prompt = `
+      Anda adalah seorang direktur kreatif yang berspesialisasi dalam kampanye Konten Buatan Pengguna (UGC) berkinerja tinggi.
+      
+      **WAWASAN DATA META:** Kampanye UGC dengan kreator yang beragam (4-5 sudut pandang berbeda) mengungguli kampanye kreator tunggal sebanyak 3x.
+      
+      **Tugas Anda:**
+      Hasilkan "Paket Keragaman UGC" berisi 4 konsep iklan berdasarkan brief yang disediakan.
+      
+      **Brief:**
+      - Produk: ${blueprint.productAnalysis.name}
+      - Persona: ${persona.description}
+      - Sudut Pandang: "${angle}"
+      - Pemicu: "${trigger.name}"
+      - Tahap Kesadaran: "${awarenessStage}"
+      - Penempatan: "${placement}"
+      - Penawaran: "${offer.name}"
+      - Negara Target: ${blueprint.adDna.targetCountry}
+      
+      **INSTRUKSI KRITIS:**
+      1.  Buat 4 konsep, masing-masing mewakili sub-tipe kreator yang BERBEDA dalam persona utama.
+          - Contoh sub-tipe: "Si Skeptis yang menjadi Percaya", "Ibu Sibuk yang menemukan jalan pintas", "Ahli yang didorong oleh Data", "Influencer yang berfokus pada Estetika".
+      2.  Setiap konsep HARUS menggunakan Sudut Pandang, Pemicu, dan Penawaran yang SAMA. Ini adalah tes terkontrol dari sudut pandang kreator.
+      3.  'format' untuk SEMUA konsep harus 'UGC'.
+      4.  Teks (hook, headline) untuk setiap konsep harus disesuaikan dengan suara sub-tipe kreatornya yang spesifik.
+      5.  Prompt visual harus menggambarkan orang yang berbeda dalam latar yang berbeda dan otentik untuk memaksimalkan keragaman.
+      6. Untuk 'strategicPathId' gunakan "${strategicPathId}".
 
-// Helper function to extract MIME type from base64 string
-export const getMimeType = (base64: string): string => {
-    return base64.substring(base64.indexOf(":") + 1, base64.indexOf(";"));
-}
+      **🔥 ATURAN KERAGAMAN UGC KRITIS (Mandat Keragaman Kreator Meta):**
+      Untuk SETIAP dari 4 mikro-persona, Anda HARUS memvariasikan:
+      1. **Demografi Kreator:**
+         - Konsep 1: Usia 18-24, gaya kasual
+         - Konsep 2: Usia 25-34, gaya profesional
+         - Konsep 3: Usia 35-44, gaya orang tua/keluarga
+         - Konsep 4: Usia 45+, gaya dewasa/ahli
+      2. **Latar Visual (HARUS sama sekali berbeda):**
+         - Konsep 1: Latar kamar tidur/kamar kos
+         - Konsep 2: Kantor/ruang kerja bersama
+         - Konsep 3: Dapur/ruang tamu (ruang keluarga)
+         - Konsep 4: Luar ruangan/ruang publik
+      3. **Gaya Kamera:**
+         - Konsep 1: Gaya selfie vertikal (kamera depan)
+         - Konsep 2: Pengaturan tripod, jarak sedang
+         - Konsep 3: Genggam, sedikit goyang (otentik)
+         - Konsep 4: Pembingkaian profesional tetapi pencahayaan alami
+      4. **Waktu Hari (untuk variasi pencahayaan):**
+         - Konsep 1: Malam hari (pencahayaan dalam ruangan yang hangat)
+         - Konsep 2: Tengah hari (cahaya alami yang terang)
+         - Konsep 3: Pagi hari (cahaya alami yang lembut)
+         - Konsep 4: Golden hour (luar ruangan)
+      
+      Variasi ini WAJIB untuk menghindari pengelompokan Entity ID. AI Meta akan memperlakukan masing-masing sebagai iklan yang berbeda secara fundamental.
+      
+      Hanya berikan respons berupa array JSON dari 4 objek konsep iklan.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: [{ text: prompt }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: adConceptSchema
+        }
+      }
+    });
+    
+    const rawJson = response.text;
+    const ideas = JSON.parse(rawJson.replace(/^```json\s*|```$/g, '')) as Omit<AdConcept, 'imageUrls'>[];
+    return ideas.map(idea => addMockPerformanceSignals(idea));
+};
+
+// FIX: Added generateRemixSuggestions function
+export const generateRemixSuggestions = async (component: AdDnaComponent, baseConcept: AdConcept, adDna: AdDna, blueprint: CampaignBlueprint): Promise<RemixSuggestion[]> => {
+    const suggestionsPrompt = `
+      Anda adalah seorang ahli strategi kreatif. Diberikan sebuah konsep iklan dan salah satu komponen DNA-nya, hasilkan 3 saran alternatif untuk komponen tersebut.
+      
+      **Konsep Dasar:**
+      - Headline: ${baseConcept.headline}
+      - Persona: ${adDna.persona.description}
+      - Sudut Pandang: ${adDna.angle}
+      
+      **Komponen untuk Diremix:** "${component}"
+      **Nilai Saat Ini:** "${(adDna as any)[component]?.name || (adDna as any)[component]}"
+      
+      **Tugas:**
+      Hasilkan 3 ide alternatif yang berbeda dan kreatif untuk "${component}".
+      Untuk setiap ide, berikan "title" singkat, "description" tentang pergeseran strategis, dan "payload" yang merupakan nilai string atau objek baru.
+      - Payload harus cocok dengan tipe komponen yang diremix. Untuk objek kompleks seperti Persona atau Pemicu, hasilkan objek lengkap.
+      
+      Hanya berikan respons berupa array JSON dari 3 objek saran.
+      Skema: { title: string, description: string, payload: any }
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: [{ text: suggestionsPrompt }],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              payload: { type: Type.OBJECT, description: "Bisa berupa string atau objek lengkap tergantung pada komponen" }
+            },
+            required: ['title', 'description', 'payload']
+          }
+        }
+      }
+    });
+    
+    const rawJson = response.text;
+    return JSON.parse(rawJson.replace(/^```json\s*|```$/g, ''));
+};
+
+// FIX: Added generateConceptFromRemix function
+export const generateConceptFromRemix = async (baseConcept: AdConcept, component: AdDnaComponent, payload: any, blueprint: CampaignBlueprint): Promise<Omit<AdConcept, 'imageUrls'>> => {
+    const evolutionType = component as ('angle' | 'trigger' | 'format' | 'placement' | 'awareness' | 'offer' | 'painDesire' | 'persona');
+    const evolvedConcepts = await evolveConcept(baseConcept, blueprint, evolutionType, payload);
+    const newConcept = {
+        ...evolvedConcepts[0],
+        entryPoint: 'Remixed' as const,
+    };
+    return newConcept;
+};
