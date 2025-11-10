@@ -7,7 +7,7 @@ import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
 import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDna, NodeType, AdDnaComponent, RemixSuggestion } from './types';
 // FIX: Changed import from generateUgcConceptsForPersona to generateConceptsFromPersona as it does not exist.
-import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails, generateQuickPivot, generateRemixSuggestions, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack } from './services/geminiService';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, evolveConcept, getBuyingTriggerDetails, generateQuickPivot, generateRemixSuggestions, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack, generateMatrixConcepts } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
 import { EvolveModal } from './components/EvolveModal';
@@ -83,13 +83,15 @@ function App() {
     }
   };
 
-  const handleWorkflowSelected = (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack') => {
+  const handleWorkflowSelected = (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack' | 'one-click-campaign') => {
       if (workflow === 'deep-dive') {
           handleStartManualExploration(validatedBlueprint);
       } else if (workflow === 'quick-scale') {
           handleStartSmartRemix(validatedBlueprint);
       } else if (workflow === 'ugc-diversity-pack') {
           handleStartUgcDiversityPack(validatedBlueprint);
+      } else if (workflow === 'one-click-campaign') {
+          handleStartOneClickCampaign(validatedBlueprint);
       }
   };
 
@@ -244,6 +246,74 @@ const handleStartUgcDiversityPack = async (validatedBlueprint: CampaignBlueprint
     } catch (e: any) {
         console.error("Paket Keragaman UGC gagal:", e);
         setError(e.message || "Gagal menjalankan Paket Keragaman UGC.");
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+};
+
+const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint) => {
+    setCampaignBlueprint(validatedBlueprint);
+    setCurrentStep('mindmap');
+    setViewMode('gallery');
+    (window as any).appState = { referenceImage };
+    setIsLoading(true);
+    setError(null);
+
+    try {
+        const campaignTag = `Kampanye Keragaman ${new Date().toLocaleTimeString()}`;
+        setLoadingMessage('Membuat Blueprint Kampanye...');
+        const dnaNode: MindMapNode = {
+            id: 'dna-root', type: 'dna', label: 'Blueprint Kampanye', content: validatedBlueprint,
+            position: { x: 0, y: 0 }, width: 300, height: 420
+        };
+        
+        setLoadingMessage('Menghasilkan 2 variasi persona...');
+        const newPersonas = await generatePersonaVariations(validatedBlueprint, [validatedBlueprint.targetPersona]);
+        const allPersonas = [validatedBlueprint.targetPersona, ...newPersonas.slice(0, 2)]; // Total 3 personas
+
+        const personaNodes: MindMapNode[] = allPersonas.map(persona => ({
+            id: simpleUUID(),
+            parentId: dnaNode.id,
+            type: 'persona',
+            label: persona.description,
+            content: { persona },
+            position: { x: 0, y: 0 },
+            isExpanded: false,
+            width: 250, height: 140,
+        }));
+        
+        setNodes([dnaNode, ...personaNodes]);
+        
+        const formats: CreativeFormat[] = ['UGC', 'Sebelum & Sesudah', 'Penawaran Langsung'];
+        const triggerNames = ['Bukti Sosial', 'Otoritas', 'Kelangkaan'];
+
+        setLoadingMessage(`Menghasilkan 27 konsep untuk ${allPersonas.length} persona...`);
+        const conceptPromises = allPersonas.map((persona, index) => 
+            generateMatrixConcepts(validatedBlueprint, persona, formats, triggerNames, personaNodes[index].id)
+        );
+
+        const conceptArrays = await Promise.all(conceptPromises);
+        const allNewConcepts = conceptArrays.flat();
+        const taggedConcepts = allNewConcepts.map(c => ({ ...c, campaignTag }));
+
+
+        const creativeNodes: MindMapNode[] = taggedConcepts.map(concept => ({
+            id: concept.id,
+            parentId: concept.strategicPathId, // This is the persona node ID
+            type: 'creative',
+            label: concept.headline,
+            content: { concept },
+            position: { x: 0, y: 0 },
+            width: 160,
+            height: 240,
+        }));
+        
+        setNodes(prev => [...prev, ...creativeNodes]);
+
+    } catch (e: any) {
+        console.error("Kampanye Keragaman gagal:", e);
+        setError(e.message || "Gagal menjalankan Kampanye Keragaman.");
     } finally {
         setIsLoading(false);
         setLoadingMessage('');

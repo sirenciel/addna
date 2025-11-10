@@ -1201,7 +1201,7 @@ export const generateQuickPivot = async (
     **🔥 MANDAT PIVOT: ${pivotInstructions[pivotType]}**
 
     Sekarang, hasilkan sebuah array yang berisi SATU objek JSON baru untuk konsep yang telah di-pivot.
-    Patuhi skema JSON yang diberikan dengan ketat.
+    Patuhi skema JSON yang disediakan dengan ketat.
     - Untuk 'adSetName', buat nama baru yang mencerminkan parameter pivot, seperti: [PivotType]_[Target]_[...]
     - Untuk 'personaDescription', 'personaAge', dll., Anda HARUS memperbarui bidang-bidang ini untuk mencerminkan persona baru.
     - Untuk 'strategicPathId', gunakan kembali ID dari konsep dasar: "${baseConcept.strategicPathId}".
@@ -1401,4 +1401,67 @@ export const generateConceptFromRemix = async (baseConcept: AdConcept, component
         entryPoint: 'Remixed' as const,
     };
     return newConcept;
+};
+
+export const generateMatrixConcepts = async (
+    blueprint: CampaignBlueprint, 
+    persona: TargetPersona, 
+    formats: CreativeFormat[], 
+    triggerNames: string[], 
+    strategicPathId: string
+): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+    
+    const prompt = `
+        Anda adalah seorang ahli strategi kreatif dan copywriter direct response kelas dunia yang berspesialisasi dalam kampanye iklan Meta. Tugas Anda adalah menghasilkan satu set konsep iklan yang sangat beragam berdasarkan matriks format kreatif dan pemicu psikologis.
+
+        **PRINSIP INTI YANG TIDAK BISA DITAWAR (DALAM KONTEKS INDONESIA):**
+        1.  **Asumsikan Zero Brand Awareness:** Tulis untuk audiens dingin. Kejelasan > Kecerdasan.
+        2.  **Fokus pada Masalah atau Hasil:** Fokus pada apa yang dipedulikan pengguna, bukan fitur.
+        3.  **Spesifisitas = Kredibilitas:** Gunakan angka dan detail konkret.
+        4.  **PECAH ENTITY ID:** Sangat PENTING bahwa setiap konsep memiliki ciri visual yang BERBEDA SECARA FUNDAMENTAL untuk memaksimalkan jangkauan di Meta. Gunakan latar, pencahayaan, demografi subjek, dan sudut kamera yang berbeda untuk setiap konsep.
+
+        **BRIEF KAMPANYE:**
+        - Produk: ${blueprint.productAnalysis.name} (Manfaat: ${blueprint.productAnalysis.keyBenefit})
+        - Penawaran Strategis: ${blueprint.adDna.offerSummary} (CTA: ${blueprint.adDna.cta})
+        - DNA Penjualan: Gunakan formula persuasi "${blueprint.adDna.persuasionFormula}" dengan nada "${blueprint.adDna.toneOfVoice}".
+        - Negara Target untuk Lokalisasi: "${blueprint.adDna.targetCountry}"
+        - Persona Target: "${persona.description}" (Usia: "${persona.age}", Tipe: "${persona.creatorType}", Poin Masalah: ${persona.painPoints.join(', ')})
+
+        **TUGAS ANDA: BUAT MATRIKS KONSEP IKLAN**
+        Hasilkan array JSON dari ${formats.length * triggerNames.length} konsep iklan unik, satu untuk setiap kombinasi dalam matriks berikut:
+
+        - **Format Kreatif:** [${formats.join(', ')}]
+        - **Pemicu Psikologis:** [${triggerNames.join(', ')}]
+
+        **UNTUK SETIAP KONSEP DALAM MATRIKS, ANDA HARUS:**
+        1.  **Pilih Sudut Pandang & Tahap Kesadaran:** Pilih sudut pandang strategis dan tahap kesadaran yang paling sesuai untuk kombinasi format/pemicu.
+        2.  **Tulis Teks Iklan (Copy-First):** Buat 'hook' yang menghentikan guliran dan 'headline' yang kuat yang menerapkan pemicu psikologis.
+        3.  **Buat Visual yang Unik:** Tulis 'visualPrompt' yang sangat terperinci yang (a) secara visual memperkuat teks iklan dan (b) BERBEDA secara fundamental dari prompt visual lainnya dalam set ini.
+        4.  **Isi Semua Bidang:** Lengkapi semua bidang yang diperlukan dari skema JSON adConcept, termasuk nama set iklan yang deskriptif.
+        5.  **Gunakan ID Jalur Strategis yang Disediakan:** Untuk 'strategicPathId', gunakan nilai ini: "${strategicPathId}".
+        6.  **Gunakan Penawaran yang Disediakan:** Untuk bidang 'offer', gunakan objek ini: ${JSON.stringify({name: blueprint.adDna.offerSummary, description: blueprint.adDna.offerSummary, psychologicalPrinciple: "Penawaran Langsung"})}.
+
+        Hanya berikan respons berupa array JSON yang valid dari objek konsep iklan.
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ text: prompt }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: adConceptSchema
+            }
+        }
+    });
+
+    const rawJson = response.text;
+    const ideas = JSON.parse(rawJson.replace(/^```json\s*|```$/g, '')) as (Omit<AdConcept, 'imageUrls' | 'entryPoint'>)[];
+
+    const entryPoints: ('Emotional' | 'Logical' | 'Social')[] = ['Emotional', 'Logical', 'Social'];
+    return ideas.map((idea, index) => addMockPerformanceSignals({
+        ...idea,
+        entryPoint: entryPoints[index % 3]
+    }));
 };

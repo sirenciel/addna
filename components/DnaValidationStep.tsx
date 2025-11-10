@@ -5,7 +5,7 @@ import { InfoIcon, RemixIcon } from './icons';
 interface BlueprintValidationStepProps {
   initialBlueprint: CampaignBlueprint;
   referenceImage: string;
-  onWorkflowSelected: (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack') => void;
+  onWorkflowSelected: (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack' | 'one-click-campaign') => void;
   onBack: () => void;
   allowVisualExploration: boolean;
   onAllowVisualExplorationChange: (checked: boolean) => void;
@@ -150,6 +150,33 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
         </div>
 
         <div className="w-full max-w-5xl">
+            <div
+              onClick={() => onWorkflowSelected(blueprint, 'one-click-campaign')}
+              className="w-full p-6 mb-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/30 cursor-pointer"
+            >
+              <h3 className="text-2xl font-bold mb-2 text-white flex items-center gap-2">
+                <RemixIcon className="w-6 h-6" /> Kampanye Keragaman Sekali Klik
+              </h3>
+              <p className="text-sm text-purple-200">Hasilkan 27 konsep yang berbeda secara fundamental dalam ~2 menit untuk menemukan pemenang tersembunyi dengan cepat.</p>
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs text-purple-200 border-t border-purple-400/30 pt-3">
+                <div>
+                    <p className="font-bold text-white">3 Persona</p>
+                    <p>mis. 18-24, 25-34, 35-44</p>
+                </div>
+                <div>
+                    <p className="font-bold text-white">3 Format</p>
+                    <p>mis. UGC, S&S, Penawaran</p>
+                </div>
+                <div>
+                    <p className="font-bold text-white">3 Pemicu</p>
+                    <p>mis. Bukti Sosial, Otoritas</p>
+                </div>
+                 <div>
+                    <p className="font-bold text-white">Pecah Entity ID</p>
+                    <p>Jangkauan & pembelajaran maks</p>
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                  <WorkflowCard
                     icon="🎬"
