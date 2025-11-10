@@ -874,13 +874,24 @@ export const generateAdImage = async (prompt: string, referenceImageBase64?: str
         parts.push(imageB64ToGenerativePart(referenceImageBase64));
 
         if (allowVisualExploration) {
-            // Gunakan DNA yang diekstraksi sebagai INSPIRASI, tetapi prioritaskan adegan baru.
-            textPrompt = `${salesIntent} 
-Menggunakan gambar referensi yang disediakan sebagai INSPIRASI:
-1.  Ekstrak elemen gaya ini: palet warna dari "${styleDNA.colorPalette}", suasana pencahayaan dari "${styleDNA.lightingStyle}", dan prinsip komposisi dari "${styleDNA.compositionApproach}".
-2.  Anda BOLEH mengembangkan/meremix konsep visual sambil mempertahankan nuansa merek.
-3.  Adegan yang dijelaskan di bawah ini adalah panduan UTAMA Anda: ${prompt}
-4.  Seimbangkan gambar akhir: 60% deskripsi adegan baru + 40% DNA gaya referensi.`;
+            // MANDAT: Pecah Entity ID dengan secara sengaja mengubah gaya.
+            textPrompt = `${salesIntent}
+**MANDAT KRITIS: PECAH ENTITY ID**
+Gambar referensi yang disediakan adalah untuk konteks gaya, TETAPI gambar yang dihasilkan HARUS BERBEDA SECARA FUNDAMENTAL untuk menghindari penalti platform Meta dan menjangkau audiens baru.
+
+**DNA GAYA REFERENSI (UNTUK DIHINDARI/DIUBAH SECARA SIGNIFIKAN):**
+- **Latar/Lokasi:** ${styleDNA.settingType}
+- **Pencahayaan:** ${styleDNA.lightingStyle}
+- **Komposisi/Sudut:** ${styleDNA.compositionApproach}
+- **Gaya Model:** ${styleDNA.modelStyling}
+- **Palet Warna:** ${styleDNA.colorPalette}
+- **Gaya Fotografi:** ${styleDNA.photographyStyle}
+
+**TUGAS ANDA:**
+1.  Pahami adegan baru yang dijelaskan dalam prompt ini: "${prompt}"
+2.  Render adegan ini sambil secara sadar **MENGUBAH SETIDAKNYA TIGA (3)** elemen dari DNA Gaya Referensi di atas.
+    - **Contoh Perubahan Wajib:** Jika referensi adalah 'Studio dalam ruangan', buat gambar baru di 'Kafe perkotaan yang ramai'. Jika referensi adalah 'Pencahayaan dramatis', gunakan 'Cahaya alami siang hari yang lembut'. Jika referensi adalah 'Close-up', gunakan 'Medium shot'.
+3.  Tujuan utamanya adalah untuk membuat gambar yang terasa seperti berasal dari kampanye yang sama sekali **BERBEDA**, namun tetap mempertahankan kualitas merek secara keseluruhan. Prioritaskan **keunikan visual** di atas kesamaan gaya. Gambar akhir harus memiliki "sidik jari visual" yang unik.`;
         } else {
             // Gunakan DNA yang diekstraksi sebagai PANDUAN KETAT atau TEMPLAT.
             textPrompt = `${salesIntent} 
