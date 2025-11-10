@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CampaignBlueprint, TargetPersona } from '../types';
 import { InfoIcon, RemixIcon } from './icons';
@@ -5,7 +6,7 @@ import { InfoIcon, RemixIcon } from './icons';
 interface BlueprintValidationStepProps {
   initialBlueprint: CampaignBlueprint;
   referenceImage: string;
-  onWorkflowSelected: (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack' | 'one-click-campaign') => void;
+  onWorkflowSelected: (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack' | 'one-click-campaign' | 'hp-authority-pack') => void;
   onBack: () => void;
   allowVisualExploration: boolean;
   onAllowVisualExplorationChange: (checked: boolean) => void;
@@ -146,7 +147,7 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
             <p className="text-brand-text-secondary mt-2 text-lg">Bagaimana Anda ingin menghasilkan konsep iklan baru?</p>
         </div>
 
-        <div className="w-full max-w-6xl">
+        <div className="w-full max-w-7xl">
             {/* Recommended Workflow */}
             <div
               onClick={() => onWorkflowSelected(blueprint, 'one-click-campaign')}
@@ -170,7 +171,7 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
             </div>
 
             {/* Other Workflows */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <WorkflowCard
                     icon="🎓"
                     title="Penelusuran Mendalam Manual"
@@ -191,6 +192,13 @@ export const DnaValidationStep: React.FC<BlueprintValidationStepProps> = ({ init
                     description="Buat 4 konsep UGC yang otentik, masing-masing dari sudut pandang kreator yang berbeda."
                     why="Data Meta menunjukkan kampanye UGC dengan 4-5 sudut pandang kreator yang beragam mengungguli kampanye kreator tunggal. Ini adalah cara tercepat untuk mendapatkan bukti sosial yang otentik."
                     onClick={() => onWorkflowSelected(blueprint, 'ugc-diversity-pack')}
+                />
+                <WorkflowCard
+                    icon="👑"
+                    title="Paket Otoritas HP"
+                    description="Hasilkan 3 konsep yang dipimpin oleh ahli/founder untuk mengatasi keberatan umum dan membangun kepercayaan."
+                    why="Iklan yang dipimpin oleh pakar (HP) sangat baik dalam mengatasi skeptisisme audiens. Alur kerja ini mengotomatiskan pembuatan aset kepercayaan tinggi yang mengatasi keberatan utama."
+                    onClick={() => onWorkflowSelected(blueprint, 'hp-authority-pack')}
                 />
             </div>
         </div>

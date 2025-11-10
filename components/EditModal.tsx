@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { AdConcept, CarouselSlide, ALL_AWARENESS_STAGES, ALL_CREATIVE_FORMATS, CampaignBlueprint } from '../types';
+import { AdConcept, CarouselSlide, ALL_AWARENESS_STAGES, ALL_CREATIVE_FORMATS, CreativeFormat, CampaignBlueprint } from '../types';
 import { refineVisualPrompt } from '../services/geminiService';
-import { RefreshCwIcon, SparklesIcon } from './icons';
+import { RefreshCwIcon, SparklesIcon, InfoIcon } from './icons';
 
 interface EditModalProps {
   concept: AdConcept;
@@ -61,6 +62,14 @@ const validateCarouselArc = (slides: CarouselSlide[], arc: string) => {
         };
     });
 };
+
+const FORMAT_TIPS: Partial<Record<CreativeFormat, string>> = {
+    'Penawaran Langsung': "Iklan statis berkinerja lebih baik dengan headline numerik (misal: '3 Alasan...') dan penawaran yang sangat jelas.",
+    'UGC': "Pastikan visual dan teks terasa otentik dan tidak terlalu dipoles, seolah-olah dibuat oleh pengguna sungguhan.",
+    'Sebelum & Sesudah': "Pastikan transformasi terlihat jelas dan dramatis. Perbedaan antara 'sebelum' dan 'sesudah' harus mencolok.",
+    'Iklan Artikel': "Gaya visual dan headline harus meniru konten editorial yang kredibel, bukan iklan yang terang-terangan.",
+};
+
 
 export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint, onSave, onClose, onGenerateImage }) => {
   const [formData, setFormData] = useState<AdConcept>(concept);
@@ -128,6 +137,8 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
     }
   };
 
+  const tip = FORMAT_TIPS[formData.format];
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-brand-surface rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -140,6 +151,12 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
           <div>
             <label htmlFor="headline" className="block text-sm font-medium text-brand-text-secondary mb-1">Headline</label>
             <input type="text" name="headline" id="headline" value={formData.headline} onChange={handleChange} className="w-full bg-gray-900 border border-gray-700 rounded-md p-2 focus:ring-2 focus:ring-brand-primary" />
+            {tip && (
+                <div className="mt-2 p-2 bg-blue-900/30 border border-blue-500/40 rounded-md text-xs flex items-start gap-2 text-blue-200">
+                    <InfoIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span><strong>Pro Tip:</strong> {tip}</span>
+                </div>
+            )}
           </div>
 
           <div>
@@ -221,4 +238,39 @@ export const EditModal: React.FC<EditModalProps> = ({ concept, campaignBlueprint
                )}
               {formData.carouselSlides.map((slide, index) => (
                 <div key={slide.slideNumber} className="p-3 border border-gray-600 rounded-md space-y-2">
-                  <p className="text-sm font-bold
+                  <p className="text-sm font-bold">Slide {slide.slideNumber}</p>
+                  <div>
+                    <label className="text-xs text-brand-text-secondary mb-1 block">Headline Slide</label>
+                    <input type="text" value={slide.headline} onChange={e => handleSlideChange(e, index, 'headline')} className="w-full bg-gray-800 border-gray-700 rounded p-1.5 text-sm"/>
+                  </div>
+                   <div>
+                    <label className="text-xs text-brand-text-secondary mb-1 block">Deskripsi Slide</label>
+                    <textarea rows={2} value={slide.description} onChange={e => handleSlideChange(e, index, 'description')} className="w-full bg-gray-800 border-gray-700 rounded p-1.5 text-sm"></textarea>
+                  </div>
+                  <div>
+                    <label className="text-xs text-brand-text-secondary mb-1 block">Prompt Visual Slide</label>
+                    <textarea rows={2} value={slide.visualPrompt} onChange={e => handleSlideChange(e, index, 'visualPrompt')} className="w-full bg-gray-800 border-gray-700 rounded p-1.5 text-sm"></textarea>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+
+        <footer className="p-4 border-t border-gray-700 bg-brand-surface rounded-b-xl flex justify-between items-center">
+            <button
+                onClick={handleGenerate}
+                className="px-4 py-2 bg-brand-secondary text-white font-bold rounded-lg hover:bg-green-500 flex items-center gap-2"
+            >
+                <SparklesIcon className="w-4 h-4" />
+                Simpan & Hasilkan Ulang Gambar
+            </button>
+            <div>
+              <button onClick={onClose} className="px-4 py-2 text-brand-text-secondary hover:bg-gray-700 rounded-lg mr-2">Batal</button>
+              <button onClick={handleSave} className="px-6 py-2 bg-brand-primary text-white font-bold rounded-lg hover:bg-indigo-500">Simpan Perubahan</button>
+            </div>
+        </footer>
+      </div>
+    </div>
+  );
+};

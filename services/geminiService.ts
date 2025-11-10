@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { CampaignBlueprint, AdConcept, CreativeFormat, PlacementFormat, AwarenessStage, TargetPersona, BuyingTriggerObject, CarouselSlide, ObjectionObject, PainDesireObject, OfferTypeObject, PivotType, PivotConfig, AdDnaComponent, AdDna, RemixSuggestion, VisualStyleDNA, ALL_CREATIVE_FORMATS, ALL_PLACEMENT_FORMATS, ALL_AWARENESS_STAGES } from '../types';
 
@@ -1254,4 +1255,47 @@ export const generateMatrixConcepts = async (
         ...idea,
         entryPoint: entryPoints[index % 3]
     }));
+};
+
+export const generateHpAuthorityPack = async (blueprint: CampaignBlueprint, persona: TargetPersona, strategicPathId: string): Promise<Omit<AdConcept, 'imageUrls'>[]> => {
+    const prompt = `
+        Anda adalah seorang ahli strategi kreatif senior yang berspesialisasi dalam iklan yang dipimpin oleh Pendiri/Pakar (HP).
+        Tugas Anda adalah membuat "Paket Otoritas HP" yang berisi 3 konsep iklan yang berbeda.
+        
+        **Brief:**
+        - Produk: ${blueprint.productAnalysis.name} - ${blueprint.productAnalysis.keyBenefit}
+        - Persona: ${persona.description}
+        - Penawaran: "${blueprint.adDna.offerSummary}"
+        - Negara Target: ${blueprint.adDna.targetCountry}
+        
+        **ALUR KERJA WAJIB:**
+        1.  **Identifikasi 3 Keberatan Teratas:** Pertama, pikirkan 3 keberatan paling umum yang akan dimiliki oleh persona ini terhadap produk ini.
+        2.  **Hasilkan 3 Konsep:** Untuk setiap keberatan, hasilkan satu konsep iklan yang secara langsung mengatasinya.
+        
+        **PERSYARATAN KONSEP (UNTUK SETIAP DARI 3 KONSEP):**
+        1.  **Penanganan Keberatan:** Headline dan hook HARUS secara langsung melawan salah satu keberatan yang Anda identifikasi.
+        2.  **Sudut Pandang "Kita vs Mereka":** Bingkai solusi sebagai cara yang superior dibandingkan "cara lama" atau pesaing.
+        3.  **Persona "Pakar/Pendiri":** 'visualPrompt' HARUS menggambarkan seorang ahli yang kredibel atau pendiri yang bersemangat (sesuai dengan Tipe Kreator 'Pakar'). Visual harus memancarkan otoritas dan kepercayaan.
+        4.  **Format Kreatif:** Gunakan format yang sesuai untuk membangun otoritas, seperti 'Iklan Artikel', 'Advertorial', atau 'Demo'.
+        5.  **Keragaman Visual:** Pastikan setiap konsep memiliki prompt visual yang berbeda secara fundamental (latar, pencahayaan, komposisi yang berbeda) untuk memecah Entity ID.
+        6.  Gunakan ID Jalur Strategis ini untuk semua konsep: "${strategicPathId}".
+        
+        Hanya berikan respons berupa array JSON dari 3 objek konsep iklan yang mematuhi skema.
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: [{ text: prompt }],
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.ARRAY,
+                items: adConceptSchema
+            }
+        }
+    });
+
+    const rawJson = response.text;
+    const ideas = JSON.parse(rawJson.replace(/^```json\s*|```$/g, '')) as Omit<AdConcept, 'imageUrls'>[];
+    return ideas.map(idea => addMockPerformanceSignals(idea));
 };

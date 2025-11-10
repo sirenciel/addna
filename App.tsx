@@ -7,7 +7,7 @@ import { ConceptGallery } from './components/ConceptGallery';
 import { LoadingIndicator } from './components/LoadingIndicator';
 import { Lightbox } from './components/Lightbox';
 import { AdConcept, CampaignBlueprint, MindMapNode, ViewMode, AppStep, CreativeFormat, ALL_CREATIVE_FORMATS, PlacementFormat, ALL_PLACEMENT_FORMATS, AwarenessStage, ALL_AWARENESS_STAGES, TargetPersona, BuyingTriggerObject, ObjectionObject, PainDesireObject, OfferTypeObject, AdDna, NodeType, AdDnaComponent, RemixSuggestion } from './types';
-import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack, generateMatrixConcepts, generateRemixSuggestions } from './services/geminiService';
+import { analyzeCampaignBlueprint, generatePersonaVariations, generatePainDesires, generateObjections, generateOfferTypes, generateHighLevelAngles, generateBuyingTriggers, generateCreativeIdeas, generateAdImage, generateConceptFromRemix, generateConceptsFromPersona, generateUgcPack, generateMatrixConcepts, generateRemixSuggestions, generateHpAuthorityPack } from './services/geminiService';
 import { LayoutGridIcon, NetworkIcon } from './components/icons';
 import { EditModal } from './components/EditModal';
 import { RemixDashboard } from './components/RemixDashboard';
@@ -79,7 +79,7 @@ function App() {
     }
   };
 
-  const handleWorkflowSelected = (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack' | 'one-click-campaign') => {
+  const handleWorkflowSelected = (validatedBlueprint: CampaignBlueprint, workflow: 'deep-dive' | 'quick-scale' | 'ugc-diversity-pack' | 'one-click-campaign' | 'hp-authority-pack') => {
       if (workflow === 'deep-dive') {
           handleStartManualExploration(validatedBlueprint);
       } else if (workflow === 'quick-scale') {
@@ -88,6 +88,8 @@ function App() {
           handleStartUgcDiversityPack(validatedBlueprint);
       } else if (workflow === 'one-click-campaign') {
           handleStartOneClickCampaign(validatedBlueprint);
+      } else if (workflow === 'hp-authority-pack') {
+          handleStartHpAuthorityPack(validatedBlueprint);
       }
   };
 
@@ -313,6 +315,62 @@ const handleStartOneClickCampaign = async (validatedBlueprint: CampaignBlueprint
     }
 };
   
+const handleStartHpAuthorityPack = async (validatedBlueprint: CampaignBlueprint) => {
+    setCampaignBlueprint(validatedBlueprint);
+    setCurrentStep('mindmap');
+    setViewMode('gallery');
+    (window as any).appState = { referenceImage };
+    setIsLoading(true);
+    setError(null);
+
+    try {
+        const campaignTag = `Paket Otoritas HP ${new Date().toLocaleTimeString()}`;
+        setLoadingMessage('Membuat Blueprint Kampanye...');
+        const dnaNode: MindMapNode = {
+            id: 'dna-root', type: 'dna', label: 'Blueprint Kampanye', content: validatedBlueprint,
+            position: { x: 0, y: 0 }, width: 300, height: 420
+        };
+        
+        const initialPersona = validatedBlueprint.targetPersona;
+        const personaNode: MindMapNode = {
+            id: simpleUUID(),
+            parentId: dnaNode.id,
+            type: 'persona',
+            label: initialPersona.description,
+            content: { persona: initialPersona },
+            position: { x: 0, y: 0 },
+            isExpanded: true, 
+            width: 250, height: 140,
+        };
+        
+        setNodes([dnaNode, personaNode]);
+
+        setLoadingMessage(`Menghasilkan Paket Otoritas HP untuk persona "${initialPersona.description}"...`);
+        const concepts = await generateHpAuthorityPack(validatedBlueprint, initialPersona, personaNode.id);
+        const taggedConcepts = concepts.map(c => ({ ...c, campaignTag }));
+
+        const creativeNodes: MindMapNode[] = taggedConcepts.map(concept => ({
+            id: concept.id,
+            parentId: concept.strategicPathId,
+            type: 'creative',
+            label: concept.headline,
+            content: { concept },
+            position: { x: 0, y: 0 },
+            width: 160,
+            height: 240,
+        }));
+        
+        setNodes(prev => [...prev, ...creativeNodes]);
+
+    } catch (e: any) {
+        console.error("Paket Otoritas HP gagal:", e);
+        setError(e.message || "Gagal menjalankan Paket Otoritas HP.");
+    } finally {
+        setIsLoading(false);
+        setLoadingMessage('');
+    }
+};
+
   const handleTogglePersona = async (nodeId: string) => {
       const personaNode = nodes.find(n => n.id === nodeId);
       if (!personaNode || !campaignBlueprint) return;

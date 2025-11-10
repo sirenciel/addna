@@ -88,6 +88,7 @@ export const RemixDashboard: React.FC<RemixDashboardProps> = ({
                     <h2 className="text-xl font-bold mb-4">DNA Iklan Unggulan</h2>
                     <DnaRow label="Persona" value={remixDna.persona.description} component="persona" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
                     <DnaRow label="Format" value={remixDna.format} component="format" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
+                    <DnaRow label="Visual Vehicle" value={remixTarget.visualVehicle} component="visualVehicle" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
                     <DnaRow label="Sudut Pandang" value={remixDna.angle} component="angle" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
                     <DnaRow label="Pemicu" value={remixDna.trigger.name} component="trigger" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
                     <DnaRow label="Penawaran" value={remixDna.offer.name} component="offer" onRemix={onRequestSuggestions} remixingComponent={remixingComponent} />
